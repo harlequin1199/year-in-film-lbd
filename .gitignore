@@ -1,0 +1,13 @@
+# Secrets and env
+.env
+
+# Local data
+*.csv
+
+# Backend
+backend/cache.db
+backend/__pycache__/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
