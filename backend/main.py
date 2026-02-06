@@ -46,7 +46,15 @@ def _startup():
         raise RuntimeError(
             "TMDB_API_KEY is not set. Set it in the environment (e.g. Render dashboard or backend/.env)."
         )
-    logger.info("Backend started; TMDB_API_KEY is set.")
+    cache_module.init_cache_db()
+    cache_module.start_writer()
+    logger.info("Backend started; TMDB_API_KEY is set; cache writer started.")
+
+
+@app.on_event("shutdown")
+def _shutdown():
+    cache_module.stop_writer()
+    logger.info("Cache writer stopped.")
 
 
 @app.get("/health")
