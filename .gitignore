@@ -4,9 +4,14 @@
 # Local data
 *.csv
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Backend
 backend/cache.db
-backend/__pycache__/
 
 # Frontend
 frontend/node_modules/
