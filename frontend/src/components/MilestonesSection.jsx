@@ -20,7 +20,7 @@ function MilestonesSection({ milestones }) {
               <>
                 <div className="milestone-poster">
                   {item.poster_url ? (
-                    <img src={item.poster_url} alt={item.title} />
+                    <img src={item.poster_url} alt={item.title} loading="lazy" />
                   ) : (
                     <div className="poster-fallback">Постера нет</div>
                   )}

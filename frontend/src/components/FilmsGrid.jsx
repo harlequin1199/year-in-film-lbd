@@ -6,7 +6,7 @@ function FilmsGrid({ films }) {
 
   const renderPoster = (film) => {
     const image = film.poster_url ? (
-      <img src={film.poster_url} alt={film.title} />
+      <img src={film.poster_url} alt={film.title} loading="lazy" />
     ) : (
       <div className="poster-fallback">Постера нет</div>
     )

@@ -6,10 +6,13 @@ Async TMDb client with:
 - Optional in-memory (per-job) and persistent (SQLite) caching
 """
 import asyncio
+import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 import cache as cache_module
 
@@ -69,6 +72,10 @@ class TMDbClient:
                             delay = float(retry_after)
                         except ValueError:
                             pass
+                    logger.warning(
+                        "TMDb rate-limit/error %s for %s, retry %s/%s in %.1fs",
+                        response.status_code, path, attempt + 1, MAX_RETRIES, delay,
+                    )
                     await asyncio.sleep(delay)
                     continue
                 response.raise_for_status()

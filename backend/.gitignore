@@ -1,0 +1,10 @@
+# Backend cache (SQLite)
+*.db
+cache.db
+.env
+
+# Python
+__pycache__/
+
+# Logs
+*.log

@@ -1,6 +1,7 @@
 import asyncio
 import csv
 import io
+import logging
 import os
 import re
 from pathlib import Path
@@ -20,21 +21,38 @@ _env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=_env_path)
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 
-# CORS: allow local dev and production frontend; use "*" for now, can restrict to ORIGINS later
-_CORS_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://your-frontend.pages.dev",  # placeholder for Cloudflare Pages URL
-]
+# CORS: FRONTEND_ORIGIN for production (e.g. Cloudflare Pages URL); else allow all
+_frontend_origin = (os.getenv("FRONTEND_ORIGIN") or "").strip()
+_cors_origins = ["http://localhost:5173", "http://localhost:3000"] if _frontend_origin else ["*"]
+if _frontend_origin:
+    _cors_origins.append(_frontend_origin)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def _startup():
+    api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "TMDB_API_KEY is not set. Set it in the environment (e.g. Render dashboard or backend/.env)."
+        )
+    logger.info("Backend started; TMDB_API_KEY is set.")
+
+
+@app.get("/health")
+def health() -> Dict[str, str]:
+    return {"status": "ok"}
+
 
 JOB_PROGRESS: Dict[str, Dict] = {}
 JOB_RESULTS: Dict[str, Dict] = {}
@@ -246,11 +264,13 @@ async def _process_job(
                 pass
         return rows, diary_entries
 
+    logger.info("Job %s started.", job_id)
     try:
         rows, diary_entries = await asyncio.to_thread(do_parse)
         n_total = len(rows)
         if n_total == 0:
             update(status="error", message="В CSV нет записей о фильмах")
+            logger.warning("Job %s: no rows in CSV.", job_id)
             return
 
         async with progress_lock:
@@ -341,7 +361,9 @@ async def _process_job(
 
         JOB_RESULTS[job_id] = result_payload
         _update_progress(job_id, status="done", percent=100, message="Готово")
+        logger.info("Job %s completed (%s films).", job_id, len(films))
     except Exception as exc:
+        logger.exception("Job %s failed: %s", job_id, exc)
         _update_progress(job_id, status="error", message=str(exc))
 
 
@@ -389,3 +411,9 @@ async def result(job_id: str) -> Dict:
     if progress_data.get("status") != "done":
         raise HTTPException(status_code=400, detail="Job is still processing")
     return JOB_RESULTS.get(job_id, {})
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "10000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
