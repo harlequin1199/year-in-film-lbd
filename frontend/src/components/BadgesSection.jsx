@@ -71,16 +71,20 @@ function BadgesSection({ badges }) {
       <div className="badge-grid">
         {items.map((badge) => (
           <div className={`badge-card tone-${badge.tone || 'gold'}`} key={badge.title}>
-            <div className="badge-icon-wrap">{ICONS[badge.iconKey] || ICONS.film}</div>
-            <span className="badge-title">{badge.title}</span>
-            <span className="badge-value">
-              {badge.isRating
-                ? formatRating(badge.value)
-                : typeof badge.value === 'string'
-                  ? badge.value
-                  : formatNumber(badge.value)}
-            </span>
-            <span className="badge-subtitle">{badge.subtitle}</span>
+            <div className="badge-icon-wrap" aria-hidden="true">
+              {ICONS[badge.iconKey] || ICONS.film}
+            </div>
+            <div className="badge-content">
+              <p className="badge-title">{badge.title}</p>
+              <p className="badge-value">
+                {badge.isRating
+                  ? formatRating(badge.value)
+                  : typeof badge.value === 'string'
+                    ? badge.value
+                    : formatNumber(badge.value)}
+              </p>
+              <p className="badge-subtitle">{badge.subtitle}</p>
+            </div>
           </div>
         ))}
       </div>

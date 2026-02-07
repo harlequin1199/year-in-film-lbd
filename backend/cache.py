@@ -2,15 +2,16 @@
 Persistent SQLite cache for TMDb search and movie details.
 TTL = 30 days.
 
-Concurrency model:
+Concurrency model (writer queue):
 - DB is initialized ONCE per process on FastAPI startup (init_cache_db).
 - All WRITES go through a single writer thread with one dedicated connection;
   set_search/set_movie enqueue and return immediately; batches commit every 50
-  writes or 1 second.
-- READS use thread-local connections (no PRAGMA/CREATE); many threads can read
-  concurrently. No "database is locked" because only one writer exists.
+  writes or 1 second. Writer uses PRAGMA busy_timeout and retries on lock/busy.
+- READS use thread-local connections; many threads can read concurrently (WAL).
+  Only one writer runs at a time, so no write/write or read/write lock storms.
 """
 import json
+import logging
 import os
 import queue
 import sqlite3
@@ -18,6 +19,8 @@ import threading
 import time
 from datetime import datetime, timedelta
 from typing import Any, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_DIR, "cache.db")
@@ -29,6 +32,9 @@ _WRITER_THREAD: Optional[threading.Thread] = None
 _WRITER_STOP = threading.Event()
 _BATCH_SIZE = 50
 _BATCH_TIMEOUT_S = 1.0
+_FLUSH_MAX_RETRIES = 5
+_FLUSH_RETRY_DELAY_S = 0.05
+_WRITER_BUSY_TIMEOUT_MS = 15_000
 
 # Thread-local read connections (no init_db, no writes)
 _read_local = threading.local()
@@ -37,6 +43,16 @@ _read_local = threading.local()
 def _connect(timeout: float = 15.0) -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=timeout)
     conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _connect_writer() -> sqlite3.Connection:
+    """Dedicated connection for the single writer thread; WAL + long busy_timeout."""
+    conn = sqlite3.connect(DB_PATH, timeout=float(_WRITER_BUSY_TIMEOUT_MS) / 1000.0)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(f"PRAGMA busy_timeout={_WRITER_BUSY_TIMEOUT_MS}")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 
@@ -91,7 +107,7 @@ def _is_expired(updated_at: str) -> bool:
         return True
 
 
-# --- Writer thread: single connection, batch commits ---
+# --- Writer thread: single connection, batch commits, retry on lock ---
 
 def _flush_batch(conn: sqlite3.Connection, batch: List[Tuple]) -> None:
     if not batch:
@@ -106,21 +122,41 @@ def _flush_batch(conn: sqlite3.Connection, batch: List[Tuple]) -> None:
         else:
             _, tid, p = x
             movie_items.append((tid, p, now))
-    if search_items:
-        conn.executemany(
-            "INSERT OR REPLACE INTO search_cache (title, year, tmdb_id, updated_at) VALUES (?, ?, ?, ?)",
-            search_items,
-        )
-    if movie_items:
-        conn.executemany(
-            "INSERT OR REPLACE INTO movie_cache (tmdb_id, payload_json, updated_at) VALUES (?, ?, ?)",
-            movie_items,
-        )
-    conn.commit()
+
+    last_err: Optional[Exception] = None
+    for attempt in range(_FLUSH_MAX_RETRIES):
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            if search_items:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO search_cache (title, year, tmdb_id, updated_at) VALUES (?, ?, ?, ?)",
+                    search_items,
+                )
+            if movie_items:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO movie_cache (tmdb_id, payload_json, updated_at) VALUES (?, ?, ?)",
+                    movie_items,
+                )
+            conn.commit()
+            return
+        except sqlite3.OperationalError as e:
+            last_err = e
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            err_msg = str(e).upper()
+            if "LOCKED" in err_msg or "BUSY" in err_msg:
+                if attempt < _FLUSH_MAX_RETRIES - 1:
+                    time.sleep(_FLUSH_RETRY_DELAY_S * (attempt + 1))
+                    continue
+            raise
+    if last_err is not None:
+        raise last_err
 
 
 def _writer_loop() -> None:
-    conn = _connect()
+    conn = _connect_writer()
     batch: List[Tuple[str, Any, ...]] = []
     deadline = time.monotonic() + _BATCH_TIMEOUT_S
     try:
@@ -130,9 +166,17 @@ def _writer_loop() -> None:
             except queue.Empty:
                 item = None
             if item is None:
-                # timeout or empty; flush if we have pending or deadline passed
                 if batch and (len(batch) >= _BATCH_SIZE or time.monotonic() >= deadline):
-                    _flush_batch(conn, batch)
+                    try:
+                        _flush_batch(conn, batch)
+                    except sqlite3.OperationalError as e:
+                        logger.warning("Cache writer flush failed (will retry later): %s", e)
+                        # Re-queue batch so we don't lose writes (optional: could drop or retry in place)
+                        for b in batch:
+                            try:
+                                _WRITE_QUEUE.put(b)
+                            except queue.Full:
+                                pass
                     batch = []
                     deadline = time.monotonic() + _BATCH_TIMEOUT_S
                 continue
@@ -140,14 +184,27 @@ def _writer_loop() -> None:
                 break
             batch.append(item)
             if len(batch) >= _BATCH_SIZE or time.monotonic() >= deadline:
-                _flush_batch(conn, batch)
+                try:
+                    _flush_batch(conn, batch)
+                except sqlite3.OperationalError as e:
+                    logger.warning("Cache writer flush failed (will retry later): %s", e)
+                    for b in batch:
+                        try:
+                            _WRITE_QUEUE.put(b)
+                        except queue.Full:
+                            pass
                 batch = []
                 deadline = time.monotonic() + _BATCH_TIMEOUT_S
-        # Flush remaining
         if batch:
-            _flush_batch(conn, batch)
+            try:
+                _flush_batch(conn, batch)
+            except sqlite3.OperationalError as e:
+                logger.warning("Cache writer final flush failed: %s", e)
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def start_writer() -> None:
