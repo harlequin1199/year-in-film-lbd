@@ -84,6 +84,26 @@ STAGES = {
 
 BATCH_SIZE = 25
 
+# Memory guard (Linux: ru_maxrss is KB → MB = / 1024)
+MEMORY_MB_SLOW_2 = 420  # reduce concurrency to 2
+MEMORY_MB_SLOW_1 = 460  # reduce concurrency to 1
+MEMORY_MB_ABORT = 490   # abort job gracefully
+ABORT_MESSAGE = (
+    "Файл слишком большой для текущего сервера. Попробуйте меньший объём или повторите позже."
+)
+
+
+def get_memory_mb() -> Optional[float]:
+    """Return current process RSS in MB (Linux); None if unavailable (e.g. Windows)."""
+    if resource is None:
+        return None
+    try:
+        # Linux: ru_maxrss is in KB
+        rss_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return rss_kb / 1024.0
+    except (OSError, AttributeError):
+        return None
+
 
 def _parse_int(value: Optional[str]) -> Optional[int]:
     try:
@@ -298,12 +318,14 @@ async def _process_job(
         # Per-job in-memory caches; persistent cache uses module-level (one connection per call, thread-safe)
         job_search_cache: Dict[tuple, Optional[int]] = {}
         job_movie_cache: Dict[int, Dict] = {}
+        default_concurrency = int(os.getenv("TMDB_CONCURRENCY") or os.getenv("TMDB_MAX_CONCURRENCY") or "4")
+        current_concurrency = default_concurrency
         client = TMDbClient(
             api_key=api_key,
             job_search_cache=job_search_cache,
             job_movie_cache=job_movie_cache,
             cache_backend=cache_module,
-            max_concurrency=int(os.getenv("TMDB_MAX_CONCURRENCY", "10")),
+            max_concurrency=current_concurrency,
         )
 
         async def process_row(row: Dict) -> Optional[Dict]:
@@ -346,8 +368,46 @@ async def _process_job(
 
         films: List[Dict] = []
         done_so_far = 0
+        aborted = False
 
         for i in range(0, n_total, BATCH_SIZE):
+            # Memory guard: log every 200 films, reduce concurrency, or abort
+            if done_so_far > 0 and done_so_far % 200 == 0:
+                mem_mb = get_memory_mb()
+                if mem_mb is not None:
+                    logger.info("[memory] Job %s after %s films: %.1f MB", job_id, done_so_far, mem_mb)
+
+            mem_mb = get_memory_mb()
+            if mem_mb is not None:
+                if mem_mb > MEMORY_MB_ABORT:
+                    logger.warning("[memory] Job %s abort: %.1f MB > %s MB", job_id, mem_mb, MEMORY_MB_ABORT)
+                    async with progress_lock:
+                        update(status="error", message=ABORT_MESSAGE)
+                    aborted = True
+                    break
+                if mem_mb > MEMORY_MB_SLOW_1 and current_concurrency > 1:
+                    await client.close()
+                    current_concurrency = 1
+                    client = TMDbClient(
+                        api_key=api_key,
+                        job_search_cache=job_search_cache,
+                        job_movie_cache=job_movie_cache,
+                        cache_backend=cache_module,
+                        max_concurrency=1,
+                    )
+                    logger.info("[memory] Job %s concurrency reduced to 1 (%.1f MB)", job_id, mem_mb)
+                elif mem_mb > MEMORY_MB_SLOW_2 and current_concurrency > 2:
+                    await client.close()
+                    current_concurrency = 2
+                    client = TMDbClient(
+                        api_key=api_key,
+                        job_search_cache=job_search_cache,
+                        job_movie_cache=job_movie_cache,
+                        cache_backend=cache_module,
+                        max_concurrency=2,
+                    )
+                    logger.info("[memory] Job %s concurrency reduced to 2 (%.1f MB)", job_id, mem_mb)
+
             batch = rows[i : i + BATCH_SIZE]
             batch_results = await asyncio.gather(
                 *[process_row(r) for r in batch],
@@ -363,6 +423,8 @@ async def _process_job(
                 update(done=done_so_far)
 
         await client.close()
+        if aborted:
+            return
 
         # Stage: analytics
         async with progress_lock:

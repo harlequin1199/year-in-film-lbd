@@ -27,7 +27,9 @@ DB_PATH = os.path.join(_DIR, "cache.db")
 TTL_DAYS = 30
 
 # Writer: one thread, one connection, processes this queue (item = ("search", title, year, tmdb_id) | ("movie", tmdb_id, payload))
-_WRITE_QUEUE: queue.Queue = queue.Queue()
+# Bounded queue for backpressure: producers (set_search/set_movie via to_thread) block when full
+_WRITE_QUEUE_MAXSIZE = 2000
+_WRITE_QUEUE: queue.Queue = queue.Queue(maxsize=_WRITE_QUEUE_MAXSIZE)
 _WRITER_THREAD: Optional[threading.Thread] = None
 _WRITER_STOP = threading.Event()
 _BATCH_SIZE = 50
