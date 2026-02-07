@@ -14,7 +14,24 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('jspdf') || id.includes('exportPdfReport') || id.includes('pdfFont')) {
+            return 'vendor-pdf'
+          }
+          if (
+            id.includes('LazyChartsSection') ||
+            id.includes('TimelineChart') ||
+            id.includes('ByYearChart')
+          ) {
+            return 'vendor-charts'
+          }
+          if (id.includes('FavoriteDecades')) {
+            return 'vendor-decades'
+          }
+        },
       },
     },
     minify: 'esbuild',

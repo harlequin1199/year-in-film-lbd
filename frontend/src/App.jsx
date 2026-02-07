@@ -1,21 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import UploadZone from './components/UploadZone.jsx'
 import StatsCards from './components/StatsCards.jsx'
 import GenresSection from './components/GenresSection.jsx'
 import HiddenGemsSection from './components/HiddenGemsSection.jsx'
 import TagsTable from './components/TagsTable.jsx'
 import FilmsGrid from './components/FilmsGrid.jsx'
-import TimelineChart from './components/TimelineChart.jsx'
-import ByYearChart from './components/ByYearChart.jsx'
 import ProgressStatus from './components/ProgressStatus.jsx'
-import FavoriteDecades from './components/FavoriteDecades.jsx'
 import WatchTimeCard from './components/WatchTimeCard.jsx'
 import LanguagesSection from './components/LanguagesSection.jsx'
 import ToggleRankedList from './components/ToggleRankedList.jsx'
 import BadgesSection from './components/BadgesSection.jsx'
-import { exportPdfReport } from './utils/exportPdfReport.js'
 import YearFilter from './components/YearFilter.jsx'
 import { computeAggregations, computeHiddenGems, filterFilmsByYears, formatYearRange, getYearRangeLabel } from './utils/analyticsClient.js'
+
+const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
+const LazyFavoriteDecades = lazy(() => import('./components/FavoriteDecades.jsx'))
 
 // Backend URL: set VITE_API_URL in Cloudflare Pages; fallback for local dev
 const API_URL = (import.meta.env.VITE_API_URL || '').trim() || 'http://localhost:8000'
@@ -167,10 +166,11 @@ function App() {
     setSelectedYears([])
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!analysis || !computed || exporting) return
     setExporting(true)
     try {
+      const { exportPdfReport } = await import('./utils/exportPdfReport.js')
       exportPdfReport({
         stats: computed.stats,
         watchTime: computed.watchTime,
@@ -262,27 +262,18 @@ function App() {
           </section>
           <section className="grid">
             <TagsTable tags={computed.topTags} />
-            {analysis.hasDiary && (() => {
-              const tl = computed.timeline || []
-              const monthsWithData = tl.filter((m) => m.count > 0)
-              const uniqueMonths = new Set(tl.map((m) => m.month)).size
-              if (uniqueMonths <= 1 || monthsWithData.length === 0) return null
-              return <TimelineChart timeline={computed.timeline} />
-            })()}
-            {!analysis.hasDiary && (
-              <section className="card activity-unavailable">
-                <div className="card-header">
-                  <h3>Активность недоступна</h3>
-                  <p>ratings.csv содержит дату выставления оценки, а не дату просмотра. Чтобы построить активность по месяцам, добавь diary.csv.</p>
-                </div>
-              </section>
-            )}
+            <Suspense fallback={null}>
+              <LazyChartsSection
+                timeline={computed.timeline}
+                films={filteredFilms}
+                hasDiary={analysis.hasDiary}
+              />
+            </Suspense>
           </section>
           <section className="grid">
-            <ByYearChart films={filteredFilms} />
-          </section>
-          <section className="grid">
-            <FavoriteDecades films={filteredFilms} />
+            <Suspense fallback={null}>
+              <LazyFavoriteDecades films={filteredFilms} />
+            </Suspense>
           </section>
           <section className="grid">
             <WatchTimeCard watchTime={computed.watchTime} />

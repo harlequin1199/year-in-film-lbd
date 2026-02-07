@@ -140,6 +140,12 @@ body {
   color: #6d7a90;
 }
 
+.upload-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #f7c8d0;
+}
+
 .activity-unavailable .card-header p {
   margin-top: 8px;
 }
