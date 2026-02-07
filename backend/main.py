@@ -1,6 +1,8 @@
 import asyncio
 import csv
+import gc
 import io
+import json
 import logging
 import os
 import re
@@ -8,9 +10,15 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
+try:
+    import resource
+except ImportError:
+    resource = None  # Windows has no resource
+
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from analytics import analyze_films
 import cache as cache_module
@@ -63,7 +71,7 @@ def health() -> Dict[str, str]:
 
 
 JOB_PROGRESS: Dict[str, Dict] = {}
-JOB_RESULTS: Dict[str, Dict] = {}
+REPORT_DIR = "/tmp"
 
 # Progress stages and messages (Russian)
 STAGES = {
@@ -216,6 +224,7 @@ def _update_progress(
     percent: Optional[int] = None,
     message: Optional[str] = None,
     status: Optional[str] = None,
+    report_path: Optional[str] = None,
 ) -> None:
     p = JOB_PROGRESS.get(job_id)
     if not p:
@@ -235,6 +244,8 @@ def _update_progress(
         p["message"] = message
     if status is not None:
         p["status"] = status
+    if report_path is not None:
+        p["report_path"] = report_path
 
 
 def _init_progress(job_id: str) -> None:
@@ -360,15 +371,37 @@ async def _process_job(
         if has_diary:
             _merge_diary_into_films(films, diary_entries)
 
+        if resource:
+            rss_before_build = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            logger.info("[OOM debug] Memory before building report (ru_maxrss): %s kB", rss_before_build)
         result_payload = await asyncio.to_thread(analyze_films, films, has_diary)
         result_payload["hasDiary"] = has_diary
         result_payload["dataSource"] = "both" if has_diary else "ratings"
 
+        if resource:
+            rss_after_build = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            logger.info("[OOM debug] Memory after building report (ru_maxrss): %s kB", rss_after_build)
+
         async with progress_lock:
             update(stage="finalizing", message=STAGES["finalizing"])
 
-        JOB_RESULTS[job_id] = result_payload
-        _update_progress(job_id, status="done", percent=100, message="Готово")
+        report_path = os.path.join(REPORT_DIR, f"year_in_film_report_{job_id}.json")
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(result_payload, f, ensure_ascii=False)
+
+        if resource:
+            rss_after_write = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            logger.info("[OOM debug] Memory after writing report (ru_maxrss): %s kB", rss_after_write)
+        try:
+            file_size = os.path.getsize(report_path)
+            logger.info("[OOM debug] Report file size: %s bytes", file_size)
+        except OSError:
+            pass
+
+        del result_payload
+        gc.collect()
+
+        _update_progress(job_id, status="done", percent=100, message="Готово", report_path=report_path)
         logger.info("Job %s completed (%s films).", job_id, len(films))
     except Exception as exc:
         logger.exception("Job %s failed: %s", job_id, exc)
@@ -410,7 +443,7 @@ async def progress(job_id: str) -> Dict:
 
 
 @app.get("/api/result/{job_id}")
-async def result(job_id: str) -> Dict:
+async def result(job_id: str):
     progress_data = JOB_PROGRESS.get(job_id)
     if not progress_data:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -418,7 +451,10 @@ async def result(job_id: str) -> Dict:
         raise HTTPException(status_code=400, detail=progress_data.get("message") or "Job failed")
     if progress_data.get("status") != "done":
         raise HTTPException(status_code=400, detail="Job is still processing")
-    return JOB_RESULTS.get(job_id, {})
+    report_path = progress_data.get("report_path")
+    if not report_path or not os.path.isfile(report_path):
+        raise HTTPException(status_code=500, detail="Report file not found")
+    return FileResponse(report_path, media_type="application/json")
 
 
 if __name__ == "__main__":

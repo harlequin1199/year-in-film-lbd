@@ -1,6 +1,15 @@
+import heapq
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+
+# Caps to prevent OOM when building/sorting huge lists (e.g. 2600+ films)
+MAX_THEMES = 200
+MAX_ACTORS = 200
+MAX_DIRECTORS = 200
+MAX_LANGUAGES = 50
+MAX_COUNTRIES = 50
+MAX_GENRES = 200
 
 
 def _parse_month(date_str: Optional[str]) -> Optional[str]:
@@ -26,9 +35,27 @@ def _rating_bucket(value: float) -> float:
     return round(value * 2) / 2
 
 
-def _build_ranked_stats(items: defaultdict) -> List[Dict]:
+def _sort_key_count(stats: Dict) -> Tuple:
+    avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
+    return (stats["count"], avg, stats["high_45"])
+
+
+def _sort_key_avg(stats: Dict) -> Tuple:
+    avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
+    return (avg, stats["count"])
+
+
+def _build_ranked_stats(items: defaultdict, max_n: Optional[int] = None) -> List[Dict]:
+    if max_n is not None and len(items) > max_n:
+        top_pairs = heapq.nlargest(
+            max_n,
+            items.items(),
+            key=lambda p: _sort_key_count(p[1]),
+        )
+    else:
+        top_pairs = list(items.items())
     ranked = []
-    for name, stats in items.items():
+    for name, stats in top_pairs:
         avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
         avg = round(avg, 2)
         share_45 = round(stats["high_45"] / stats["count"], 2) if stats["count"] else 0
@@ -45,18 +72,20 @@ def _build_ranked_stats(items: defaultdict) -> List[Dict]:
     return ranked
 
 
-def _build_ranked_avg(items: Dict[str, Dict], min_count: int) -> List[Dict]:
+def _build_ranked_avg(items: Dict[str, Dict], min_count: int, max_n: Optional[int] = None) -> List[Dict]:
+    filtered = [(n, s) for n, s in items.items() if s["count"] >= min_count]
+    if max_n is not None and len(filtered) > max_n:
+        top_pairs = heapq.nlargest(max_n, filtered, key=lambda p: _sort_key_avg(p[1]))
+    else:
+        top_pairs = filtered
     ranked = []
-    for name, stats in items.items():
-        if stats["count"] < min_count:
-            continue
+    for name, stats in top_pairs:
         avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
-        avg = round(avg, 2)
         ranked.append(
             {
                 "name": name,
                 "count": stats["count"],
-                "avg_rating": avg,
+                "avg_rating": round(avg, 2),
                 "high_45": stats["high_45"],
             }
         )
@@ -127,10 +156,16 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         if rating_date:
             available_years.add(rating_date.year)
 
-    top_genres = _build_ranked_stats(genre_stats)
+    top_genres = _build_ranked_stats(genre_stats, MAX_GENRES)
 
+    def _tag_sort_key(p):
+        name, stats = p
+        avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
+        return (stats["high_45"] * avg, stats["count"])
+
+    tag_top = heapq.nlargest(MAX_THEMES, tag_stats.items(), key=_tag_sort_key)
     top_tags = []
-    for name, stats in tag_stats.items():
+    for name, stats in tag_top:
         avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
         avg = round(avg, 2)
         love_score = round(stats["high_45"] * avg, 2)
@@ -144,15 +179,16 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
             }
         )
     top_tags.sort(key=lambda t: (t["loveScore"], t["count"]), reverse=True)
-    top_directors = _build_ranked_stats(director_stats)
-    top_countries = _build_ranked_stats(country_stats)
+    top_directors = _build_ranked_stats(director_stats, MAX_DIRECTORS)
+    top_countries = _build_ranked_stats(country_stats, MAX_COUNTRIES)
 
     top_directors_by_count = top_directors[:10]
-    top_directors_by_avg = _build_ranked_avg(director_stats, 3)[:10]
-    top_actors_by_count = _build_ranked_stats(actor_stats)[:15]
-    top_actors_by_avg = _build_ranked_avg(actor_stats, 3)[:15]
+    top_directors_by_avg = _build_ranked_avg(director_stats, 3, MAX_DIRECTORS)[:10]
+    top_actors_full = _build_ranked_stats(actor_stats, MAX_ACTORS)
+    top_actors_by_count = top_actors_full[:15]
+    top_actors_by_avg = _build_ranked_avg(actor_stats, 3, MAX_ACTORS)[:15]
     top_countries_by_count = top_countries[:10]
-    top_countries_by_avg = _build_ranked_avg(country_stats, 5)[:10]
+    top_countries_by_avg = _build_ranked_avg(country_stats, 5, MAX_COUNTRIES)[:10]
 
     total_countries_count = len(country_stats)
     total_languages_count = 0
@@ -233,8 +269,10 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
                 weekday_stats["rated"] += 1
 
     total_languages_count = len(language_stats)
+    lang_sort_key = lambda p: (p[1]["count"], p[1]["sum_rating"] / p[1]["count"] if p[1]["count"] else 0)
+    lang_top = heapq.nlargest(MAX_LANGUAGES, language_stats.items(), key=lang_sort_key)
     top_languages_by_count = []
-    for code, stats in language_stats.items():
+    for code, stats in lang_top:
         avg = stats["sum_rating"] / stats["count"] if stats["count"] else 0
         top_languages_by_count.append(
             {
@@ -354,10 +392,10 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
                 key=lambda d: (d[1]["sum_rating"] / d[1]["rated"], d[1]["count"]),
             )[0]
 
-    top_genres_by_avg = _build_ranked_avg(genre_stats, 5)
-    top_countries_by_avg = _build_ranked_avg(country_stats, 5)
-    top_directors_by_avg = _build_ranked_avg(director_stats, 3)
-    top_tags_by_avg = _build_ranked_avg(tag_stats, 8)
+    top_genres_by_avg = _build_ranked_avg(genre_stats, 5, MAX_GENRES)
+    top_countries_by_avg = _build_ranked_avg(country_stats, 5, MAX_COUNTRIES)
+    top_directors_by_avg = _build_ranked_avg(director_stats, 3, MAX_DIRECTORS)
+    top_tags_by_avg = _build_ranked_avg(tag_stats, 8, MAX_THEMES)
 
     longest_film = None
     shortest_film = None
@@ -506,9 +544,8 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
 
     badges = badges[:12] if len(badges) > 12 else badges
 
-    top_rated = sorted(
-        films, key=lambda f: ((f.get("rating") or 0), (f.get("year") or 0)), reverse=True
-    )[:12]
+    _top_rated_key = lambda f: ((f.get("rating") or 0), (f.get("year") or 0))
+    top_rated = heapq.nlargest(12, films, key=_top_rated_key)
     top_rated_films = [
         {
             "title": f.get("title"),
