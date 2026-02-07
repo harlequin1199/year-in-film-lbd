@@ -3,13 +3,22 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-# Caps to prevent OOM when building/sorting huge lists (e.g. 2600+ films)
+# Report output caps (return only top-N)
 MAX_THEMES = 200
 MAX_ACTORS = 200
 MAX_DIRECTORS = 200
 MAX_LANGUAGES = 50
 MAX_COUNTRIES = 50
 MAX_GENRES = 200
+MAX_FILMS_LITE = 500
+
+# Internal counters cap during processing (avoid huge dicts)
+CAP_THEMES = 2000
+CAP_ACTORS = 3000
+CAP_DIRECTORS = 2000
+CAP_GENRES = 500
+CAP_COUNTRIES = 500
+CAP_LANGUAGES = 100
 
 
 def _parse_month(date_str: Optional[str]) -> Optional[str]:
@@ -155,6 +164,25 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         rating_date = _parse_date(film.get("date"))
         if rating_date:
             available_years.add(rating_date.year)
+
+    def _prune_stats(stats: defaultdict, cap: int) -> None:
+        if len(stats) <= cap:
+            return
+        top = heapq.nlargest(cap, stats.items(), key=lambda p: _sort_key_count(p[1]))
+        stats.clear()
+        for k, v in top:
+            stats[k] = v
+
+    _prune_stats(tag_stats, CAP_THEMES)
+    _prune_stats(genre_stats, CAP_GENRES)
+    _prune_stats(director_stats, CAP_DIRECTORS)
+    _prune_stats(actor_stats, CAP_ACTORS)
+    _prune_stats(country_stats, CAP_COUNTRIES)
+    if len(language_stats) > CAP_LANGUAGES:
+        top_lang = heapq.nlargest(CAP_LANGUAGES, language_stats.items(), key=lambda p: (p[1]["count"], p[1]["sum_rating"] / p[1]["count"] if p[1]["count"] else 0))
+        language_stats.clear()
+        for k, v in top_lang:
+            language_stats[k] = v
 
     top_genres = _build_ranked_stats(genre_stats, MAX_GENRES)
 
@@ -561,8 +589,11 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         for f in top_rated
     ]
 
+    # Cap filmsLite so report stays small (no full 10k list)
+    _fl_key = lambda f: ((f.get("rating") or 0), (f.get("year") or 0))
+    films_for_lite = heapq.nlargest(MAX_FILMS_LITE, films, key=_fl_key)
     films_lite = []
-    for f in films:
+    for f in films_for_lite:
         va = f.get("tmdb_vote_average")
         vc = f.get("tmdb_vote_count") or 0
         entry = {

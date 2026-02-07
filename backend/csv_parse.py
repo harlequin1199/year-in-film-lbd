@@ -1,11 +1,12 @@
 """
 Shared CSV parsing and diary merge for ratings/diary.
 Used by FastAPI (for validation) and by the worker process.
+Stream parsing: never load full CSV into memory.
 """
 import csv
 import io
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 
 def _parse_int(value: Optional[str]) -> Optional[int]:
@@ -37,7 +38,7 @@ def _find_column(fieldnames: List[str], *candidates: str) -> Optional[str]:
 
 
 def parse_ratings_csv_fast(text: str) -> List[Dict]:
-    """Lightweight parse: only needed columns."""
+    """Lightweight parse: only needed columns (loads into list). Use stream for large files."""
     reader = csv.DictReader(io.StringIO(text))
     fieldnames = list(reader.fieldnames or [])
     if not fieldnames:
@@ -65,6 +66,45 @@ def parse_ratings_csv_fast(text: str) -> List[Dict]:
             "letterboxd_url": (row.get(uri_col) or "").strip() or None,
         })
     return rows
+
+
+def count_ratings_csv_rows(filepath: str) -> int:
+    """Count data rows in ratings CSV (row-by-row, no full load)."""
+    with open(filepath, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            return 0
+        name_col = _find_column(list(reader.fieldnames), "Name", "name", "Title")
+        if not name_col:
+            return 0
+        return sum(1 for row in reader if (row.get(name_col) or "").strip())
+
+
+def stream_ratings_csv(filepath: str) -> Iterator[Dict]:
+    """Yield ratings rows one-by-one; never load full CSV into memory."""
+    with open(filepath, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        if not fieldnames:
+            return
+        name_col = _find_column(fieldnames, "Name", "name", "Title")
+        year_col = _find_column(fieldnames, "Year", "year")
+        rating_col = _find_column(fieldnames, "Rating", "rating")
+        date_col = _find_column(fieldnames, "Date", "date")
+        uri_col = _find_column(fieldnames, "Letterboxd URI", "URI", "letterboxd")
+        if not name_col:
+            return
+        for row in reader:
+            title = (row.get(name_col) or "").strip()
+            if not title:
+                continue
+            yield {
+                "title": title,
+                "year": _parse_int(row.get(year_col)) if year_col else None,
+                "rating": _parse_float(row.get(rating_col)) if rating_col else None,
+                "date": (row.get(date_col) or "").strip() if date_col else None,
+                "letterboxd_url": (row.get(uri_col) or "").strip() or None,
+            }
 
 
 def parse_diary_csv(text: str) -> List[Dict]:

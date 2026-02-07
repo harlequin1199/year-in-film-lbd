@@ -3,9 +3,12 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Optional
 from uuid import uuid4
+
+TMP_CLEANUP_AGE_SEC = 2 * 60 * 60  # 2 hours
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -40,6 +43,25 @@ PROGRESS_DIR = "/tmp"
 BUSY_MESSAGE = "Сервер занят обработкой другого отчёта. Попробуйте позже."
 
 
+def _cleanup_old_tmp_files() -> None:
+    """Remove progress/report/ratings/diary files in /tmp older than 2 hours."""
+    try:
+        names = os.listdir(PROGRESS_DIR)
+    except OSError:
+        return
+    now = time.time()
+    for name in names:
+        if not (name.startswith("progress_") or name.startswith("report_") or name.startswith("ratings_") or name.startswith("diary_")):
+            continue
+        path = os.path.join(PROGRESS_DIR, name)
+        try:
+            if os.path.isfile(path) and (now - os.path.getmtime(path)) > TMP_CLEANUP_AGE_SEC:
+                os.unlink(path)
+                logger.info("Cleaned old tmp file: %s", name)
+        except OSError:
+            pass
+
+
 @app.on_event("startup")
 def _startup():
     api_key = (os.getenv("TMDB_API_KEY") or "").strip()
@@ -47,6 +69,7 @@ def _startup():
         raise RuntimeError(
             "TMDB_API_KEY is not set. Set it in the environment (e.g. Render dashboard or backend/.env)."
         )
+    _cleanup_old_tmp_files()
     logger.info("Backend started; TMDB_API_KEY is set (worker runs analysis in separate process).")
 
 
@@ -104,6 +127,8 @@ async def analyze(
 
     if not _worker_lock_try_acquire():
         raise HTTPException(status_code=429, detail=BUSY_MESSAGE)
+
+    _cleanup_old_tmp_files()
 
     job_id = str(uuid4())
     ratings_path = os.path.join(PROGRESS_DIR, f"ratings_{job_id}.csv")

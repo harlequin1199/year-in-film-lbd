@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 import cache as cache_module
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
-DEFAULT_CONCURRENCY = 10
+DEFAULT_CONCURRENCY = 4
 RETRY_DELAYS = (0.5, 1.0, 2.0, 4.0, 8.0)
 MAX_RETRIES = 5
 
@@ -124,12 +124,68 @@ class TMDbClient:
         )
         return tmdb_id
 
-    async def get_movie_details(self, tmdb_id: int) -> Dict[str, Any]:
+    async def get_movie_minimal(self, tmdb_id: int) -> Dict[str, Any]:
+        """Lightweight: no credits/keywords. For phase 1 (all movies)."""
         if tmdb_id in self._job_movie:
-            return self._job_movie[tmdb_id]
+            p = self._job_movie[tmdb_id]
+            if isinstance(p, dict) and "credits" not in p and "keywords" not in p:
+                return p
+            if isinstance(p, dict):
+                return {
+                    "id": p.get("id"),
+                    "poster_path": p.get("poster_path"),
+                    "vote_average": p.get("vote_average"),
+                    "vote_count": p.get("vote_count"),
+                    "genres": p.get("genres", []),
+                    "runtime": p.get("runtime"),
+                    "production_countries": p.get("production_countries", []),
+                    "original_language": p.get("original_language"),
+                    "release_date": p.get("release_date"),
+                }
 
         payload = await asyncio.to_thread(self._cache.get_movie, tmdb_id)
         if payload is not None:
+            minimal = {
+                "id": payload.get("id"),
+                "poster_path": payload.get("poster_path"),
+                "vote_average": payload.get("vote_average"),
+                "vote_count": payload.get("vote_count"),
+                "genres": payload.get("genres", []),
+                "runtime": payload.get("runtime"),
+                "production_countries": payload.get("production_countries", []),
+                "original_language": payload.get("original_language"),
+                "release_date": payload.get("release_date"),
+            }
+            self._job_movie[tmdb_id] = minimal
+            return minimal
+
+        async with self._semaphore:
+            payload = await self._get(f"movie/{tmdb_id}")
+
+        minimal = {
+            "id": payload.get("id"),
+            "poster_path": payload.get("poster_path"),
+            "vote_average": payload.get("vote_average"),
+            "vote_count": payload.get("vote_count"),
+            "genres": payload.get("genres", []),
+            "runtime": payload.get("runtime"),
+            "production_countries": payload.get("production_countries", []),
+            "original_language": payload.get("original_language"),
+            "release_date": payload.get("release_date"),
+        }
+        self._job_movie[tmdb_id] = minimal
+        await asyncio.to_thread(self._cache.set_movie, tmdb_id, minimal)
+        return minimal
+
+    async def get_movie_details(self, tmdb_id: int) -> Dict[str, Any]:
+        """Full: with keywords,credits. For phase 2 (selected movies only)."""
+        if tmdb_id in self._job_movie:
+            p = self._job_movie[tmdb_id]
+            if isinstance(p, dict) and ("credits" in p or "keywords" in p):
+                return p
+
+        payload = await asyncio.to_thread(self._cache.get_movie, tmdb_id)
+        if payload is not None and isinstance(payload, dict) and ("credits" in payload or "keywords" in payload):
             self._job_movie[tmdb_id] = payload
             return payload
 
@@ -182,6 +238,47 @@ class TMDbClient:
             "runtime": movie.get("runtime"),
             "original_language": movie.get("original_language"),
         }
+
+    def _enriched_from_minimal(self, tmdb_id: int, movie: Dict[str, Any]) -> Dict:
+        genres = [g.get("name") for g in movie.get("genres", []) if g.get("name")]
+        countries = [c.get("name") for c in movie.get("production_countries", []) if c.get("name")]
+        release_date = movie.get("release_date") or ""
+        release_year = int(release_date[:4]) if len(release_date) >= 4 else None
+        return {
+            "tmdb_id": tmdb_id,
+            "poster_path": movie.get("poster_path"),
+            "vote_average": movie.get("vote_average"),
+            "vote_count": movie.get("vote_count") or 0,
+            "genres": genres,
+            "keywords": [],
+            "directors": [],
+            "actors": [],
+            "countries": countries,
+            "runtime": movie.get("runtime"),
+            "original_language": movie.get("original_language"),
+            "release_year": release_year,
+        }
+
+    async def get_enriched_minimal(self, title: str, year: Optional[int]) -> Dict:
+        """Phase 1: search + minimal details only (no credits/keywords)."""
+        tmdb_id = await self.search_movie(title, year)
+        if tmdb_id is None:
+            return {
+                "tmdb_id": None,
+                "poster_path": None,
+                "vote_average": None,
+                "vote_count": 0,
+                "genres": [],
+                "keywords": [],
+                "directors": [],
+                "actors": [],
+                "countries": [],
+                "runtime": None,
+                "original_language": None,
+                "release_year": None,
+            }
+        movie = await self.get_movie_minimal(tmdb_id)
+        return self._enriched_from_minimal(tmdb_id, movie)
 
     async def get_enriched(self, title: str, year: Optional[int]) -> Dict:
         tmdb_id = await self.search_movie(title, year)
