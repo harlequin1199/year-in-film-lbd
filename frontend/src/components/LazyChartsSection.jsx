@@ -12,7 +12,7 @@ function LazyChartsSection({ timeline, films, hasDiary }) {
   const showTimeline = hasDiary && uniqueMonths > 1 && monthsWithData.length > 0
 
   return (
-    <>
+    <div style={{ display: 'contents' }}>
       {showTimeline && <TimelineChart timeline={timeline} />}
       {!showTimeline && !hasDiary && (
         <section className="card activity-unavailable">
@@ -22,10 +22,10 @@ function LazyChartsSection({ timeline, films, hasDiary }) {
           </div>
         </section>
       )}
-      <section className="grid">
+      <section className="chart-by-year-row">
         <ByYearChart films={films} />
       </section>
-    </>
+    </div>
   )
 }
 
