@@ -1,8 +1,14 @@
+import { useState } from 'react'
 import Stars from './Stars.jsx'
 import { formatNumber, formatRating } from '../utils/format.js'
 
+const LIMIT = 10
+
 function TagsTable({ tags }) {
-  const top = (tags || []).slice(0, 10)
+  const [expanded, setExpanded] = useState(false)
+  const full = tags || []
+  const list = expanded ? full : full.slice(0, LIMIT)
+  const hasMore = full.length > LIMIT
 
   return (
     <section className="card">
@@ -17,7 +23,7 @@ function TagsTable({ tags }) {
           <span>Средняя</span>
           <span>Индекс любви*</span>
         </div>
-        {top.map((tag) => (
+        {list.map((tag) => (
           <div className="table-row" key={tag.name}>
             <span className="tag-name">{tag.name}</span>
             <span>{formatNumber(tag.count)}</span>
@@ -29,6 +35,11 @@ function TagsTable({ tags }) {
           </div>
         ))}
       </div>
+      {hasMore && (
+        <button type="button" className="show-more-btn" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? 'Свернуть' : 'Показать ещё'}
+        </button>
+      )}
       <p className="table-footnote">
         Индекс любви* = (количество фильмов на 4.5–5★) × (средняя оценка темы)
       </p>

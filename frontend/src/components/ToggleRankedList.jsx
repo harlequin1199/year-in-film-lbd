@@ -10,13 +10,18 @@ function ToggleRankedList({
   emptyText,
   countLabel = 'Чаще всего',
   avgLabel = 'Самые любимые',
+  sectionKey,
 }) {
   const [mode, setMode] = useState('count')
+  const [expanded, setExpanded] = useState(false)
   const items = mode === 'count' ? byCount : byAvg
-  const list = (items || []).slice(0, 10)
+  const fullList = items || []
+  const limit = 10
+  const list = expanded ? fullList : fullList.slice(0, limit)
+  const hasMore = fullList.length > limit
 
   return (
-    <section className="card">
+    <section className="card" data-section={sectionKey || undefined}>
       <div className="card-header">
         <h3>{title}</h3>
         <p>{subtitle}</p>
@@ -58,6 +63,15 @@ function ToggleRankedList({
             </div>
           ))}
         </div>
+      )}
+      {hasMore && (
+        <button
+          type="button"
+          className="show-more-btn"
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded ? 'Свернуть' : 'Показать ещё'}
+        </button>
       )}
     </section>
   )

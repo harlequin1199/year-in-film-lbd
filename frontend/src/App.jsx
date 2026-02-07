@@ -11,13 +11,16 @@ import LanguagesSection from './components/LanguagesSection.jsx'
 import ToggleRankedList from './components/ToggleRankedList.jsx'
 import BadgesSection from './components/BadgesSection.jsx'
 import YearFilter from './components/YearFilter.jsx'
+import { formatNumber, formatRating } from './utils/format.js'
 import { computeAggregations, computeHiddenGems, filterFilmsByYears, formatYearRange, getYearRangeLabel } from './utils/analyticsClient.js'
+import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
 const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
 const LazyFavoriteDecades = lazy(() => import('./components/FavoriteDecades.jsx'))
 
 // Backend URL: set VITE_API_URL in Cloudflare Pages; fallback for local dev
 const API_URL = (import.meta.env.VITE_API_URL || '').trim() || 'http://localhost:8000'
+const SHOW_MOCK_UI = import.meta.env.DEV && USE_MOCKS
 
 function App() {
   const [analysis, setAnalysis] = useState(null)
@@ -28,10 +31,12 @@ function App() {
   const [exporting, setExporting] = useState(false)
   const [availableYears, setAvailableYears] = useState([])
   const [selectedYears, setSelectedYears] = useState([])
+  const [lastUploadedFileName, setLastUploadedFileName] = useState('')
+  const [demoMockId, setDemoMockId] = useState(MOCK_OPTIONS[0]?.id || 'mock_ratings_only')
   const intervalRef = useRef(null)
 
   useEffect(() => {
-    if (!jobId) return undefined
+    if (!jobId || USE_MOCKS) return undefined
 
     const poll = async () => {
       try {
@@ -87,9 +92,14 @@ function App() {
 
   const handleUpload = async (ratingsFile, diaryFile = null) => {
     if (!ratingsFile) return
+    if (USE_MOCKS) {
+      setError('В режиме демо используйте блок «Демо-отчёт» ниже.')
+      return
+    }
     setError('')
     setLoading(true)
     setAnalysis(null)
+    setLastUploadedFileName(ratingsFile.name || '')
     setProgress({ total: 0, done: 0, status: 'processing' })
 
     const formData = new FormData()
@@ -166,6 +176,25 @@ function App() {
     setSelectedYears([])
   }
 
+  const handleLoadDemo = async () => {
+    setError('')
+    setLoading(true)
+    setAnalysis(null)
+    try {
+      const { data, error: mockError } = await loadMock(demoMockId)
+      setLoading(false)
+      if (mockError) {
+        setError(mockError)
+        return
+      }
+      setAnalysis(data)
+      setLastUploadedFileName('демо')
+    } catch (err) {
+      setLoading(false)
+      setError(err.message || 'Не удалось загрузить демо')
+    }
+  }
+
   const handleExport = async () => {
     if (!analysis || !computed || exporting) return
     setExporting(true)
@@ -198,6 +227,11 @@ function App() {
         <div>
           <p className="eyebrow">Letterboxd · Итоги года</p>
           <h1>Твой год в кино</h1>
+          {analysis && computed && filteredFilms.length > 0 && (
+            <p className="hero-summary-line" aria-live="polite">
+              {formatNumber(computed.stats.totalFilms)} фильма · {formatRating(computed.stats.avgRating)}★ · {formatNumber(computed.stats.count45)} фильмов 4.5+ · {computed.stats.oldestYear}–{computed.stats.newestYear}
+            </p>
+          )}
           <p className="subtitle">
             Загрузите экспорт рейтингов Letterboxd и увидьте год через любимые
             жанры, темы и самые высокие оценки.
@@ -222,7 +256,42 @@ function App() {
           >
             Экспорт в PDF
           </button>
-          <UploadZone onUpload={handleUpload} loading={loading} />
+          <UploadZone
+            onUpload={handleUpload}
+            loading={loading}
+            selectedFileName={analysis ? lastUploadedFileName : ''}
+            selectedFilmCount={analysis ? filteredFilms.length : 0}
+          />
+          {SHOW_MOCK_UI && (
+            <div className="mock-demo-block">
+              <label className="mock-demo-label" htmlFor="demo-select">
+                Демо-отчёт
+              </label>
+              <div className="mock-demo-row">
+                <select
+                  id="demo-select"
+                  className="mock-demo-select"
+                  value={demoMockId}
+                  onChange={(e) => setDemoMockId(e.target.value)}
+                  disabled={loading}
+                >
+                  {MOCK_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-secondary mock-demo-btn"
+                  onClick={handleLoadDemo}
+                  disabled={loading}
+                >
+                  Загрузить демо
+                </button>
+              </div>
+            </div>
+          )}
           <p className="upload-privacy">
             Файл обрабатывается только для построения отчёта.
           </p>
@@ -291,6 +360,7 @@ function App() {
               byCount={computed.topCountriesByCount}
               byAvg={computed.topCountriesByAvgRating}
               emptyText="Нет данных по странам."
+              sectionKey="countries"
             />
             <ToggleRankedList
               title="Режиссёры"
@@ -298,6 +368,7 @@ function App() {
               byCount={computed.topDirectorsByCount}
               byAvg={computed.topDirectorsByAvgRating}
               emptyText="Нет данных по режиссёрам."
+              sectionKey="directors"
             />
           </section>
           <section className="grid">
@@ -307,6 +378,7 @@ function App() {
               byCount={computed.topActorsByCount}
               byAvg={computed.topActorsByAvgRating}
               emptyText="Нет данных по актёрам."
+              sectionKey="actors"
             />
           </section>
           <section className="grid">

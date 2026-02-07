@@ -1,0 +1,14 @@
+{
+  "filmsLite": [
+    { "title": "Фильм 1", "year": 2023, "rating": 4.5, "poster_url": null, "genres": ["Драма"], "keywords": ["любовь"], "directors": ["Режиссёр А"], "actors": ["Актёр 1"], "countries": ["Россия"], "original_language": "ru", "runtime": 120, "watchedDate": null },
+    { "title": "Фильм 2", "year": 2022, "rating": 5, "poster_url": null, "genres": ["Комедия"], "keywords": ["дружба"], "directors": ["Режиссёр Б"], "actors": ["Актёр 2"], "countries": ["США"], "original_language": "en", "runtime": 95, "watchedDate": null },
+    { "title": "Фильм 3", "year": 2024, "rating": 3.5, "poster_url": null, "genres": ["Триллер"], "keywords": [], "directors": [], "actors": [], "countries": ["Франция"], "original_language": "fr", "runtime": 110, "watchedDate": null }
+  ],
+  "filmsLiteAll": [
+    { "title": "Фильм 1", "year": 2023, "rating": 4.5, "poster_url": null, "genres": ["Драма"], "keywords": ["любовь"], "directors": ["Режиссёр А"], "actors": ["Актёр 1"], "countries": ["Россия"], "original_language": "ru", "runtime": 120, "watchedDate": null },
+    { "title": "Фильм 2", "year": 2022, "rating": 5, "poster_url": null, "genres": ["Комедия"], "keywords": ["дружба"], "directors": ["Режиссёр Б"], "actors": ["Актёр 2"], "countries": ["США"], "original_language": "en", "runtime": 95, "watchedDate": null },
+    { "title": "Фильм 3", "year": 2024, "rating": 3.5, "poster_url": null, "genres": ["Триллер"], "keywords": [], "directors": [], "actors": [], "countries": ["Франция"], "original_language": "fr", "runtime": 110, "watchedDate": null }
+  ],
+  "availableYears": [2022, 2023, 2024],
+  "hasDiary": false
+}

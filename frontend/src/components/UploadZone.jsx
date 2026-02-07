@@ -3,10 +3,11 @@ import { useRef, useState } from 'react'
 // Broad accept for mobile (iOS/Android often use different MIME types for CSV)
 const FILE_ACCEPT = '.csv,text/csv,application/csv,text/plain,application/vnd.ms-excel'
 
-function UploadZone({ onUpload, loading }) {
+function UploadZone({ onUpload, loading, selectedFileName = '', selectedFilmCount = 0 }) {
   const inputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const [selectError, setSelectError] = useState(null)
+  const hasFile = Boolean(selectedFileName)
 
   const detectFiles = (files) => {
     if (!files || files.length === 0) return { ratings: null, diary: null }
@@ -43,7 +44,7 @@ function UploadZone({ onUpload, loading }) {
   return (
     <div className="upload-area">
       <div
-        className={`upload-zone ${isDragging ? 'dragging' : ''}`}
+        className={`upload-zone ${isDragging ? 'dragging' : ''} ${hasFile ? 'has-file' : ''}`}
         onDragOver={(event) => {
           event.preventDefault()
           setIsDragging(true)
@@ -77,6 +78,14 @@ function UploadZone({ onUpload, loading }) {
         <button className="btn" type="button" disabled={loading}>
           {loading ? 'Анализирую…' : 'Выбрать файлы'}
         </button>
+        {hasFile && (
+          <p className="upload-file-state">
+            Выбран файл: <strong>{selectedFileName}</strong>
+            {selectedFilmCount > 0 && (
+              <> ({selectedFilmCount} {selectedFilmCount === 1 ? 'фильм' : selectedFilmCount < 5 ? 'фильма' : 'фильмов'})</>
+            )}
+          </p>
+        )}
       </div>
       {selectError && <p className="upload-error">{selectError}</p>}
       <p className="upload-hint">Добавить diary.csv (необязательно): выберите оба файла сразу.</p>

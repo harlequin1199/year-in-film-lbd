@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { formatNumber, formatRating, formatYear } from '../utils/format.js'
 
-const BAR_HEIGHT = 170
+const BAR_HEIGHT = 220
 
 const getBarWidth = (yearCount) => {
   if (yearCount <= 40) return 10

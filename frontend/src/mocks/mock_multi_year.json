@@ -1,0 +1,28 @@
+{
+  "filmsLite": [
+    { "title": "Фильм 2018", "year": 2018, "rating": 4, "poster_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": ["Д"], "actors": ["А"], "countries": ["Россия"], "original_language": "ru", "runtime": 90, "watchedDate": null },
+    { "title": "Фильм 2019", "year": 2019, "rating": 4.5, "poster_url": null, "genres": ["Комедия"], "keywords": ["б"], "directors": ["Д"], "actors": ["А"], "countries": ["США"], "original_language": "en", "runtime": 100, "watchedDate": null },
+    { "title": "Фильм 2020", "year": 2020, "rating": 5, "poster_url": null, "genres": ["Триллер"], "keywords": ["в"], "directors": ["Д"], "actors": ["А"], "countries": ["Франция"], "original_language": "fr", "runtime": 110, "watchedDate": null },
+    { "title": "Фильм 2021", "year": 2021, "rating": 3.5, "poster_url": null, "genres": ["Драма"], "keywords": ["г"], "directors": ["Д"], "actors": ["А"], "countries": ["Германия"], "original_language": "de", "runtime": 95, "watchedDate": null },
+    { "title": "Фильм 2022", "year": 2022, "rating": 4, "poster_url": null, "genres": ["Мелодрама"], "keywords": ["д"], "directors": ["Д"], "actors": ["А"], "countries": ["Италия"], "original_language": "it", "runtime": 88, "watchedDate": null },
+    { "title": "Фильм 2023", "year": 2023, "rating": 4.5, "poster_url": null, "genres": ["Фантастика"], "keywords": ["е"], "directors": ["Д"], "actors": ["А"], "countries": ["Япония"], "original_language": "ja", "runtime": 120, "watchedDate": null },
+    { "title": "Фильм 2024", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Детектив"], "keywords": ["ж"], "directors": ["Д"], "actors": ["А"], "countries": ["Испания"], "original_language": "es", "runtime": 105, "watchedDate": null },
+    { "title": "Фильм 2025", "year": 2025, "rating": 3, "poster_url": null, "genres": ["Ужасы"], "keywords": ["з"], "directors": ["Д"], "actors": ["А"], "countries": ["Великобритания"], "original_language": "en", "runtime": 92, "watchedDate": null },
+    { "title": "Фильм 2026", "year": 2026, "rating": 4, "poster_url": null, "genres": ["Боевик"], "keywords": ["и"], "directors": ["Д"], "actors": ["А"], "countries": ["Корея"], "original_language": "ko", "runtime": 115, "watchedDate": null },
+    { "title": "Фильм 2027", "year": 2027, "rating": 4.5, "poster_url": null, "genres": ["Драма"], "keywords": ["к"], "directors": ["Д"], "actors": ["А"], "countries": ["Россия"], "original_language": "ru", "runtime": 99, "watchedDate": null }
+  ],
+  "filmsLiteAll": [
+    { "title": "Фильм 2018", "year": 2018, "rating": 4, "poster_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": ["Д"], "actors": ["А"], "countries": ["Россия"], "original_language": "ru", "runtime": 90, "watchedDate": null },
+    { "title": "Фильм 2019", "year": 2019, "rating": 4.5, "poster_url": null, "genres": ["Комедия"], "keywords": ["б"], "directors": ["Д"], "actors": ["А"], "countries": ["США"], "original_language": "en", "runtime": 100, "watchedDate": null },
+    { "title": "Фильм 2020", "year": 2020, "rating": 5, "poster_url": null, "genres": ["Триллер"], "keywords": ["в"], "directors": ["Д"], "actors": ["А"], "countries": ["Франция"], "original_language": "fr", "runtime": 110, "watchedDate": null },
+    { "title": "Фильм 2021", "year": 2021, "rating": 3.5, "poster_url": null, "genres": ["Драма"], "keywords": ["г"], "directors": ["Д"], "actors": ["А"], "countries": ["Германия"], "original_language": "de", "runtime": 95, "watchedDate": null },
+    { "title": "Фильм 2022", "year": 2022, "rating": 4, "poster_url": null, "genres": ["Мелодрама"], "keywords": ["д"], "directors": ["Д"], "actors": ["А"], "countries": ["Италия"], "original_language": "it", "runtime": 88, "watchedDate": null },
+    { "title": "Фильм 2023", "year": 2023, "rating": 4.5, "poster_url": null, "genres": ["Фантастика"], "keywords": ["е"], "directors": ["Д"], "actors": ["А"], "countries": ["Япония"], "original_language": "ja", "runtime": 120, "watchedDate": null },
+    { "title": "Фильм 2024", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Детектив"], "keywords": ["ж"], "directors": ["Д"], "actors": ["А"], "countries": ["Испания"], "original_language": "es", "runtime": 105, "watchedDate": null },
+    { "title": "Фильм 2025", "year": 2025, "rating": 3, "poster_url": null, "genres": ["Ужасы"], "keywords": ["з"], "directors": ["Д"], "actors": ["А"], "countries": ["Великобритания"], "original_language": "en", "runtime": 92, "watchedDate": null },
+    { "title": "Фильм 2026", "year": 2026, "rating": 4, "poster_url": null, "genres": ["Боевик"], "keywords": ["и"], "directors": ["Д"], "actors": ["А"], "countries": ["Корея"], "original_language": "ko", "runtime": 115, "watchedDate": null },
+    { "title": "Фильм 2027", "year": 2027, "rating": 4.5, "poster_url": null, "genres": ["Драма"], "keywords": ["к"], "directors": ["Д"], "actors": ["А"], "countries": ["Россия"], "original_language": "ru", "runtime": 99, "watchedDate": null }
+  ],
+  "availableYears": [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027],
+  "hasDiary": false
+}
