@@ -224,7 +224,7 @@ function App() {
           </button>
           <UploadZone onUpload={handleUpload} loading={loading} />
           <p className="upload-privacy">
-            Файл обрабатывается на сервере. Данные не сохраняются после перезапуска сервера.
+            Файл обрабатывается только для построения отчёта.
           </p>
           <p className="upload-wake-hint">
             Если сервис долго не использовался, сервер может просыпаться 5–10 секунд — это нормально.
@@ -260,7 +260,7 @@ function App() {
               genreOfTheYear={computed.genreOfTheYear}
             />
           </section>
-          <section className="grid">
+          <section className="grid grid--two-cols">
             <TagsTable tags={computed.topTags} />
             <Suspense fallback={null}>
               <LazyChartsSection
