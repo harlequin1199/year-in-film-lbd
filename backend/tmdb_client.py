@@ -6,24 +6,11 @@ Async TMDb client with:
 - Optional in-memory (per-job) and persistent (SQLite) caching
 """
 import asyncio
-import json
 import logging
 import os
-import time
-from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import httpx
-
-# #region agent log
-def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
-    try:
-        path = Path(__file__).resolve().parent.parent / ".cursor" / "debug.log"
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"location": location, "message": message, "data": data, "timestamp": int(time.time() * 1000), "hypothesisId": hypothesis_id}) + "\n")
-    except Exception:
-        pass
-# #endregion
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +43,6 @@ class TMDbClient:
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
-            # #region agent log
-            _debug_log("tmdb_client.py:_get_client", "creating client", {"has_http_proxy": bool(os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")), "has_https_proxy": bool(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy"))}, "H1")
-            # #endregion
             self._client = httpx.AsyncClient(
                 base_url=TMDB_BASE_URL,
                 timeout=20.0,
@@ -75,13 +59,6 @@ class TMDbClient:
         client = await self._get_client()
         params = dict(params or {})
         params["api_key"] = self.api_key
-        # #region agent log
-        try:
-            full_url = str(client.base_url.join(path))
-            _debug_log("tmdb_client.py:_get", "before request", {"path": path, "base_url": str(client.base_url), "full_url_no_query": full_url}, "A")
-        except Exception:
-            _debug_log("tmdb_client.py:_get", "before request", {"path": path}, "A")
-        # #endregion
 
         for attempt in range(MAX_RETRIES + 1):
             try:
@@ -107,9 +84,6 @@ class TMDbClient:
             except httpx.HTTPStatusError:
                 raise
             except (httpx.RequestError, httpx.HTTPError) as e:
-                # #region agent log
-                _debug_log("tmdb_client.py:_get", "request error", {"exc_type": type(e).__name__, "exc_msg": str(e), "attempt": attempt, "path": path}, "BCD")
-                # #endregion
                 if attempt >= MAX_RETRIES:
                     raise
                 await asyncio.sleep(RETRY_DELAYS[attempt])

@@ -1,24 +1,12 @@
 import asyncio
 import csv
 import io
-import json
 import logging
 import os
 import re
-import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
-
-# #region agent log
-def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
-    try:
-        path = Path(__file__).resolve().parent.parent / ".cursor" / "debug.log"
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"location": location, "message": message, "data": data, "timestamp": int(time.time() * 1000), "hypothesisId": hypothesis_id}) + "\n")
-    except Exception:
-        pass
-# #endregion
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
@@ -356,9 +344,6 @@ async def _process_job(
             )
             for r in batch_results:
                 if isinstance(r, Exception):
-                    # #region agent log
-                    _debug_log("main.py:_process_job", "batch exception", {"exc_type": type(r).__name__, "exc_msg": str(r), "job_id": job_id}, "E")
-                    # #endregion
                     raise r
                 if r is not None:
                     films.append(r)
