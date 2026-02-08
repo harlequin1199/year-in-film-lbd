@@ -439,6 +439,30 @@ h3, .card-header h3 {
   font-size: 14px;
 }
 
+.progress-eta {
+  color: var(--text-muted);
+}
+
+.progress-retry-message {
+  margin: var(--space-xs) 0 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.progress-actions {
+  margin-top: var(--space-md);
+}
+
+.btn-small {
+  font-size: 13px;
+  padding: var(--space-xs) var(--space-md);
+}
+
+.upload-settings-sep {
+  color: var(--text-muted);
+  margin: 0 var(--space-xs);
+}
+
 .progress-percent {
   font-weight: 600;
   color: var(--accent);

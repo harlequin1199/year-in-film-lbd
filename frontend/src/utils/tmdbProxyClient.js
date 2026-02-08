@@ -1,4 +1,5 @@
 import * as cache from './indexedDbCache.js'
+import { fetchWithRetry } from './fetchWithRetry.js'
 
 const PROXY_BASE = (import.meta.env.VITE_TMDB_PROXY_BASE || '').trim().replace(/\/$/, '')
 const DEFAULT_CONCURRENCY = 4
@@ -11,30 +12,32 @@ function tmdbRating5(voteAverage) {
   return Math.round((voteAverage / 2) * 10) / 10
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url)
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(t || `HTTP ${res.status}`)
-  }
-  return res.json()
+function searchKey(title, year) {
+  return `${(title || '').trim().toLowerCase()}:${year ?? 0}`
 }
 
-export async function searchMovie(title, year) {
+async function fetchJson(url, opts = {}) {
+  const { onRetryMessage, signal } = opts
+  const res = await fetchWithRetry(url, { signal }, { onRetryMessage })
+  const data = await res.json()
+  return data
+}
+
+export async function searchMovie(title, year, opts = {}) {
   const cached = await cache.getSearch(title, year)
   if (cached !== undefined) return cached
   const qs = new URLSearchParams({ title: (title || '').trim().slice(0, 120) })
   if (year != null && year >= 1800 && year <= 2100) qs.set('year', String(year))
-  const data = await fetchJson(`${PROXY_BASE}/search?${qs}`)
+  const data = await fetchJson(`${PROXY_BASE}/search?${qs}`, opts)
   const id = data.tmdb_id ?? null
   await cache.setSearch(title, year, id)
   return id
 }
 
-export async function getMovieMinimal(tmdbId) {
+export async function getMovieMinimal(tmdbId, opts = {}) {
   const cached = await cache.getMovie(tmdbId)
   if (cached) return cached
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}`)
+  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}`, opts)
   const out = {
     id: data.id,
     poster_path: data.poster_path ?? null,
@@ -50,30 +53,35 @@ export async function getMovieMinimal(tmdbId) {
   return out
 }
 
-export async function getCredits(tmdbId) {
+export async function getCredits(tmdbId, opts = {}) {
   const cached = await cache.getCredits(tmdbId)
   if (cached) return cached
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/credits`)
+  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/credits`, opts)
   const out = { directors: data.directors || [], actors: data.actors || [] }
   await cache.setCredits(tmdbId, out)
   return out
 }
 
-export async function getKeywords(tmdbId) {
+export async function getKeywords(tmdbId, opts = {}) {
   const cached = await cache.getKeywords(tmdbId)
   if (cached) return cached
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/keywords`)
+  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/keywords`, opts)
   const out = { keywords: data.keywords || [] }
   await cache.setKeywords(tmdbId, out)
   return out
 }
 
-function runQueue(tasks, concurrency, onProgress) {
+function runQueue(tasks, concurrency, opts = {}) {
+  const { signal, onProgress } = opts
   return new Promise((resolve, reject) => {
     let index = 0
     let inFlight = 0
     const results = []
     const next = () => {
+      if (signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'))
+        return
+      }
       while (inFlight < concurrency && index < tasks.length) {
         const i = index++
         if (i >= tasks.length) break
@@ -96,92 +104,167 @@ function runQueue(tasks, concurrency, onProgress) {
   })
 }
 
-export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress) {
+function mergeDiary(filmsList, diary) {
+  const byUri = new Map()
+  const byKey = new Map()
+  diary.forEach((e) => {
+    const d = e.date && e.date.match(/^\d{4}-\d{2}-\d{2}/) ? e.date.slice(0, 10) : e.date
+    if (!d) return
+    const name = (e.name || '').toLowerCase().trim()
+    const year = e.year ?? 0
+    if (e.letterboxd_uri) byUri.set(e.letterboxd_uri, d)
+    byKey.set(`${name}:${year}`, d)
+  })
+  filmsList.forEach((f) => {
+    const uri = (f.letterboxd_url || '').trim()
+    const name = (f.title || '').toLowerCase().trim()
+    const year = f.year ?? 0
+    f.watchedDate = (uri && byUri.get(uri)) || byKey.get(`${name}:${year}`) || null
+  })
+}
+
+/**
+ * Smart Phase 1: dedupe search by (title, year); fetch /movie only for unique tmdb_id.
+ * Then optionally run Phase 2 (credits/keywords) for selected candidates.
+ */
+export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}) {
+  const { signal, onRetryMessage } = opts
   if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
-  const batchSize = Math.min(200, Math.max(concurrency * 2, 50))
-  const films = []
+  const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))
+  const fetchOpts = { signal, onRetryMessage }
 
-  const mergeDiary = (filmsList, diary) => {
-    const byUri = new Map()
-    const byKey = new Map()
-    diary.forEach((e) => {
-      const d = e.date && e.date.match(/^\d{4}-\d{2}-\d{2}/) ? e.date.slice(0, 10) : e.date
-      if (!d) return
-      const name = (e.name || '').toLowerCase().trim()
-      const year = e.year ?? 0
-      if (e.letterboxd_uri) byUri.set(e.letterboxd_uri, d)
-      byKey.set(`${name}:${year}`, d)
+  // Step 1: unique search keys
+  const keyToIndexes = new Map()
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    if (!keyToIndexes.has(k)) keyToIndexes.set(k, [])
+    keyToIndexes.get(k).push(i)
+  })
+  const uniqueKeys = [...keyToIndexes.keys()]
+  const searchTotal = uniqueKeys.length
+  const resolvedTmdbIds = new Array(rows.length).fill(null)
+  const keyToTmdbId = new Map()
+
+  const searchTasks = uniqueKeys.map((k) => {
+    const parts = k.split(':')
+    const yearPart = parts.length > 1 ? parts.pop() : '0'
+    const title = parts.join(':') || ''
+    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+    return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+  })
+
+  let searchDone = 0
+  for (let j = 0; j < searchTasks.length; j += batchSize) {
+    const chunk = searchTasks.slice(j, j + batchSize)
+    const chunkKeys = uniqueKeys.slice(j, j + batchSize)
+    const results = await runQueue(chunk, concurrency, {
+      signal,
+      onProgress: (done, batchLen) => {
+        searchDone = j + done
+        if (onProgress) {
+          onProgress({
+            stage: 'tmdb_search',
+            message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
+            done: searchDone,
+            total: searchTotal,
+            percent: Math.min(99, Math.round((searchDone / searchTotal) * 45)),
+          })
+        }
+      },
     })
-    filmsList.forEach((f) => {
-      const uri = (f.letterboxd_url || '').trim()
-      const name = (f.title || '').toLowerCase().trim()
-      const year = f.year ?? 0
-      f.watchedDate = (uri && byUri.get(uri)) || byKey.get(`${name}:${year}`) || null
+    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+  }
+
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    resolvedTmdbIds[i] = keyToTmdbId.get(k) ?? null
+  })
+
+  const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
+  const movieTotal = uniqueIds.length
+  const movieMap = new Map()
+
+  const movieTasks = uniqueIds.map((id) => async () => {
+    const movie = await getMovieMinimal(id, fetchOpts)
+    movieMap.set(id, movie)
+    return movie
+  })
+
+  let movieDone = 0
+  for (let j = 0; j < movieTasks.length; j += batchSize) {
+    const chunk = movieTasks.slice(j, j + batchSize)
+    const chunkIds = uniqueIds.slice(j, j + batchSize)
+    await runQueue(chunk, concurrency, {
+      signal,
+      onProgress: (done, batchLen) => {
+        movieDone = j + done
+        if (onProgress) {
+          onProgress({
+            stage: 'tmdb_details',
+            message: `Загрузка данных TMDb: ${movieDone} / ${movieTotal}`,
+            done: movieDone,
+            total: movieTotal,
+            percent: 45 + Math.min(49, Math.round((movieDone / movieTotal) * 45)),
+          })
+        }
+      },
     })
   }
 
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize)
-    const tasks = batch.map((row) => async () => {
-      const tmdbId = await searchMovie(row.title, row.year)
-      if (!tmdbId) {
-        return {
-          ...row,
-          tmdb_id: null,
-          poster_path: null,
-          poster_url: null,
-          poster_url_w342: null,
-          tmdb_vote_average: null,
-          tmdb_vote_count: 0,
-          tmdb_stars: null,
-          genres: [],
-          keywords: [],
-          directors: [],
-          actors: [],
-          countries: [],
-          runtime: null,
-          original_language: null,
-        }
-      }
-      const movie = await getMovieMinimal(tmdbId)
-      const poster_path = movie.poster_path
-      const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
-      const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
-      const va = movie.vote_average
-      const vc = movie.vote_count || 0
+  const films = rows.map((row, i) => {
+    const tmdbId = resolvedTmdbIds[i]
+    if (!tmdbId) {
       return {
         ...row,
-        tmdb_id: tmdbId,
-        poster_path,
-        poster_url,
-        poster_url_w342,
-        tmdb_vote_average: va,
-        tmdb_vote_count: vc,
-        tmdb_stars: tmdbRating5(va),
-        genres: movie.genres || [],
+        tmdb_id: null,
+        poster_path: null,
+        poster_url: null,
+        poster_url_w342: null,
+        tmdb_vote_average: null,
+        tmdb_vote_count: 0,
+        tmdb_stars: null,
+        genres: [],
         keywords: [],
         directors: [],
         actors: [],
-        countries: movie.production_countries || [],
-        runtime: movie.runtime,
-        original_language: movie.original_language,
+        countries: [],
+        runtime: null,
+        original_language: null,
       }
-    })
-    const batchResults = await runQueue(tasks, concurrency, (done, totalBatch) => {
-      if (onProgress) onProgress({ stage: 'tmdb_details', done: i + done, total, message: 'Загрузка данных TMDb' })
-    })
-    films.push(...batchResults)
-  }
+    }
+    const movie = movieMap.get(tmdbId)
+    const poster_path = movie?.poster_path ?? null
+    const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
+    const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
+    const va = movie?.vote_average ?? null
+    const vc = movie?.vote_count ?? 0
+    return {
+      ...row,
+      tmdb_id: tmdbId,
+      poster_path,
+      poster_url,
+      poster_url_w342,
+      tmdb_vote_average: va,
+      tmdb_vote_count: vc,
+      tmdb_stars: tmdbRating5(va),
+      genres: movie?.genres || [],
+      keywords: [],
+      directors: [],
+      actors: [],
+      countries: movie?.production_countries || [],
+      runtime: movie?.runtime ?? null,
+      original_language: movie?.original_language ?? null,
+    }
+  })
 
-  if (diaryRows && diaryRows.length > 0) mergeDiary(films, diaryRows)
+  if (diaryRows?.length > 0) mergeDiary(films, diaryRows)
 
   const BEST_CAP = 200
   const GEMS_CAP = 300
   const OVERRATED_CAP = 300
   const DECADE_CAP = 500
-
   const idsForPhase2 = new Set()
   const byRating = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
   byRating.slice(0, BEST_CAP).forEach((f) => f.tmdb_id && idsForPhase2.add(f.tmdb_id))
@@ -211,15 +294,23 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress) {
   const keywordsMap = new Map()
   for (let j = 0; j < idList.length; j += batchSize) {
     const chunk = idList.slice(j, j + batchSize)
-    const creditTasks = chunk.map((id) => () => getCredits(id))
-    const keywordTasks = chunk.map((id) => () => getKeywords(id))
-    const credResults = await runQueue(creditTasks, concurrency)
-    const kwResults = await runQueue(keywordTasks, concurrency)
+    const creditTasks = chunk.map((id) => () => getCredits(id, fetchOpts))
+    const keywordTasks = chunk.map((id) => () => getKeywords(id, fetchOpts))
+    const credResults = await runQueue(creditTasks, concurrency, { signal })
+    const kwResults = await runQueue(keywordTasks, concurrency, { signal })
     chunk.forEach((id, i) => {
       if (credResults[i]) creditsMap.set(id, credResults[i])
       if (kwResults[i]) keywordsMap.set(id, kwResults[i])
     })
-    if (onProgress) onProgress({ stage: 'tmdb_details', done: total, total, message: 'Загрузка данных TMDb (фаза 2)' })
+    if (onProgress) {
+      onProgress({
+        stage: 'tmdb_details',
+        message: 'Загрузка данных TMDb (фаза 2)',
+        done: total,
+        total,
+        percent: 95,
+      })
+    }
   }
 
   films.forEach((f) => {
@@ -237,85 +328,136 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress) {
   return films
 }
 
-export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress) {
+export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = {}) {
+  const { signal, onRetryMessage } = opts
   if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
-  const batchSize = Math.min(200, Math.max(concurrency * 2, 50))
-  const films = []
+  const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))
+  const fetchOpts = { signal, onRetryMessage }
 
-  const mergeDiary = (filmsList, diary) => {
-    const byUri = new Map()
-    const byKey = new Map()
-    diary.forEach((e) => {
-      const d = e.date && e.date.match(/^\d{4}-\d{2}-\d{2}/) ? e.date.slice(0, 10) : e.date
-      if (!d) return
-      const name = (e.name || '').toLowerCase().trim()
-      const year = e.year ?? 0
-      if (e.letterboxd_uri) byUri.set(e.letterboxd_uri, d)
-      byKey.set(`${name}:${year}`, d)
+  const keyToIndexes = new Map()
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    if (!keyToIndexes.has(k)) keyToIndexes.set(k, [])
+    keyToIndexes.get(k).push(i)
+  })
+  const uniqueKeys = [...keyToIndexes.keys()]
+  const searchTotal = uniqueKeys.length
+  const resolvedTmdbIds = new Array(rows.length).fill(null)
+  const keyToTmdbId = new Map()
+
+  const searchTasks = uniqueKeys.map((k) => {
+    const parts = k.split(':')
+    const yearPart = parts.length > 1 ? parts.pop() : '0'
+    const title = parts.join(':') || ''
+    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+    return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+  })
+
+  let searchDone = 0
+  for (let j = 0; j < searchTasks.length; j += batchSize) {
+    const chunk = searchTasks.slice(j, j + batchSize)
+    const chunkKeys = uniqueKeys.slice(j, j + batchSize)
+    const results = await runQueue(chunk, concurrency, {
+      signal,
+      onProgress: (done, batchLen) => {
+        searchDone = j + done
+        if (onProgress) {
+          onProgress({
+            stage: 'tmdb_search',
+            message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
+            done: searchDone,
+            total: searchTotal,
+            percent: Math.min(99, Math.round((searchDone / searchTotal) * 50)),
+          })
+        }
+      },
     })
-    filmsList.forEach((f) => {
-      const uri = (f.letterboxd_url || '').trim()
-      const name = (f.title || '').toLowerCase().trim()
-      const year = f.year ?? 0
-      f.watchedDate = (uri && byUri.get(uri)) || byKey.get(`${name}:${year}`) || null
+    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+  }
+
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    resolvedTmdbIds[i] = keyToTmdbId.get(k) ?? null
+  })
+
+  const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
+  const movieTotal = uniqueIds.length
+  const movieMap = new Map()
+
+  const movieTasks = uniqueIds.map((id) => async () => {
+    const movie = await getMovieMinimal(id, fetchOpts)
+    movieMap.set(id, movie)
+    return movie
+  })
+
+  let movieDone = 0
+  for (let j = 0; j < movieTasks.length; j += batchSize) {
+    const chunk = movieTasks.slice(j, j + batchSize)
+    await runQueue(chunk, concurrency, {
+      signal,
+      onProgress: (done, batchLen) => {
+        movieDone = j + done
+        if (onProgress) {
+          onProgress({
+            stage: 'tmdb_details',
+            message: `Загрузка данных TMDb: ${movieDone} / ${movieTotal}`,
+            done: movieDone,
+            total: movieTotal,
+            percent: 50 + Math.min(48, Math.round((movieDone / movieTotal) * 48)),
+          })
+        }
+      },
     })
   }
 
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize)
-    const tasks = batch.map((row) => async () => {
-      const tmdbId = await searchMovie(row.title, row.year)
-      if (!tmdbId) {
-        return {
-          ...row,
-          tmdb_id: null,
-          poster_path: null,
-          poster_url: null,
-          poster_url_w342: null,
-          tmdb_vote_average: null,
-          tmdb_vote_count: 0,
-          tmdb_stars: null,
-          genres: [],
-          keywords: [],
-          directors: [],
-          actors: [],
-          countries: [],
-          runtime: null,
-          original_language: null,
-        }
-      }
-      const movie = await getMovieMinimal(tmdbId)
-      const poster_path = movie.poster_path
-      const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
-      const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
-      const va = movie.vote_average
-      const vc = movie.vote_count || 0
+  const films = rows.map((row, i) => {
+    const tmdbId = resolvedTmdbIds[i]
+    if (!tmdbId) {
       return {
         ...row,
-        tmdb_id: tmdbId,
-        poster_path,
-        poster_url,
-        poster_url_w342,
-        tmdb_vote_average: va,
-        tmdb_vote_count: vc,
-        tmdb_stars: tmdbRating5(va),
-        genres: movie.genres || [],
+        tmdb_id: null,
+        poster_path: null,
+        poster_url: null,
+        poster_url_w342: null,
+        tmdb_vote_average: null,
+        tmdb_vote_count: 0,
+        tmdb_stars: null,
+        genres: [],
         keywords: [],
         directors: [],
         actors: [],
-        countries: movie.production_countries || [],
-        runtime: movie.runtime,
-        original_language: movie.original_language,
+        countries: [],
+        runtime: null,
+        original_language: null,
       }
-    })
-    const batchResults = await runQueue(tasks, concurrency, (done, totalBatch) => {
-      if (onProgress) onProgress({ stage: 'tmdb_details', done: i + done, total, message: 'Загрузка данных TMDb' })
-    })
-    films.push(...batchResults)
-  }
+    }
+    const movie = movieMap.get(tmdbId)
+    const poster_path = movie?.poster_path ?? null
+    const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
+    const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
+    const va = movie?.vote_average ?? null
+    const vc = movie?.vote_count ?? 0
+    return {
+      ...row,
+      tmdb_id: tmdbId,
+      poster_path,
+      poster_url,
+      poster_url_w342,
+      tmdb_vote_average: va,
+      tmdb_vote_count: vc,
+      tmdb_stars: tmdbRating5(va),
+      genres: movie?.genres || [],
+      keywords: [],
+      directors: [],
+      actors: [],
+      countries: movie?.production_countries || [],
+      runtime: movie?.runtime ?? null,
+      original_language: movie?.original_language ?? null,
+    }
+  })
 
-  if (diaryRows && diaryRows.length > 0) mergeDiary(films, diaryRows)
+  if (diaryRows?.length > 0) mergeDiary(films, diaryRows)
   return films
 }

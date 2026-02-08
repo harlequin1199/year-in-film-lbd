@@ -1,6 +1,6 @@
 const DB_NAME = 'year-in-film-cache'
-const DB_VERSION = 1
-const STORES = ['searchCache', 'movieCache', 'creditsCache', 'keywordsCache']
+const DB_VERSION = 2
+const STORES = ['searchCache', 'movieCache', 'creditsCache', 'keywordsCache', 'resumeState', 'lastReport']
 
 let dbPromise = null
 
@@ -12,11 +12,11 @@ function openDb() {
     req.onsuccess = () => resolve(req.result)
     req.onupgradeneeded = (e) => {
       const db = e.target.result
-      STORES.forEach((name) => {
+      for (const name of STORES) {
         if (!db.objectStoreNames.contains(name)) {
           db.createObjectStore(name)
         }
-      })
+      }
     }
   })
   return dbPromise
@@ -110,9 +110,63 @@ export async function setKeywords(tmdbId, data) {
 
 export async function clearCache() {
   const db = await openDb()
+  const storesToClear = ['searchCache', 'movieCache', 'creditsCache', 'keywordsCache']
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES, 'readwrite')
-    STORES.forEach((name) => tx.objectStore(name).clear())
+    const tx = db.transaction(storesToClear, 'readwrite')
+    storesToClear.forEach((name) => tx.objectStore(name).clear())
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+export async function getResumeState() {
+  const db = await openDb()
+  if (!db.objectStoreNames.contains('resumeState')) return null
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumeState', 'readonly')
+    const req = tx.objectStore('resumeState').get('current')
+    req.onsuccess = () => resolve(req.result ?? null)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function setResumeState(state) {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumeState', 'readwrite')
+    tx.objectStore('resumeState').put(state, 'current')
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+export async function clearResumeState() {
+  const db = await openDb()
+  if (!db.objectStoreNames.contains('resumeState')) return
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('resumeState', 'readwrite')
+    tx.objectStore('resumeState').delete('current')
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+export async function getLastReport() {
+  const db = await openDb()
+  if (!db.objectStoreNames.contains('lastReport')) return null
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('lastReport', 'readonly')
+    const req = tx.objectStore('lastReport').get('report')
+    req.onsuccess = () => resolve(req.result ?? null)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function setLastReport(report) {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('lastReport', 'readwrite')
+    tx.objectStore('lastReport').put(report, 'report')
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })

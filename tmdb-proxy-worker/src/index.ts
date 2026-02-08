@@ -1,6 +1,6 @@
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_DAYS = 30
-const RATE_LIMIT_PER_MIN = 40
+const DEFAULT_RATE_LIMIT_PER_MIN = 600
 const ALLOWED_ORIGINS = [
   'https://year-in-film-lbd.pages.dev',
   'http://localhost:5173',
@@ -11,15 +11,24 @@ const ALLOWED_ORIGINS = [
 const TITLE_MAX = 120
 const YEAR_MIN = 1800
 const YEAR_MAX = 2100
-const RATE_429_MSG = 'Слишком много запросов. Подождите минуту и попробуйте снова.'
+const RATE_429_MSG = 'Слишком много запросов. Подождите немного и попробуйте снова.'
+const RETRY_AFTER_SECONDS = 10
 
 interface Env {
   TMDB_API_KEY: string
+  RATE_LIMIT_PER_MIN?: string
 }
 
 const rateMap = new Map<string, { count: number; resetAt: number }>()
 
-function rateLimit(ip: string): boolean {
+function getRateLimit(env: Env): number {
+  const v = env.RATE_LIMIT_PER_MIN
+  if (v === undefined || v === '') return DEFAULT_RATE_LIMIT_PER_MIN
+  const n = parseInt(v, 10)
+  return Number.isNaN(n) || n < 1 ? DEFAULT_RATE_LIMIT_PER_MIN : Math.min(10000, n)
+}
+
+function rateLimit(ip: string, limit: number): boolean {
   const now = Date.now()
   const windowMs = 60_000
   let entry = rateMap.get(ip)
@@ -33,7 +42,7 @@ function rateLimit(ip: string): boolean {
     return true
   }
   entry.count += 1
-  return entry.count <= RATE_LIMIT_PER_MIN
+  return entry.count <= limit
 }
 
 function corsHeaders(origin: string | null): HeadersInit {
@@ -46,15 +55,34 @@ function corsHeaders(origin: string | null): HeadersInit {
   }
 }
 
-function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
+/** Only for success (200). Caller must not use for status >= 400. */
+function jsonSuccess(body: unknown, headers?: HeadersInit): Response {
   return new Response(JSON.stringify(body), {
-    status,
+    status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': `public, max-age=${CACHE_DAYS * 24 * 60 * 60}`,
       ...headers,
     },
   })
+}
+
+/** Error response: no cache, CORS on all. */
+function jsonError(body: { error: string }, status: number, extraHeaders?: HeadersInit): Response {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    ...corsHeaders(null),
+    ...extraHeaders,
+  }
+  return new Response(JSON.stringify(body), { status, headers })
+}
+
+function withCors(res: Response, origin: string | null): Response {
+  const cors = corsHeaders(origin)
+  const r = new Response(res.body, res)
+  Object.entries(cors).forEach(([k, v]) => r.headers.set(k, v as string))
+  return r
 }
 
 function getClientIP(request: Request): string {
@@ -71,19 +99,19 @@ async function fetchTmdb(path: string, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = request.headers.get('Origin')
-    const headers = corsHeaders(origin)
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers })
+      return new Response(null, { status: 204, headers: corsHeaders(origin) })
     }
 
     if (request.method !== 'GET') {
-      return jsonResponse({ error: 'Method not allowed' }, 405, headers)
+      return jsonError({ error: 'Method not allowed' }, 405)
     }
 
+    const limit = getRateLimit(env)
     const ip = getClientIP(request)
-    if (!rateLimit(ip)) {
-      return jsonResponse({ error: RATE_429_MSG }, 429, headers)
+    if (!rateLimit(ip, limit)) {
+      return jsonError({ error: RATE_429_MSG }, 429, { 'Retry-After': String(RETRY_AFTER_SECONDS) })
     }
 
     const url = new URL(request.url)
@@ -94,27 +122,25 @@ export default {
         const title = url.searchParams.get('title')?.trim() || ''
         const yearRaw = url.searchParams.get('year')?.trim()
         if (title.length > TITLE_MAX) {
-          return jsonResponse({ error: 'Title too long' }, 400, headers)
+          return jsonError({ error: 'Title too long' }, 400)
         }
         const year = yearRaw ? parseInt(yearRaw, 10) : undefined
         if (yearRaw !== undefined && yearRaw !== '' && (Number.isNaN(year) || year < YEAR_MIN || year > YEAR_MAX)) {
-          return jsonResponse({ error: 'Invalid year' }, 400, headers)
+          return jsonError({ error: 'Invalid year' }, 400)
         }
 
         const cacheKey = new Request(url.toString())
         const cache = caches.default
         let res = await cache.match(cacheKey)
         if (res) {
-          const r = new Response(res.body, res)
-          Object.entries(headers).forEach(([k, v]) => r.headers.set(k, v as string))
-          return r
+          return withCors(res, origin)
         }
 
         const qs = new URLSearchParams({ query: title })
         if (year) qs.set('year', String(year))
         const tmdbRes = await fetchTmdb(`/search/movie?${qs}`, env)
         if (!tmdbRes.ok) {
-          return jsonResponse({ error: 'TMDb search failed' }, tmdbRes.status, headers)
+          return jsonError({ error: 'TMDb search failed' }, tmdbRes.status)
         }
         const data = (await tmdbRes.json()) as { results?: Array<{ id?: number; title?: string; release_date?: string; poster_path?: string }> }
         const first = data.results?.[0]
@@ -124,9 +150,9 @@ export default {
           year: first?.release_date ? parseInt(first.release_date.slice(0, 4), 10) : null,
           poster_path: first?.poster_path ?? null,
         }
-        res = jsonResponse(out, 200, headers)
+        res = jsonSuccess(out)
         ctx.waitUntil(cache.put(cacheKey, res.clone()))
-        return res
+        return withCors(res, origin)
       }
 
       const movieMatch = path.match(/^\/movie\/(\d+)(?:\/(credits|keywords))?$/)
@@ -135,22 +161,20 @@ export default {
         const sub = movieMatch[2]
         const idNum = parseInt(id, 10)
         if (Number.isNaN(idNum) || id !== String(idNum)) {
-          return jsonResponse({ error: 'Invalid movie id' }, 400, headers)
+          return jsonError({ error: 'Invalid movie id' }, 400)
         }
 
         const cacheKey = new Request(url.toString())
         const cache = caches.default
         let res = await cache.match(cacheKey)
         if (res) {
-          const r = new Response(res.body, res)
-          Object.entries(headers).forEach(([k, v]) => r.headers.set(k, v as string))
-          return r
+          return withCors(res, origin)
         }
 
         if (sub === 'credits') {
           const tmdbRes = await fetchTmdb(`/movie/${id}/credits`, env)
           if (!tmdbRes.ok) {
-            return jsonResponse({ error: 'TMDb credits failed' }, tmdbRes.status, headers)
+            return jsonError({ error: 'TMDb credits failed' }, tmdbRes.status)
           }
           const data = (await tmdbRes.json()) as {
             id?: number
@@ -160,27 +184,27 @@ export default {
           const directors = (data.crew || []).filter((c) => c.job === 'Director').map((c) => c.name).filter(Boolean) as string[]
           const actors = (data.cast || []).slice(0, 10).map((c) => c.name).filter(Boolean) as string[]
           const out = { id: data.id ?? idNum, directors, actors }
-          res = jsonResponse(out, 200, headers)
+          res = jsonSuccess(out)
           ctx.waitUntil(cache.put(cacheKey, res.clone()))
-          return res
+          return withCors(res, origin)
         }
 
         if (sub === 'keywords') {
           const tmdbRes = await fetchTmdb(`/movie/${id}/keywords`, env)
           if (!tmdbRes.ok) {
-            return jsonResponse({ error: 'TMDb keywords failed' }, tmdbRes.status, headers)
+            return jsonError({ error: 'TMDb keywords failed' }, tmdbRes.status)
           }
           const data = (await tmdbRes.json()) as { id?: number; keywords?: Array<{ name?: string }> }
           const keywords = (data.keywords || []).slice(0, 20).map((k) => k.name).filter(Boolean) as string[]
           const out = { id: data.id ?? idNum, keywords }
-          res = jsonResponse(out, 200, headers)
+          res = jsonSuccess(out)
           ctx.waitUntil(cache.put(cacheKey, res.clone()))
-          return res
+          return withCors(res, origin)
         }
 
         const tmdbRes = await fetchTmdb(`/movie/${id}`, env)
         if (!tmdbRes.ok) {
-          return jsonResponse({ error: 'TMDb movie failed' }, tmdbRes.status, headers)
+          return jsonError({ error: 'TMDb movie failed' }, tmdbRes.status)
         }
         const data = (await tmdbRes.json()) as {
           id?: number
@@ -204,14 +228,14 @@ export default {
           production_countries: (data.production_countries || []).map((c) => c.name).filter(Boolean),
           release_date: data.release_date ?? null,
         }
-        res = jsonResponse(out, 200, headers)
+        res = jsonSuccess(out)
         ctx.waitUntil(cache.put(cacheKey, res.clone()))
-        return res
+        return withCors(res, origin)
       }
 
-      return jsonResponse({ error: 'Not found' }, 404, headers)
+      return jsonError({ error: 'Not found' }, 404)
     } catch (e) {
-      return jsonResponse({ error: 'Internal error' }, 500, headers)
+      return jsonError({ error: 'Internal error' }, 500)
     }
   },
 }

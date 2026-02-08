@@ -7,12 +7,21 @@ const DISPLAY_STEPS = [
   { key: 'finalizing', label: 'Подготовка отчёта' },
 ]
 
-function ProgressStatus({ progress }) {
+function formatEta(seconds) {
+  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return null
+  const m = Math.floor(seconds / 60)
+  const s = Math.round(seconds % 60)
+  if (m > 0) return `${m} мин ${s} сек`
+  return `${s} сек`
+}
+
+function ProgressStatus({ progress, onCancel, retryMessage }) {
   if (!progress) return null
   const total = progress.total || 0
   const done = progress.done || 0
   const percent = progress.percent ?? (total ? Math.min(100, Math.round((done / total) * 100)) : 0)
   const stage = progress.stage || 'parsing'
+  const etaSeconds = progress.etaSeconds
   const stepIndex = (() => {
     if (stage === 'parsing') return 0
     if (stage === 'tmdb_search') return 1
@@ -27,8 +36,12 @@ function ProgressStatus({ progress }) {
         <div>
           <p className="progress-title">{progress.message || 'Анализирую ваш год в кино'}</p>
           <p className="progress-subtitle">
-            Обработано {formatNumber(done)} из {formatNumber(total)} фильмов
+            Обработано {formatNumber(done)} из {formatNumber(total)}
+            {etaSeconds != null && total > done && (
+              <span className="progress-eta"> · Осталось примерно: {formatEta(etaSeconds) || '…'}</span>
+            )}
           </p>
+          {retryMessage && <p className="progress-retry-message">{retryMessage}</p>}
         </div>
         <div className="progress-percent">{percent}%</div>
       </div>
@@ -46,6 +59,13 @@ function ProgressStatus({ progress }) {
           </span>
         ))}
       </div>
+      {onCancel && (
+        <div className="progress-actions">
+          <button type="button" className="btn btn-secondary btn-small" onClick={onCancel}>
+            Остановить анализ
+          </button>
+        </div>
+      )}
     </section>
   )
 }

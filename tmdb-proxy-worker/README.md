@@ -55,4 +55,8 @@ Enter your key when prompted. Get a key at [themoviedb.org/settings/api](https:/
 - `GET /movie/:id/credits` — directors + actors
 - `GET /movie/:id/keywords` — keywords (max 20)
 
-CORS is allowed for `https://year-in-film-lbd.pages.dev` and localhost. Rate limit: 40 requests per minute per IP. Responses are cached for 30 days.
+CORS is allowed for `https://year-in-film-lbd.pages.dev` and localhost. CORS headers are sent on all responses, including errors.
+
+**Rate limiting:** 600 requests per minute per IP by default. Configure via env var `RATE_LIMIT_PER_MIN` in `wrangler.toml` (e.g. add to `[vars]`: `RATE_LIMIT_PER_MIN = "600"`) or as a secret. On 429 the worker returns `Retry-After: 10` and a JSON error message in Russian.
+
+**Caching:** Only successful 200 responses are cached (30 days). Error responses (4xx/5xx) are never cached and include `Cache-Control: no-store`.

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import UploadZone from './components/UploadZone.jsx'
 import StatsCards from './components/StatsCards.jsx'
 import GenresSection from './components/GenresSection.jsx'
@@ -19,7 +19,7 @@ import {
   getYearRangeLabel,
 } from './utils/analyticsClient.js'
 import { enrichFilmsPhase1Only, enrichFilmsTwoPhase } from './utils/tmdbProxyClient.js'
-import { clearCache } from './utils/indexedDbCache.js'
+import { clearCache, clearResumeState, getResumeState, getLastReport, setLastReport, setResumeState as persistResumeState } from './utils/indexedDbCache.js'
 import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
 const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
@@ -33,6 +33,8 @@ function isMobile() {
 }
 
 const BIG_FILE_MOBILE_THRESHOLD = 2000
+const RESUME_PERSIST_INTERVAL_MS = 3000
+const ETA_UPDATE_INTERVAL_MS = 2000
 
 function App() {
   const [analysis, setAnalysis] = useState(null)
@@ -47,12 +49,37 @@ function App() {
   const [pendingFiles, setPendingFiles] = useState(null)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [cacheCleared, setCacheCleared] = useState(false)
+  const [retryMessage, setRetryMessage] = useState('')
+  const [resumeState, setResumeState] = useState(null)
+  const [showResumeModal, setShowResumeModal] = useState(false)
+  const [lastReportAvailable, setLastReportAvailable] = useState(false)
 
-  const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false) => {
+  const abortControllerRef = useRef(null)
+  const progressRef = useRef(null)
+  const etaRef = useRef({ lastDone: 0, lastTime: 0 })
+  const persistIntervalRef = useRef(null)
+  const etaIntervalRef = useRef(null)
+
+  useEffect(() => {
+    getResumeState().then((s) => {
+      if (s && s.stage && s.updatedAt) setResumeState(s)
+    })
+    getLastReport().then((r) => setLastReportAvailable(!!r))
+  }, [])
+
+  useEffect(() => {
+    if (resumeState && !loading) setShowResumeModal(true)
+  }, [resumeState, loading])
+
+  const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false, signal = null, fileName = '') => {
+    const opts = {
+      signal: signal || abortControllerRef.current?.signal,
+      onRetryMessage: (msg) => setRetryMessage(msg || ''),
+    }
     setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 2 })
     const films = simplified
-      ? await enrichFilmsPhase1Only(parsedRows, parsedDiary, setProgress)
-      : await enrichFilmsTwoPhase(parsedRows, parsedDiary, setProgress)
+      ? await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
+      : await enrichFilmsTwoPhase(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
     setProgress({ stage: 'finalizing', message: 'Подготовка отчёта', total: films.length, done: films.length, percent: 98 })
     const hasDiary = parsedDiary && parsedDiary.length > 0
     const availableYearsFromFilms = [...new Set(films.map((f) => {
@@ -61,23 +88,43 @@ function App() {
       const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
       return y ? parseInt(y, 10) : null
     }).filter(Boolean))].sort((a, b) => a - b)
-    setAnalysis({
+    const result = {
       filmsLite: films,
       filmsLiteAll: films,
       hasDiary,
       dataSource: hasDiary ? 'both' : 'ratings',
       availableYears: availableYearsFromFilms,
       simplifiedMode: simplified,
-    })
+      fileName,
+    }
+    setAnalysis(result)
     setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
+    await setLastReport(result)
+    setLastReportAvailable(true)
+    await clearResumeState()
   }
 
   const runAnalysis = async (ratingsFile, diaryFile, simplified = false) => {
     setError('')
+    setRetryMessage('')
     setLoading(true)
     setAnalysis(null)
     setProgress({ stage: 'parsing', message: 'Чтение CSV', total: 1, done: 0, percent: 0 })
     setLastUploadedFileName(ratingsFile?.name || '')
+    abortControllerRef.current = new AbortController()
+    const fileName = ratingsFile?.name || ''
+    etaRef.current = { lastDone: 0, lastTime: 0 }
+
+    const clearTimers = () => {
+      if (persistIntervalRef.current) {
+        clearInterval(persistIntervalRef.current)
+        persistIntervalRef.current = null
+      }
+      if (etaIntervalRef.current) {
+        clearInterval(etaIntervalRef.current)
+        etaIntervalRef.current = null
+      }
+    }
 
     try {
       const ratingsText = await ratingsFile.text()
@@ -122,13 +169,60 @@ function App() {
         return
       }
 
-      await runAnalysisFromRows(parsedRows, parsedDiary, simplified)
+      const rowCount = parsedRows.length
+      persistIntervalRef.current = setInterval(() => {
+        const p = progressRef.current
+        if (p && p.stage && p.stage !== 'parsing') {
+          persistResumeState({
+            runId: `${Date.now()}`,
+            fileName,
+            rowCount,
+            stage: p.stage,
+            done: p.done ?? 0,
+            total: p.total ?? 0,
+            updatedAt: Date.now(),
+          }).catch(() => {})
+        }
+      }, RESUME_PERSIST_INTERVAL_MS)
+
+      etaIntervalRef.current = setInterval(() => {
+        const p = progressRef.current
+        if (!p || !p.total || p.done >= p.total) return
+        const now = Date.now()
+        const prev = etaRef.current
+        if (prev.lastTime && p.done > prev.lastDone) {
+          const elapsed = (now - prev.lastTime) / 1000
+          const delta = p.done - prev.lastDone
+          if (delta > 0 && elapsed > 0) {
+            const rate = delta / elapsed
+            const remaining = (p.total - p.done) / rate
+            setProgress((prevP) => ({ ...prevP, etaSeconds: Math.round(remaining) }))
+          }
+        }
+        etaRef.current = { lastDone: p.done, lastTime: now }
+      }, ETA_UPDATE_INTERVAL_MS)
+
+      await runAnalysisFromRows(parsedRows, parsedDiary, simplified, abortControllerRef.current.signal, fileName)
       if (simplified) setSimplifiedMode(true)
     } catch (err) {
-      setError(err.message || 'Произошла ошибка')
+      if (err?.name === 'AbortError') {
+        setError('Анализ остановлен.')
+        clearResumeState().catch(() => {})
+      } else {
+        setError(err.message || 'Произошла ошибка')
+      }
     } finally {
+      clearTimers()
       setLoading(false)
       setProgress(null)
+      setRetryMessage('')
+      abortControllerRef.current = null
+    }
+  }
+
+  const handleCancelAnalysis = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
     }
   }
 
@@ -147,16 +241,18 @@ function App() {
       setError('')
       setLoading(true)
       setAnalysis(null)
+      abortControllerRef.current = new AbortController()
       setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: pendingFiles.parsedRows.length, done: 0, percent: 2 })
       setLastUploadedFileName('')
       try {
-        await runAnalysisFromRows(pendingFiles.parsedRows, pendingFiles.parsedDiary, true)
+        await runAnalysisFromRows(pendingFiles.parsedRows, pendingFiles.parsedDiary, true, abortControllerRef.current.signal, '')
         setSimplifiedMode(true)
       } catch (err) {
-        setError(err.message || 'Произошла ошибка')
+        if (err?.name !== 'AbortError') setError(err.message || 'Произошла ошибка')
       } finally {
         setLoading(false)
         setProgress(null)
+        abortControllerRef.current = null
       }
       setPendingFiles(null)
     }
@@ -165,6 +261,30 @@ function App() {
   const handleMobileCancel = () => {
     setShowMobileModal(false)
     setPendingFiles(null)
+  }
+
+  const handleResumeContinue = async () => {
+    setShowResumeModal(false)
+    setResumeState(null)
+    await clearResumeState().catch(() => {})
+  }
+
+  const handleResumeStartOver = async () => {
+    setShowResumeModal(false)
+    setResumeState(null)
+    await clearResumeState().catch(() => {})
+  }
+
+  const handleOpenLastReport = async () => {
+    try {
+      const report = await getLastReport()
+      if (report) {
+        setAnalysis(report)
+        setLastUploadedFileName(report.fileName || 'последний отчёт')
+      }
+    } catch {
+      setError('Не удалось загрузить последний отчёт')
+    }
   }
 
   const handleClearCache = async () => {
@@ -322,9 +442,40 @@ function App() {
             >
               {cacheCleared ? 'Кеш очищен' : 'Очистить кеш'}
             </button>
+            {lastReportAvailable && !analysis && !loading && (
+              <span className="upload-settings-sep"> · </span>
+            )}
+            {lastReportAvailable && !analysis && !loading && (
+              <button
+                type="button"
+                className="btn-link btn-link-small"
+                onClick={handleOpenLastReport}
+              >
+                Открыть последний отчёт
+              </button>
+            )}
           </p>
         </div>
       </header>
+
+      {showResumeModal && resumeState && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resume-modal-title">
+          <div className="modal-card">
+            <h2 id="resume-modal-title">Продолжить?</h2>
+            <p>
+              Похоже, анализ был прерван. Продолжить?
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={handleResumeStartOver}>
+                Начать заново
+              </button>
+              <button type="button" className="btn" onClick={handleResumeContinue}>
+                Продолжить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showMobileModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="mobile-modal-title">
@@ -346,7 +497,13 @@ function App() {
         </div>
       )}
 
-      {loading && <ProgressStatus progress={progress} />}
+      {loading && (
+        <ProgressStatus
+          progress={progress}
+          onCancel={handleCancelAnalysis}
+          retryMessage={retryMessage}
+        />
+      )}
       {error && <div className="error-banner">{error}</div>}
 
       {!analysis && !loading && (
