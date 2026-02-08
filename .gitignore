@@ -16,3 +16,10 @@ backend/cache.db
 # Frontend
 frontend/node_modules/
 frontend/dist/
+
+# IDE
+.cursor/
+
+# Worker
+tmdb-proxy-worker/node_modules/
+tmdb-proxy-worker/dist/

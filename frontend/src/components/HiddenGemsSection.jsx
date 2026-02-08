@@ -5,7 +5,7 @@ import { formatYear } from '../utils/format.js'
 const TAB_GEMS = 'gems'
 const TAB_OVERRATED = 'overrated'
 
-export default function HiddenGemsSection({ hiddenGems = [], overrated = [] }) {
+export default function HiddenGemsSection({ hiddenGems = [], overrated = [], simplifiedEmpty = false }) {
   const [activeTab, setActiveTab] = useState(TAB_GEMS)
   const gems = hiddenGems || []
   const overratedList = overrated || []
@@ -37,12 +37,15 @@ export default function HiddenGemsSection({ hiddenGems = [], overrated = [] }) {
   const showGems = activeTab === TAB_GEMS
   const list = showGems ? gems : overratedList
   const isEmpty = list.length === 0
-  const emptyTitleGems = 'Тёмных лошадок не найдено'
-  const emptyTitleOverrated = 'Переоценённых фильмов не найдено'
+  const simplifiedMessage = 'Недоступно в упрощённом режиме на телефоне.'
+  const emptyTitleGems = simplifiedEmpty ? 'Упрощённый режим' : 'Тёмных лошадок не найдено'
+  const emptyTitleOverrated = simplifiedEmpty ? 'Упрощённый режим' : 'Переоценённых фильмов не найдено'
   const emptyTitle = showGems ? emptyTitleGems : emptyTitleOverrated
-  const emptyText = showGems
-    ? 'В этом периоде нет фильмов, которые ты оценил намного выше среднего рейтинга TMDb.'
-    : 'В этом периоде нет фильмов, которые TMDb оценил намного выше твоей оценки.'
+  const emptyText = simplifiedEmpty
+    ? simplifiedMessage
+    : showGems
+      ? 'В этом периоде нет фильмов, которые ты оценил намного выше среднего рейтинга TMDb.'
+      : 'В этом периоде нет фильмов, которые TMDb оценил намного выше твоей оценки.'
 
   return (
     <section className="card hidden-gems-section">

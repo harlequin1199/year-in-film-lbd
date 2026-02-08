@@ -1,9 +1,9 @@
 import { formatNumber } from '../utils/format.js'
 
 const DISPLAY_STEPS = [
-  { key: 'parsing', label: 'Парсинг CSV' },
-  { key: 'tmdb', label: 'Обогащение через TMDb' },
-  { key: 'analytics', label: 'Подсчёт статистики' },
+  { key: 'parsing', label: 'Чтение CSV' },
+  { key: 'tmdb_search', label: 'Поиск фильмов в TMDb' },
+  { key: 'tmdb_details', label: 'Загрузка данных TMDb' },
   { key: 'finalizing', label: 'Подготовка отчёта' },
 ]
 
@@ -15,8 +15,8 @@ function ProgressStatus({ progress }) {
   const stage = progress.stage || 'parsing'
   const stepIndex = (() => {
     if (stage === 'parsing') return 0
-    if (stage === 'tmdb_search' || stage === 'tmdb_details') return 1
-    if (stage === 'analytics') return 2
+    if (stage === 'tmdb_search') return 1
+    if (stage === 'tmdb_details' || stage === 'analytics') return 2
     return 3
   })()
 

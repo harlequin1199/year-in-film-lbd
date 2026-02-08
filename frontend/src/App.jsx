@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import UploadZone from './components/UploadZone.jsx'
 import StatsCards from './components/StatsCards.jsx'
 import GenresSection from './components/GenresSection.jsx'
@@ -12,83 +12,125 @@ import ToggleRankedList from './components/ToggleRankedList.jsx'
 import BadgesSection from './components/BadgesSection.jsx'
 import YearFilter from './components/YearFilter.jsx'
 import { formatNumber, formatRating } from './utils/format.js'
-import { computeAggregations, computeHiddenGems, filterFilmsByYears, formatYearRange, getYearRangeLabel } from './utils/analyticsClient.js'
+import {
+  computeAggregations,
+  filterFilmsByYears,
+  formatYearRange,
+  getYearRangeLabel,
+} from './utils/analyticsClient.js'
+import { enrichFilmsPhase1Only, enrichFilmsTwoPhase } from './utils/tmdbProxyClient.js'
+import { clearCache } from './utils/indexedDbCache.js'
 import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
 const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
 const LazyFavoriteDecades = lazy(() => import('./components/FavoriteDecades.jsx'))
 
-// Backend URL: set VITE_API_URL in Cloudflare Pages; fallback for local dev
-const API_URL = (import.meta.env.VITE_API_URL || '').trim() || 'http://localhost:8000'
 const SHOW_MOCK_UI = import.meta.env.DEV && USE_MOCKS
+const MOBILE_WIDTH = 600
+function isMobile() {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth < MOBILE_WIDTH || /mobile|android|iphone|ipad/i.test(navigator.userAgent)
+}
+
+const BIG_FILE_MOBILE_THRESHOLD = 2000
 
 function App() {
   const [analysis, setAnalysis] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(null)
-  const [jobId, setJobId] = useState('')
-  const [exporting, setExporting] = useState(false)
   const [availableYears, setAvailableYears] = useState([])
   const [selectedYears, setSelectedYears] = useState([])
   const [lastUploadedFileName, setLastUploadedFileName] = useState('')
   const [demoMockId, setDemoMockId] = useState(MOCK_OPTIONS[0]?.id || 'mock_ratings_only')
-  const intervalRef = useRef(null)
+  const [showMobileModal, setShowMobileModal] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState(null)
+  const [simplifiedMode, setSimplifiedMode] = useState(false)
+  const [cacheCleared, setCacheCleared] = useState(false)
 
-  useEffect(() => {
-    if (!jobId || USE_MOCKS) return undefined
+  const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false) => {
+    setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 2 })
+    const films = simplified
+      ? await enrichFilmsPhase1Only(parsedRows, parsedDiary, setProgress)
+      : await enrichFilmsTwoPhase(parsedRows, parsedDiary, setProgress)
+    setProgress({ stage: 'finalizing', message: 'Подготовка отчёта', total: films.length, done: films.length, percent: 98 })
+    const hasDiary = parsedDiary && parsedDiary.length > 0
+    const availableYearsFromFilms = [...new Set(films.map((f) => {
+      const d = f.watchedDate || f.date
+      if (!d) return null
+      const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+      return y ? parseInt(y, 10) : null
+    }).filter(Boolean))].sort((a, b) => a - b)
+    setAnalysis({
+      filmsLite: films,
+      filmsLiteAll: films,
+      hasDiary,
+      dataSource: hasDiary ? 'both' : 'ratings',
+      availableYears: availableYearsFromFilms,
+      simplifiedMode: simplified,
+    })
+    setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
+  }
 
-    const poll = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/progress/${jobId}`)
-        if (!response.ok) {
-          throw new Error('Не удалось получить прогресс')
-        }
-        const data = await response.json()
-        setProgress(data)
+  const runAnalysis = async (ratingsFile, diaryFile, simplified = false) => {
+    setError('')
+    setLoading(true)
+    setAnalysis(null)
+    setProgress({ stage: 'parsing', message: 'Чтение CSV', total: 1, done: 0, percent: 0 })
+    setLastUploadedFileName(ratingsFile?.name || '')
 
-        if (data.status === 'done') {
-          clearInterval(intervalRef.current)
-          intervalRef.current = null
-          const resultResponse = await fetch(`${API_URL}/api/result/${jobId}`)
-          if (!resultResponse.ok) {
-            throw new Error('Не удалось получить результаты анализа')
+    try {
+      const ratingsText = await ratingsFile.text()
+      const diaryText = diaryFile ? await diaryFile.text() : null
+
+      const rows = await new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('./workers/csvParse.worker.js', import.meta.url), { type: 'module' })
+        let ratingRows = null
+        let diaryRows = []
+        worker.postMessage({ type: 'parse', ratingsText, diaryText })
+        worker.onmessage = (ev) => {
+          if (ev.data.type === 'progress') setProgress(ev.data)
+          if (ev.data.type === 'rows') ratingRows = ev.data.rows
+          if (ev.data.type === 'diary') diaryRows = ev.data.rows || []
+          if (ev.data.type === 'error') {
+            worker.terminate()
+            reject(new Error(ev.data.message))
+            return
           }
-          const resultData = await resultResponse.json()
-          setAnalysis(resultData)
-          setLoading(false)
-          setJobId('')
-          setProgress(null)
+          if (ratingRows !== null) {
+            worker.terminate()
+            resolve({ rows: ratingRows, diaryRows })
+          }
         }
+        worker.onerror = () => reject(new Error('Ошибка парсинга CSV'))
+      })
 
-        if (data.status === 'error') {
-          clearInterval(intervalRef.current)
-          intervalRef.current = null
-          setLoading(false)
-          setJobId('')
-          setProgress(null)
-          setError('Произошла ошибка во время анализа')
-        }
-      } catch (err) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
+      const { rows: parsedRows, diaryRows: parsedDiary } = rows
+      if (!parsedRows || parsedRows.length === 0) {
+        setError('В CSV нет записей о фильмах')
         setLoading(false)
-        setJobId('')
         setProgress(null)
-        setError(err.message || 'Ошибка анализа')
+        return
       }
-    }
 
-    poll()
-    intervalRef.current = setInterval(poll, 500)
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
+      const mobile = isMobile()
+      if (mobile && parsedRows.length > BIG_FILE_MOBILE_THRESHOLD && !simplified) {
+        setPendingFiles({ parsedRows, parsedDiary })
+        setShowMobileModal(true)
+        setLoading(false)
+        setProgress(null)
+        return
       }
+
+      await runAnalysisFromRows(parsedRows, parsedDiary, simplified)
+      if (simplified) setSimplifiedMode(true)
+    } catch (err) {
+      setError(err.message || 'Произошла ошибка')
+    } finally {
+      setLoading(false)
+      setProgress(null)
     }
-  }, [jobId])
+  }
 
   const handleUpload = async (ratingsFile, diaryFile = null) => {
     if (!ratingsFile) return
@@ -96,34 +138,42 @@ function App() {
       setError('В режиме демо используйте блок «Демо-отчёт» ниже.')
       return
     }
-    setError('')
-    setLoading(true)
-    setAnalysis(null)
-    setLastUploadedFileName(ratingsFile.name || '')
-    setProgress({ total: 0, done: 0, status: 'processing' })
+    await runAnalysis(ratingsFile, diaryFile, false)
+  }
 
-    const formData = new FormData()
-    formData.append('ratings_file', ratingsFile)
-    if (diaryFile) formData.append('diary_file', diaryFile)
+  const handleMobileContinue = async () => {
+    setShowMobileModal(false)
+    if (pendingFiles) {
+      setError('')
+      setLoading(true)
+      setAnalysis(null)
+      setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: pendingFiles.parsedRows.length, done: 0, percent: 2 })
+      setLastUploadedFileName('')
+      try {
+        await runAnalysisFromRows(pendingFiles.parsedRows, pendingFiles.parsedDiary, true)
+        setSimplifiedMode(true)
+      } catch (err) {
+        setError(err.message || 'Произошла ошибка')
+      } finally {
+        setLoading(false)
+        setProgress(null)
+      }
+      setPendingFiles(null)
+    }
+  }
 
+  const handleMobileCancel = () => {
+    setShowMobileModal(false)
+    setPendingFiles(null)
+  }
+
+  const handleClearCache = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/analyze`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Не удалось загрузить файл для анализа')
-      }
-      const data = await response.json()
-      if (!data.job_id) {
-        throw new Error('Сервис анализа недоступен')
-      }
-      setJobId(data.job_id)
-    } catch (err) {
-      setError(err.message || 'Произошла ошибка')
-      setLoading(false)
-      setProgress(null)
+      await clearCache()
+      setCacheCleared(true)
+      setTimeout(() => setCacheCleared(false), 2000)
+    } catch {
+      setError('Не удалось очистить кеш')
     }
   }
 
@@ -152,7 +202,6 @@ function App() {
 
   const summaryText = formatYearRange(selectedYears, availableYears)
   const yearsLabel = getYearRangeLabel(selectedYears.length ? selectedYears : availableYears)
-  const fileName = `year-in-film_${yearsLabel || 'all'}.pdf`
   const yearsHeader = (() => {
     if (!availableYears.length) return 'Все годы'
     if (selectedYears.length === 0) {
@@ -180,6 +229,7 @@ function App() {
     setError('')
     setLoading(true)
     setAnalysis(null)
+    setSimplifiedMode(false)
     try {
       const { data, error: mockError } = await loadMock(demoMockId)
       setLoading(false)
@@ -195,31 +245,7 @@ function App() {
     }
   }
 
-  const handleExport = async () => {
-    if (!analysis || !computed || exporting) return
-    setExporting(true)
-    try {
-      const { exportPdfReport } = await import('./utils/exportPdfReport.js')
-      exportPdfReport({
-        stats: computed.stats,
-        watchTime: computed.watchTime,
-        selectedYearsLabel: yearsHeader,
-        filePeriod: yearsLabel || 'all',
-        topRatedFilms: computed.topRatedFilms,
-        topGenres: computed.topGenres,
-        topGenresByAvg: computed.topGenresByAvg,
-        topTags: computed.topTags,
-        decades: computed.decades,
-        topDirectorsByCount: computed.topDirectorsByCount,
-        topActorsByCount: computed.topActorsByCount,
-        topCountriesByCount: computed.topCountriesByCount,
-        topLanguagesByCount: computed.topLanguagesByCount,
-        badges: computed.badges,
-      })
-    } finally {
-      setExporting(false)
-    }
-  }
+  const simplifiedEmpty = analysis?.simplifiedMode
 
   return (
     <div className="app" id="dashboard-root">
@@ -248,14 +274,6 @@ function App() {
           )}
         </div>
         <div className="hero-actions">
-          <button
-            className="btn btn-secondary"
-            type="button"
-            onClick={handleExport}
-            disabled={!analysis || exporting}
-          >
-            Экспорт в PDF
-          </button>
           <UploadZone
             onUpload={handleUpload}
             loading={loading}
@@ -293,17 +311,43 @@ function App() {
             </div>
           )}
           <p className="upload-privacy">
-            Файл обрабатывается только для построения отчёта.
+            Файл обрабатывается только в браузере. Никуда не отправляется.
           </p>
-          <p className="upload-wake-hint">
-            Если сервис долго не использовался, сервер может просыпаться 5–10 секунд — это нормально.
+          <p className="upload-settings">
+            <button
+              type="button"
+              className="btn-link btn-link-small"
+              onClick={handleClearCache}
+              disabled={loading}
+            >
+              {cacheCleared ? 'Кеш очищен' : 'Очистить кеш'}
+            </button>
           </p>
         </div>
       </header>
 
+      {showMobileModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="mobile-modal-title">
+          <div className="modal-card">
+            <h2 id="mobile-modal-title">Большой файл</h2>
+            <p>
+              На телефоне обработка может быть очень долгой.
+              Рекомендуем открыть сайт на ПК.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={handleMobileCancel}>
+                Отмена
+              </button>
+              <button type="button" className="btn" onClick={handleMobileContinue}>
+                Продолжить (упрощённый режим)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading && <ProgressStatus progress={progress} />}
       {error && <div className="error-banner">{error}</div>}
-      {exporting && <div className="export-overlay">Готовлю PDF…</div>}
 
       {!analysis && !loading && (
         <section className="empty-state">
@@ -317,10 +361,19 @@ function App() {
 
       {analysis && computed && filteredFilms.length > 0 && (
         <main className="dashboard">
+          {computed.summarySentence && (
+            <p className="summary-sentence" aria-live="polite">
+              {computed.summarySentence}
+            </p>
+          )}
           <StatsCards stats={computed.stats} />
           <FilmsGrid films={computed.topRatedFilms} />
           <section className="grid">
-            <HiddenGemsSection hiddenGems={computed.hiddenGems} overrated={computed.overrated} />
+            <HiddenGemsSection
+              hiddenGems={simplifiedEmpty ? [] : computed.hiddenGems}
+              overrated={simplifiedEmpty ? [] : computed.overrated}
+              simplifiedEmpty={simplifiedEmpty}
+            />
           </section>
           <section className="grid">
             <GenresSection
@@ -330,7 +383,10 @@ function App() {
             />
           </section>
           <section className="grid grid--two-cols">
-            <TagsTable tags={computed.topTags} />
+            <TagsTable
+              tags={computed.topTags}
+              emptyMessage={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : undefined}
+            />
             <Suspense fallback={null}>
               <LazyChartsSection
                 timeline={computed.timeline}
@@ -359,15 +415,15 @@ function App() {
               subtitle="География твоего кино-года"
               byCount={computed.topCountriesByCount}
               byAvg={computed.topCountriesByAvgRating}
-              emptyText="Нет данных по странам."
+              emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по странам.'}
               sectionKey="countries"
             />
             <ToggleRankedList
               title="Режиссёры"
               subtitle="Те, кого ты смотришь чаще всего"
-              byCount={computed.topDirectorsByCount}
-              byAvg={computed.topDirectorsByAvgRating}
-              emptyText="Нет данных по режиссёрам."
+              byCount={simplifiedEmpty ? [] : computed.topDirectorsByCount}
+              byAvg={simplifiedEmpty ? [] : computed.topDirectorsByAvgRating}
+              emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по режиссёрам.'}
               sectionKey="directors"
             />
           </section>
@@ -375,9 +431,9 @@ function App() {
             <ToggleRankedList
               title="Актёры"
               subtitle="Любимые лица твоего года"
-              byCount={computed.topActorsByCount}
-              byAvg={computed.topActorsByAvgRating}
-              emptyText="Нет данных по актёрам."
+              byCount={simplifiedEmpty ? [] : computed.topActorsByCount}
+              byAvg={simplifiedEmpty ? [] : computed.topActorsByAvgRating}
+              emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по актёрам.'}
               sectionKey="actors"
             />
           </section>

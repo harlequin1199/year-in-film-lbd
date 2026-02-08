@@ -372,6 +372,15 @@ export const computeAggregations = (films) => {
 
   const hiddenGems = computeHiddenGems(films)
   const overrated = computeOverrated(films)
+  const summarySentence = generateSummarySentence({
+    stats,
+    topGenres,
+    decades,
+    topCountriesByCount: countriesByCount,
+    topLanguagesByCount,
+    hiddenGems,
+    filmsCount: films.length,
+  })
 
   return {
     stats,
@@ -397,7 +406,38 @@ export const computeAggregations = (films) => {
     timeline: watchesByMonth.map((item) => ({ month: item.month, count: item.count })),
     badges: trimmedBadges,
     decades,
+    summarySentence,
   }
+}
+
+/**
+ * Итоговое предложение в духе Letterboxd: жанр, десятилетие, рейтинг, страна/язык, скрытые жемчужины.
+ */
+export function generateSummarySentence(computed) {
+  if (!computed) return ''
+  const { stats, topGenres, decades, topCountriesByCount, topLanguagesByCount, hiddenGems, filmsCount } = computed
+  const genre = topGenres?.[0]?.name
+  const decade = decades?.[0]?.decade
+  const avg = stats?.avgRating
+  const country = topCountriesByCount?.[0]?.name
+  const lang = topLanguagesByCount?.[0]?.name
+  const gemsRatio = filmsCount > 0 && hiddenGems?.length > 0 ? hiddenGems.length / filmsCount : 0
+
+  let main = ''
+  if (genre && decade != null) {
+    main = `в этом году ты чаще всего выбирал ${genre.toLowerCase()} ${decade}-х`
+  } else if (genre) {
+    main = `твой главный жанр года — ${genre.toLowerCase()}`
+  } else {
+    main = 'твой год в кино собран и посчитан'
+  }
+  let tail = ' — и явно любишь, когда атмосфера важнее сюжета.'
+  if (country && (lang === undefined || lang === 'en')) {
+    tail = ` — и география года явно за ${country}.`
+  } else if (gemsRatio > 0.08) {
+    tail = ' — и ты умеешь находить скрытые жемчужины.'
+  }
+  return `Итог: ${main}${tail}`
 }
 
 /**
