@@ -441,7 +441,7 @@ function App() {
         <div>
           <p className="eyebrow">Letterboxd · Итоги года</p>
           <h1>Твой год в кино</h1>
-          {analysis && computed && computed.stats.totalFilms > 0 && (
+          {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
             <p className="hero-summary-line" aria-live="polite">
               {formatNumber(computed.stats.totalFilms)} фильма · {formatRating(computed.stats.avgRating)}★ · {formatNumber(computed.stats.count45)} фильмов 4.5+ · {computed.stats.oldestYear}–{computed.stats.newestYear}
             </p>
@@ -450,7 +450,7 @@ function App() {
             Загрузите экспорт рейтингов Letterboxd и увидьте год через любимые
             жанры, темы и самые высокие оценки.
           </p>
-          {analysis && (
+          {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
             <YearFilter
               availableYears={availableYears}
               selectedYears={selectedYears}
@@ -572,7 +572,14 @@ function App() {
           retryMessage={retryMessage}
         />
       )}
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          <span>{error}</span>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => setError('')}>
+            Повторить
+          </button>
+        </div>
+      )}
       {analysis?.warnings?.length > 0 && (
         <div className="warning-banner" role="alert">
           {analysis.warnings.join(' ')}
@@ -589,7 +596,7 @@ function App() {
         </section>
       )}
 
-      {analysis && computed && computed.stats.totalFilms > 0 && (
+      {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
         <main className="dashboard">
           {computed.summarySentence && (
             <p className="summary-sentence" aria-live="polite">
@@ -672,7 +679,7 @@ function App() {
           </section>
         </main>
       )}
-      {analysis && computed && computed.stats.totalFilms > 0 && selectedYears.length > 0 && filteredFilms.length === 0 && (
+      {!loading && analysis && computed && computed.stats.totalFilms > 0 && selectedYears.length > 0 && filteredFilms.length === 0 && (
         <section className="empty-state">
           <h2>Нет фильмов для выбранного периода</h2>
           <p>Попробуй выбрать другие годы или сбросить фильтр.</p>

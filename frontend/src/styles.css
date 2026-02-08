@@ -72,7 +72,7 @@ body {
   }
 }
 
-/* Typography hierarchy */
+/* Typography hierarchy: page title → section titles → card subtitles → body */
 h1, .hero h1 {
   margin: 0 0 var(--space-sm);
   font-size: clamp(28px, 5vw, 42px);
@@ -83,15 +83,15 @@ h1, .hero h1 {
 }
 
 h2 {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
-  margin: 0 0 var(--space-sm);
+  margin: 0 0 var(--space-md);
   line-height: var(--leading-tight);
   color: var(--text-primary);
 }
 
 h3, .card-header h3 {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
   line-height: var(--leading-tight);
@@ -618,7 +618,7 @@ h3, .card-header h3 {
 .card-header p {
   margin: var(--space-sm) 0 0;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   line-height: var(--leading-normal);
 }
 
@@ -1057,7 +1057,7 @@ h3, .card-header h3 {
 
 .hidden-gems-header-left h3 {
   margin: 0 0 4px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #e6edf7;
 }
@@ -1121,10 +1121,9 @@ h3, .card-header h3 {
   margin-right: auto;
 }
 
-/* Два ряда помещаются без скролла; при третьем ряде появляется скролл (запас 8px убирает «мёртвый» скроллбар) */
+/* Scroll only when >2 rows; max-height set by JS (ResizeObserver) */
 .hidden-gems-grid-scroll {
-  max-height: 710px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .hidden-gems-grid {
@@ -1244,18 +1243,12 @@ h3, .card-header h3 {
 }
 
 @media (max-width: 900px) {
-  .hidden-gems-grid-scroll {
-    max-height: 965px;
-  }
   .hidden-gems-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 520px) {
-  .hidden-gems-grid-scroll {
-    max-height: 848px;
-  }
   .hidden-gems-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -1351,11 +1344,30 @@ h3, .card-header h3 {
   height: 16px;
 }
 
+/* Top by rating: 12 films. Wide 6 cols, medium 4, small 3, mobile 2 */
 .films-grid {
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-lg);
+}
+
+@media (min-width: 600px) {
+  .films-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .films-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .films-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 .film {
@@ -1976,10 +1988,6 @@ h3, .card-header h3 {
   .grid--two-cols {
     grid-template-columns: 1fr;
   }
-  .films-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-md);
-  }
   .badge-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-sm);
@@ -2068,4 +2076,10 @@ h3, .card-header h3 {
   color: var(--text-muted);
   font-size: 14px;
   line-height: var(--leading-normal);
+}
+
+.section-empty-few {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
 }

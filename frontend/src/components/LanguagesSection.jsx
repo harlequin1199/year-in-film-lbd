@@ -11,6 +11,7 @@ function LanguagesSection({ totalLanguagesCount, topLanguagesByCount }) {
   const list = expanded ? full : full.slice(0, LIMIT)
   const hasMore = full.length > LIMIT
   const pills = full.slice(0, 6)
+  const fewItems = full.length > 0 && full.length < 3
 
   return (
     <section className="card">
@@ -32,7 +33,8 @@ function LanguagesSection({ totalLanguagesCount, topLanguagesByCount }) {
         </div>
       </div>
       {full.length === 0 && <div className="empty-inline">Нет данных по языкам.</div>}
-      {full.length > 0 && (
+      {fewItems && <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>}
+      {full.length > 0 && !fewItems && (
         <>
           <div className="table">
             <div className="table-head">

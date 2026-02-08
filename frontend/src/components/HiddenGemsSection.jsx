@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Stars from './Stars.jsx'
 import { formatYear } from '../utils/format.js'
 
 const TAB_GEMS = 'gems'
 const TAB_OVERRATED = 'overrated'
 
+const GAP_PX = 16
+
+function getColumnsFromWidth(width) {
+  if (width < 520) return 2
+  if (width < 900) return 3
+  return 6
+}
+
 export default function HiddenGemsSection({ hiddenGems = [], overrated = [], simplifiedEmpty = false }) {
   const [activeTab, setActiveTab] = useState(TAB_GEMS)
+  const scrollRef = useRef(null)
+  const gridRef = useRef(null)
   const gems = hiddenGems || []
   const overratedList = overrated || []
 
@@ -37,6 +47,32 @@ export default function HiddenGemsSection({ hiddenGems = [], overrated = [], sim
   const showGems = activeTab === TAB_GEMS
   const list = showGems ? gems : overratedList
   const isEmpty = list.length === 0
+
+  useEffect(() => {
+    if (isEmpty || !scrollRef.current || !gridRef.current) return
+    const scrollEl = scrollRef.current
+    const gridEl = gridRef.current
+    const updateScroll = () => {
+      const width = scrollEl.offsetWidth
+      const columns = getColumnsFromWidth(width)
+      const rows = Math.ceil(list.length / columns)
+      if (rows <= 2) {
+        scrollEl.style.maxHeight = ''
+        scrollEl.style.overflowY = ''
+        return
+      }
+      const first = gridEl.querySelector('.hidden-gems-tile')
+      if (!first) return
+      const tileHeight = first.offsetHeight
+      const rowHeight = tileHeight + GAP_PX
+      scrollEl.style.maxHeight = `${2 * rowHeight + GAP_PX}px`
+      scrollEl.style.overflowY = 'auto'
+    }
+    updateScroll()
+    const ro = new ResizeObserver(updateScroll)
+    ro.observe(scrollEl)
+    return () => ro.disconnect()
+  }, [list.length, isEmpty])
   const simplifiedMessage = 'Недоступно в упрощённом режиме на телефоне.'
   const emptyTitleGems = simplifiedEmpty ? 'Упрощённый режим' : 'Тёмных лошадок не найдено'
   const emptyTitleOverrated = simplifiedEmpty ? 'Упрощённый режим' : 'Переоценённых фильмов не найдено'
@@ -81,8 +117,8 @@ export default function HiddenGemsSection({ hiddenGems = [], overrated = [], sim
           <p className="hidden-gems-empty-text">{emptyText}</p>
         </div>
       ) : (
-        <div className="hidden-gems-grid-scroll">
-          <div className="hidden-gems-grid">
+        <div className="hidden-gems-grid-scroll" ref={scrollRef}>
+          <div className="hidden-gems-grid" ref={gridRef}>
             {list.map((film) => (
             <article key={`${film.title}-${film.year}`} className="hidden-gems-tile">
               {renderPoster(film, activeTab === TAB_OVERRATED)}

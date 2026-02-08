@@ -19,6 +19,7 @@ function ToggleRankedList({
   const limit = 10
   const list = expanded ? fullList : fullList.slice(0, limit)
   const hasMore = fullList.length > limit
+  const fewItems = fullList.length > 0 && fullList.length < 3
 
   return (
     <section className="card" data-section={sectionKey || undefined}>
@@ -43,7 +44,8 @@ function ToggleRankedList({
         </button>
       </div>
       {list.length === 0 && <div className="empty-inline">{emptyText}</div>}
-      {list.length > 0 && (
+      {fewItems && <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>}
+      {list.length > 0 && !fewItems && (
         <div className="table">
           <div className="table-head table-head--wide">
             <span>Имя</span>

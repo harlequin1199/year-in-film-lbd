@@ -25,6 +25,8 @@ const buildRankedByCount = (map) => {
   return list
 }
 
+const TOP_LIST_MAX = 10
+
 const buildRankedByAvg = (map, minCount) => {
   const list = []
   map.forEach((stats, name) => {
@@ -458,25 +460,25 @@ export const computeAggregations = (films) => {
 
   return {
     stats,
-    topGenres,
-    topGenresByAvg,
-    topGenresByAvgMin8,
+    topGenres: topGenres.slice(0, TOP_LIST_MAX),
+    topGenresByAvg: topGenresByAvg.slice(0, TOP_LIST_MAX),
+    topGenresByAvgMin8: topGenresByAvgMin8.slice(0, TOP_LIST_MAX),
     genreOfTheYear,
     hiddenGems,
     overrated,
-    topTags,
+    topTags: topTags.slice(0, TOP_LIST_MAX),
     topRatedFilms,
     watchTime,
     watchesByMonth,
     watchesByWeekday,
     totalLanguagesCount: languageMap.size,
-    topLanguagesByCount,
-    topCountriesByCount: countriesByCount,
-    topCountriesByAvgRating: countriesByAvg,
-    topDirectorsByCount: directorsByCount,
-    topDirectorsByAvgRating: directorsByAvg,
-    topActorsByCount: actorsByCount,
-    topActorsByAvgRating: actorsByAvg,
+    topLanguagesByCount: topLanguagesByCount.slice(0, TOP_LIST_MAX),
+    topCountriesByCount: countriesByCount.slice(0, TOP_LIST_MAX),
+    topCountriesByAvgRating: countriesByAvg.slice(0, TOP_LIST_MAX),
+    topDirectorsByCount: directorsByCount.slice(0, TOP_LIST_MAX),
+    topDirectorsByAvgRating: directorsByAvg.slice(0, TOP_LIST_MAX),
+    topActorsByCount: actorsByCount.slice(0, TOP_LIST_MAX),
+    topActorsByAvgRating: actorsByAvg.slice(0, TOP_LIST_MAX),
     timeline: watchesByMonth.map((item) => ({ month: item.month, count: item.count })),
     badges: trimmedBadges,
     decades,

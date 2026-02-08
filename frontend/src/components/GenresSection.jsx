@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { formatNumber, formatRating } from '../utils/format.js'
 import Stars from './Stars.jsx'
 
-function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHoverGenre }) {
+function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
   if (!items || items.length === 0) {
     return <p className="genres-list-empty">Нет данных</p>
+  }
+  if (fewItems) {
+    return <p className="genres-list-empty section-empty-few">Слишком мало записей для рейтинга.</p>
   }
   const showPct = totalForPct != null && totalForPct > 0
   return (
@@ -46,9 +49,11 @@ export default function GenresSection({
 }) {
   const [highlightedGenre, setHighlightedGenre] = useState(null)
   const topGenresList = topGenres || []
-  const byCount = topGenresList.slice(0, 8)
-  const byAvg = (topGenresByAvgMin8 || []).slice(0, 8)
+  const byCount = topGenresList
+  const byAvg = topGenresByAvgMin8 || []
   const totalGenreCount = topGenresList.reduce((acc, g) => acc + g.count, 0)
+  const fewCount = byCount.length > 0 && byCount.length < 3
+  const fewAvg = byAvg.length > 0 && byAvg.length < 3
 
   return (
     <section className="card genres-section">
@@ -78,6 +83,7 @@ export default function GenresSection({
           <GenreList
             items={byCount}
             showAvg={false}
+            fewItems={fewCount}
             totalForPct={totalGenreCount}
             highlightedGenre={highlightedGenre}
             onHoverGenre={setHighlightedGenre}
@@ -92,6 +98,7 @@ export default function GenresSection({
           <GenreList
             items={byAvg}
             showAvg={true}
+            fewItems={fewAvg}
             highlightedGenre={highlightedGenre}
             onHoverGenre={setHighlightedGenre}
           />

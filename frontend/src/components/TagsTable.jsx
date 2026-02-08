@@ -10,6 +10,7 @@ function TagsTable({ tags, emptyMessage }) {
   const list = expanded ? full : full.slice(0, LIMIT)
   const hasMore = full.length > LIMIT
   const showEmpty = full.length === 0 && emptyMessage
+  const fewItems = full.length > 0 && full.length < 3
 
   return (
     <section className="card">
@@ -19,6 +20,8 @@ function TagsTable({ tags, emptyMessage }) {
       </div>
       {showEmpty ? (
         <p className="text-muted">{emptyMessage}</p>
+      ) : fewItems ? (
+        <p className="text-muted section-empty-few">Слишком мало записей для рейтинга.</p>
       ) : (
         <>
           <div className="table">
