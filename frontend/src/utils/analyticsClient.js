@@ -45,6 +45,80 @@ const buildRankedByAvg = (map, minCount) => {
   return list
 }
 
+/**
+ * Stage 1: CSV-only stats (no TMDb). Use right after parse for instant partial result.
+ */
+export function computeStage1FromRows(rows) {
+  if (!rows || rows.length === 0) {
+    return {
+      stats: { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+      ratingDistribution: [],
+      top12ByRating: [],
+    }
+  }
+  const ratings = rows.map((r) => r.rating).filter((r) => r !== null && r !== undefined)
+  const years = rows.map((r) => r.year).filter(Boolean)
+  const stats = {
+    totalFilms: rows.length,
+    avgRating: ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2)) : 0,
+    count45: ratings.filter((r) => r >= 4.5).length,
+    oldestYear: years.length ? Math.min(...years) : null,
+    newestYear: years.length ? Math.max(...years) : null,
+  }
+  const buckets = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+  const ratingDistribution = buckets.map((low, i) => {
+    const high = buckets[i + 1] ?? 5.5
+    const count = ratings.filter((r) => r >= low && r < high).length
+    return { min: low, max: high, count }
+  })
+  const top12ByRating = [...rows]
+    .filter((r) => r.rating != null)
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
+    .slice(0, 12)
+    .map((r) => ({ title: r.title, year: r.year, rating: r.rating }))
+  return { stats, ratingDistribution, top12ByRating }
+}
+
+/** Partial computed from Stage 1 only (for progressive UI before TMDb data). */
+export function getComputedFromStage1(stage1) {
+  if (!stage1) return null
+  const { stats, top12ByRating } = stage1
+  const topRatedFilms = (top12ByRating || []).map((r) => ({
+    title: r.title,
+    year: r.year,
+    rating: r.rating,
+    poster_url: null,
+    poster_url_w342: null,
+    tmdb_id: null,
+  }))
+  return {
+    stats: stats || { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+    topRatedFilms,
+    topGenres: [],
+    topGenresByAvg: [],
+    topGenresByAvgMin8: [],
+    genreOfTheYear: null,
+    hiddenGems: [],
+    overrated: [],
+    topTags: [],
+    watchTime: null,
+    watchesByMonth: [],
+    watchesByWeekday: [],
+    totalLanguagesCount: 0,
+    topLanguagesByCount: [],
+    topCountriesByCount: [],
+    topCountriesByAvgRating: [],
+    topDirectorsByCount: [],
+    topDirectorsByAvgRating: [],
+    topActorsByCount: [],
+    topActorsByAvgRating: [],
+    timeline: [],
+    badges: [],
+    decades: [],
+    summarySentence: '',
+  }
+}
+
 export const computeAggregations = (films) => {
   const ratings = films.map((film) => film.rating).filter((r) => r !== null && r !== undefined)
   const years = films.map((film) => film.year).filter(Boolean)

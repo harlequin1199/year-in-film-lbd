@@ -378,6 +378,16 @@ h3, .card-header h3 {
   background: #1a1216;
 }
 
+.warning-banner {
+  margin: var(--space-md) 0;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
 .export-overlay {
   position: fixed;
   inset: 0;

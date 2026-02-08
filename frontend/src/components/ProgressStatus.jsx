@@ -2,9 +2,11 @@ import { formatNumber } from '../utils/format.js'
 
 const DISPLAY_STEPS = [
   { key: 'parsing', label: 'Чтение CSV' },
+  { key: 'stage1', label: 'Базовая статистика' },
   { key: 'tmdb_search', label: 'Поиск фильмов в TMDb' },
   { key: 'tmdb_details', label: 'Загрузка данных TMDb' },
-  { key: 'finalizing', label: 'Подготовка отчёта' },
+  { key: 'credits_keywords', label: 'Актёры и режиссёры (опц.)' },
+  { key: 'finalizing', label: 'Финализация отчёта' },
 ]
 
 function formatEta(seconds) {
@@ -24,9 +26,11 @@ function ProgressStatus({ progress, onCancel, retryMessage }) {
   const etaSeconds = progress.etaSeconds
   const stepIndex = (() => {
     if (stage === 'parsing') return 0
-    if (stage === 'tmdb_search') return 1
-    if (stage === 'tmdb_details' || stage === 'analytics') return 2
-    return 3
+    if (stage === 'stage1') return 1
+    if (stage === 'tmdb_search') return 2
+    if (stage === 'tmdb_details' || stage === 'analytics') return 3
+    if (stage === 'credits_keywords') return 4
+    return 5
   })()
 
   return (

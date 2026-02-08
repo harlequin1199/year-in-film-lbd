@@ -104,6 +104,232 @@ function runQueue(tasks, concurrency, opts = {}) {
   })
 }
 
+const CONCURRENCY_SEARCH = 3
+const CONCURRENCY_MOVIE = 3
+const CONCURRENCY_CREDITS = 1
+const CONCURRENCY_KEYWORDS = 1
+const CREDITS_CAP = 400
+const KEYWORDS_CAP = 400
+
+function emptyFilm(row) {
+  return {
+    ...row,
+    tmdb_id: null,
+    poster_path: null,
+    poster_url: null,
+    poster_url_w342: null,
+    tmdb_vote_average: null,
+    tmdb_vote_count: 0,
+    tmdb_stars: null,
+    genres: [],
+    keywords: [],
+    directors: [],
+    actors: [],
+    countries: [],
+    runtime: null,
+    original_language: null,
+  }
+}
+
+/**
+ * Progressive staged analysis: Stage 2 (search) -> Stage 3 (movie) -> Stage 4 (credits/keywords capped).
+ * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
+ */
+export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
+  if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
+  const fetchOpts = { signal, onRetryMessage }
+
+  const keyToIndexes = new Map()
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    if (!keyToIndexes.has(k)) keyToIndexes.set(k, [])
+    keyToIndexes.get(k).push(i)
+  })
+  const uniqueKeys = [...keyToIndexes.keys()]
+  const resolvedTmdbIds = new Array(rows.length).fill(null)
+  const keyToTmdbId = new Map()
+
+  const searchTasks = uniqueKeys.map((k) => {
+    const parts = k.split(':')
+    const yearPart = parts.length > 1 ? parts.pop() : '0'
+    const title = parts.join(':') || ''
+    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+    return async () => {
+      try {
+        return await searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+      } catch {
+        return null
+      }
+    }
+  })
+
+  let searchDone = 0
+  for (let j = 0; j < searchTasks.length; j += 50) {
+    const chunk = searchTasks.slice(j, j + 50)
+    const chunkKeys = uniqueKeys.slice(j, j + 50)
+    const results = await runQueue(chunk, CONCURRENCY_SEARCH, {
+      signal,
+      onProgress: (done, batchLen) => {
+        searchDone = j + done
+        if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: Math.min(25, Math.round((searchDone / uniqueKeys.length) * 25)) })
+      },
+    })
+    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+  }
+
+  rows.forEach((row, i) => {
+    const k = searchKey(row.title, row.year)
+    resolvedTmdbIds[i] = keyToTmdbId.get(k) ?? null
+  })
+
+  const filmsStage2 = rows.map((row, i) => ({ ...row, tmdb_id: resolvedTmdbIds[i] ?? null }))
+  if (onPartialResult) onPartialResult({ stage: 2, films: filmsStage2 })
+
+  const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
+  const movieMap = new Map()
+
+  const movieTasks = uniqueIds.map((id) => async () => {
+    try {
+      const movie = await getMovieMinimal(id, fetchOpts)
+      movieMap.set(id, movie)
+      return movie
+    } catch {
+      return null
+    }
+  })
+
+  let movieDone = 0
+  for (let j = 0; j < movieTasks.length; j += 50) {
+    const chunk = movieTasks.slice(j, j + 50)
+    await runQueue(chunk, CONCURRENCY_MOVIE, {
+      signal,
+      onProgress: (done, batchLen) => {
+        movieDone = j + done
+        if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: 25 + Math.min(45, Math.round((movieDone / uniqueIds.length) * 45)) })
+      },
+    })
+  }
+
+  const films = rows.map((row, i) => {
+    const tmdbId = resolvedTmdbIds[i]
+    if (!tmdbId) return emptyFilm(row)
+    const movie = movieMap.get(tmdbId)
+    const poster_path = movie?.poster_path ?? null
+    const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
+    const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
+    const va = movie?.vote_average ?? null
+    const vc = movie?.vote_count ?? 0
+    return {
+      ...row,
+      tmdb_id: tmdbId,
+      poster_path,
+      poster_url,
+      poster_url_w342,
+      tmdb_vote_average: va,
+      tmdb_vote_count: vc,
+      tmdb_stars: tmdbRating5(va),
+      genres: movie?.genres || [],
+      keywords: [],
+      directors: [],
+      actors: [],
+      countries: movie?.production_countries || [],
+      runtime: movie?.runtime ?? null,
+      original_language: movie?.original_language ?? null,
+    }
+  })
+
+  if (diaryRows?.length > 0) mergeDiary(films, diaryRows)
+  if (onPartialResult) onPartialResult({ stage: 3, films })
+
+  const byRating = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
+  const gemScore = (f) => {
+    const u = f.rating ?? 0
+    const t = f.tmdb_stars
+    const vc = f.tmdb_vote_count ?? 0
+    if (u < 3.5 || vc < 200 || t == null) return -999
+    return u - t
+  }
+  const overScore = (f) => {
+    const t = f.tmdb_stars
+    const u = f.rating ?? 0
+    if (t == null) return -999
+    return t - u
+  }
+  const idsForCredits = new Set()
+  byRating.slice(0, 250).forEach((f) => f.tmdb_id && idsForCredits.add(f.tmdb_id))
+  films.slice().sort((a, b) => gemScore(b) - gemScore(a)).slice(0, 150).forEach((f) => {
+    if (gemScore(f) >= 1.5 && f.tmdb_id) idsForCredits.add(f.tmdb_id)
+  })
+  films.slice().sort((a, b) => overScore(b) - overScore(a)).slice(0, 150).forEach((f) => {
+    if (f.tmdb_id) idsForCredits.add(f.tmdb_id)
+  })
+  const idList = Array.from(idsForCredits).slice(0, CREDITS_CAP)
+  const creditsMap = new Map()
+  const keywordsMap = new Map()
+  const creditsToFetch = idList.slice(0, CREDITS_CAP)
+  const keywordsToFetch = idList.slice(0, KEYWORDS_CAP)
+
+  const creditTasks = creditsToFetch.map((id) => async () => {
+    try {
+      return await getCredits(id, fetchOpts)
+    } catch {
+      return null
+    }
+  })
+  const keywordTasks = keywordsToFetch.map((id) => async () => {
+    try {
+      return await getKeywords(id, fetchOpts)
+    } catch {
+      return null
+    }
+  })
+
+  let creditsDone = 0
+  for (let j = 0; j < creditTasks.length; j += 20) {
+    const chunk = creditTasks.slice(j, j + 20)
+    const chunkIds = creditsToFetch.slice(j, j + 20)
+    const results = await runQueue(chunk, CONCURRENCY_CREDITS, {
+      signal,
+      onProgress: (done, batchLen) => {
+        creditsDone = j + done
+        if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: creditsDone, total: creditTasks.length, percent: 70 + Math.min(25, Math.round((creditsDone / creditTasks.length) * 25)) })
+      },
+    })
+    chunkIds.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
+  }
+
+  let keywordsDone = 0
+  for (let j = 0; j < keywordTasks.length; j += 20) {
+    const chunk = keywordTasks.slice(j, j + 20)
+    const chunkIds = keywordsToFetch.slice(j, j + 20)
+    const results = await runQueue(chunk, CONCURRENCY_KEYWORDS, {
+      signal,
+      onProgress: (done, batchLen) => {
+        keywordsDone = j + done
+        if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: keywordsDone, total: keywordTasks.length, percent: 70 + Math.min(25, Math.round((keywordsDone / keywordTasks.length) * 25)) })
+      },
+    })
+    chunkIds.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
+  }
+
+  films.forEach((f) => {
+    const id = f.tmdb_id
+    if (!id) return
+    const cred = creditsMap.get(id)
+    if (cred) {
+      f.directors = cred.directors || []
+      f.actors = (cred.actors || []).slice(0, 10)
+    }
+    const kw = keywordsMap.get(id)
+    if (kw) f.keywords = (kw.keywords || []).slice(0, 20)
+  })
+
+  const warnings = []
+  if (idList.length >= CREDITS_CAP) warnings.push('Большой файл: загрузка актёров/режиссёров ограничена для стабильности.')
+  if (onPartialResult) onPartialResult({ stage: 4, films, warnings })
+  return films
+}
+
 function mergeDiary(filmsList, diary) {
   const byUri = new Map()
   const byKey = new Map()

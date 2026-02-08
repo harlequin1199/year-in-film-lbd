@@ -14,11 +14,13 @@ import YearFilter from './components/YearFilter.jsx'
 import { formatNumber, formatRating } from './utils/format.js'
 import {
   computeAggregations,
+  computeStage1FromRows,
+  getComputedFromStage1,
   filterFilmsByYears,
   formatYearRange,
   getYearRangeLabel,
 } from './utils/analyticsClient.js'
-import { enrichFilmsPhase1Only, enrichFilmsTwoPhase } from './utils/tmdbProxyClient.js'
+import { enrichFilmsPhase1Only, enrichFilmsTwoPhase, runStagedAnalysis } from './utils/tmdbProxyClient.js'
 import { clearCache, clearResumeState, getResumeState, getLastReport, setLastReport, setResumeState as persistResumeState } from './utils/indexedDbCache.js'
 import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
@@ -72,16 +74,73 @@ function App() {
   }, [resumeState, loading])
 
   const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false, signal = null, fileName = '') => {
+    const hasDiary = parsedDiary && parsedDiary.length > 0
     const opts = {
       signal: signal || abortControllerRef.current?.signal,
       onRetryMessage: (msg) => setRetryMessage(msg || ''),
     }
-    setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 2 })
-    const films = simplified
-      ? await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
-      : await enrichFilmsTwoPhase(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
-    setProgress({ stage: 'finalizing', message: 'Подготовка отчёта', total: films.length, done: films.length, percent: 98 })
-    const hasDiary = parsedDiary && parsedDiary.length > 0
+
+    setProgress({ stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 5 })
+    const stage1 = computeStage1FromRows(parsedRows)
+    setAnalysis({
+      stage1,
+      filmsLite: [],
+      filmsLiteAll: [],
+      hasDiary,
+      dataSource: hasDiary ? 'both' : 'ratings',
+      availableYears: [],
+      simplifiedMode: simplified,
+      fileName,
+      warnings: [],
+    })
+
+    if (simplified) {
+      const films = await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
+      const availableYearsFromFilms = [...new Set(films.map((f) => {
+        const d = f.watchedDate || f.date
+        if (!d) return null
+        const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+        return y ? parseInt(y, 10) : null
+      }).filter(Boolean))].sort((a, b) => a - b)
+      setAnalysis((prev) => ({
+        ...prev,
+        filmsLite: films,
+        filmsLiteAll: films,
+        stage1: undefined,
+        availableYears: availableYearsFromFilms,
+      }))
+      setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
+      await setLastReport({ filmsLite: films, filmsLiteAll: films, hasDiary, dataSource: hasDiary ? 'both' : 'ratings', availableYears: availableYearsFromFilms, simplifiedMode: true, fileName })
+      setLastReportAvailable(true)
+      await clearResumeState()
+      return
+    }
+
+    setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 8 })
+    const films = await runStagedAnalysis(parsedRows, parsedDiary, {
+      ...opts,
+      onProgress: (p) => { progressRef.current = p; setProgress(p) },
+      onPartialResult: (partial) => {
+        if (partial.films) {
+          const years = [...new Set(partial.films.map((f) => {
+            const d = f.watchedDate || f.date
+            if (!d) return null
+            const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+            return y ? parseInt(y, 10) : null
+          }).filter(Boolean))].sort((a, b) => a - b)
+          setAnalysis((prev) => ({
+            ...prev,
+            filmsLite: partial.films,
+            filmsLiteAll: partial.films,
+            ...(partial.stage >= 3 ? { stage1: undefined } : {}),
+            availableYears: years,
+            warnings: partial.warnings || prev.warnings,
+          }))
+        }
+      },
+    })
+
+    setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 98 })
     const availableYearsFromFilms = [...new Set(films.map((f) => {
       const d = f.watchedDate || f.date
       if (!d) return null
@@ -94,8 +153,9 @@ function App() {
       hasDiary,
       dataSource: hasDiary ? 'both' : 'ratings',
       availableYears: availableYearsFromFilms,
-      simplifiedMode: simplified,
+      simplifiedMode: false,
       fileName,
+      warnings: [],
     }
     setAnalysis(result)
     setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
@@ -317,8 +377,16 @@ function App() {
 
   const computed = useMemo(() => {
     if (!analysis) return null
+    if (analysis.stage1 && (!analysis.filmsLite || analysis.filmsLite.length === 0)) {
+      return getComputedFromStage1(analysis.stage1)
+    }
     return computeAggregations(filteredFilms)
   }, [analysis, filteredFilms])
+
+  const posterSetIdsTop12 = useMemo(
+    () => new Set((computed?.topRatedFilms || []).slice(0, 12).map((f) => f.tmdb_id).filter(Boolean)),
+    [computed?.topRatedFilms]
+  )
 
   const summaryText = formatYearRange(selectedYears, availableYears)
   const yearsLabel = getYearRangeLabel(selectedYears.length ? selectedYears : availableYears)
@@ -373,7 +441,7 @@ function App() {
         <div>
           <p className="eyebrow">Letterboxd · Итоги года</p>
           <h1>Твой год в кино</h1>
-          {analysis && computed && filteredFilms.length > 0 && (
+          {analysis && computed && computed.stats.totalFilms > 0 && (
             <p className="hero-summary-line" aria-live="polite">
               {formatNumber(computed.stats.totalFilms)} фильма · {formatRating(computed.stats.avgRating)}★ · {formatNumber(computed.stats.count45)} фильмов 4.5+ · {computed.stats.oldestYear}–{computed.stats.newestYear}
             </p>
@@ -389,7 +457,7 @@ function App() {
               onToggleYear={handleToggleYear}
               onReset={handleResetYears}
               summaryText={summaryText}
-              filmCount={filteredFilms.length}
+              filmCount={filteredFilms.length || computed?.stats?.totalFilms || 0}
             />
           )}
         </div>
@@ -505,6 +573,11 @@ function App() {
         />
       )}
       {error && <div className="error-banner">{error}</div>}
+      {analysis?.warnings?.length > 0 && (
+        <div className="warning-banner" role="alert">
+          {analysis.warnings.join(' ')}
+        </div>
+      )}
 
       {!analysis && !loading && (
         <section className="empty-state">
@@ -516,7 +589,7 @@ function App() {
         </section>
       )}
 
-      {analysis && computed && filteredFilms.length > 0 && (
+      {analysis && computed && computed.stats.totalFilms > 0 && (
         <main className="dashboard">
           {computed.summarySentence && (
             <p className="summary-sentence" aria-live="polite">
@@ -524,7 +597,7 @@ function App() {
             </p>
           )}
           <StatsCards stats={computed.stats} />
-          <FilmsGrid films={computed.topRatedFilms} />
+          <FilmsGrid films={computed.topRatedFilms} posterSetIds={posterSetIdsTop12} />
           <section className="grid">
             <HiddenGemsSection
               hiddenGems={simplifiedEmpty ? [] : computed.hiddenGems}
@@ -599,7 +672,7 @@ function App() {
           </section>
         </main>
       )}
-      {analysis && computed && filteredFilms.length === 0 && (
+      {analysis && computed && computed.stats.totalFilms > 0 && selectedYears.length > 0 && filteredFilms.length === 0 && (
         <section className="empty-state">
           <h2>Нет фильмов для выбранного периода</h2>
           <p>Попробуй выбрать другие годы или сбросить фильтр.</p>

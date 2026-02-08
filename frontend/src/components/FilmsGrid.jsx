@@ -1,11 +1,17 @@
 import Stars from './Stars.jsx'
 import { formatYear } from '../utils/format.js'
 
-function FilmsGrid({ films }) {
+function FilmsGrid({ films, posterSetIds }) {
   if (!films || films.length === 0) return null
 
+  const showPoster = (film) => {
+    if (!posterSetIds) return !!film.poster_url
+    return film.tmdb_id && posterSetIds.has(film.tmdb_id) && film.poster_url
+  }
+
   const renderPoster = (film) => {
-    const image = film.poster_url ? (
+    const usePoster = showPoster(film)
+    const image = usePoster ? (
       <img src={film.poster_url} alt={film.title} loading="lazy" />
     ) : (
       <div className="poster-fallback">Постера нет</div>
