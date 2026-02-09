@@ -86,6 +86,41 @@ export async function getMovieMinimal(tmdbId, opts = {}) {
   const cached = await cache.getMovie(tmdbId)
   if (cached) return cached
   
+  if (API_BASE) {
+    const data = await fetchJsonPost(
+      `${API_BASE}/tmdb/movies/batch`,
+      { tmdb_ids: [tmdbId] },
+      opts
+    )
+    const result = data.results?.[0]
+    if (result && result.movie) {
+      const out = {
+        id: result.movie.id,
+        poster_path: result.movie.poster_path ?? null,
+        genres: result.movie.genres || [],
+        runtime: result.movie.runtime ?? null,
+        vote_average: result.movie.vote_average ?? null,
+        vote_count: result.movie.vote_count || 0,
+        original_language: result.movie.original_language ?? null,
+        production_countries: result.movie.production_countries || [],
+        release_date: result.movie.release_date ?? null,
+      }
+      await cache.setMovie(tmdbId, out)
+      return out
+    }
+    return {
+      id: tmdbId,
+      poster_path: null,
+      genres: [],
+      runtime: null,
+      vote_average: null,
+      vote_count: 0,
+      original_language: null,
+      production_countries: [],
+      release_date: null,
+    }
+  }
+  
   if (!PROXY_BASE) {
     return {
       id: tmdbId,
@@ -119,6 +154,23 @@ export async function getMovieMinimal(tmdbId, opts = {}) {
 export async function getCredits(tmdbId, opts = {}) {
   const cached = await cache.getCredits(tmdbId)
   if (cached) return cached
+  
+  if (API_BASE) {
+    const data = await fetchJsonPost(
+      `${API_BASE}/tmdb/movies/credits/batch`,
+      { tmdb_ids: [tmdbId] },
+      opts
+    )
+    const result = data.results?.[0]
+    if (result && result.credits) {
+      const out = { directors: result.credits.directors || [], actors: result.credits.actors || [] }
+      await cache.setCredits(tmdbId, out)
+      return out
+    }
+    return { directors: [], actors: [] }
+  }
+  
+  if (!PROXY_BASE) return { directors: [], actors: [] }
   const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/credits`, opts)
   const out = { directors: data.directors || [], actors: data.actors || [] }
   await cache.setCredits(tmdbId, out)
@@ -128,6 +180,23 @@ export async function getCredits(tmdbId, opts = {}) {
 export async function getKeywords(tmdbId, opts = {}) {
   const cached = await cache.getKeywords(tmdbId)
   if (cached) return cached
+  
+  if (API_BASE) {
+    const data = await fetchJsonPost(
+      `${API_BASE}/tmdb/movies/keywords/batch`,
+      { tmdb_ids: [tmdbId] },
+      opts
+    )
+    const result = data.results?.[0]
+    if (result && result.keywords) {
+      const out = { keywords: result.keywords || [] }
+      await cache.setKeywords(tmdbId, out)
+      return out
+    }
+    return { keywords: [] }
+  }
+  
+  if (!PROXY_BASE) return { keywords: [] }
   const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/keywords`, opts)
   const out = { keywords: data.keywords || [] }
   await cache.setKeywords(tmdbId, out)
@@ -355,27 +424,93 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
   const movieMap = new Map()
 
-  const movieTasks = uniqueIds.map((id) => async () => {
-    try {
-      const movie = await getMovieMinimal(id, fetchOpts)
-      movieMap.set(id, movie)
-      return movie
-    } catch {
-      return null
+  if (API_BASE && uniqueIds.length > 0) {
+    let movieDone = 0
+    for (let j = 0; j < uniqueIds.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = uniqueIds.slice(j, j + BATCH_SIZE)
+      try {
+        const data = await fetchJsonPost(
+          `${API_BASE}/tmdb/movies/batch`,
+          { tmdb_ids: chunk },
+          fetchOpts
+        )
+        
+        const cachePromises = []
+        data.results?.forEach((result) => {
+          if (result.movie) {
+            const movie = {
+              id: result.movie.id,
+              poster_path: result.movie.poster_path ?? null,
+              genres: result.movie.genres || [],
+              runtime: result.movie.runtime ?? null,
+              vote_average: result.movie.vote_average ?? null,
+              vote_count: result.movie.vote_count || 0,
+              original_language: result.movie.original_language ?? null,
+              production_countries: result.movie.production_countries || [],
+              release_date: result.movie.release_date ?? null,
+            }
+            movieMap.set(result.tmdb_id, movie)
+            cachePromises.push(
+              cache.setMovie(result.tmdb_id, movie).catch((err) => {
+                console.warn('Failed to cache movie:', err)
+              })
+            )
+          }
+        })
+        
+        await Promise.allSettled(cachePromises)
+        
+        movieDone = j + (data.results?.length || 0)
+        if (onProgress) {
+          const calculatedPercent = 75 + Math.min(15, Math.round((movieDone / uniqueIds.length) * 15))
+          onProgress({
+            stage: 'tmdb_details',
+            message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`,
+            done: movieDone,
+            total: uniqueIds.length,
+            percent: calculatedPercent,
+          })
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const movieTasks = chunk.map((id) => async () => {
+          try {
+            const movie = await getMovieMinimal(id, fetchOpts)
+            movieMap.set(id, movie)
+            return movie
+          } catch {
+            return null
+          }
+        })
+        await runQueue(movieTasks, CONCURRENCY_MOVIE, { signal })
+        movieDone = j + chunk.length
+      }
     }
-  })
-
-  let movieDone = 0
-  for (let j = 0; j < movieTasks.length; j += 50) {
-    const chunk = movieTasks.slice(j, j + 50)
-    await runQueue(chunk, CONCURRENCY_MOVIE, {
-      signal,
-      onProgress: (done, batchLen) => {
-        movieDone = j + done
-        const calculatedPercent = 75 + Math.min(15, Math.round((movieDone / uniqueIds.length) * 15))
-        if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: calculatedPercent })
-      },
+  } else {
+    const movieTasks = uniqueIds.map((id) => async () => {
+      try {
+        const movie = await getMovieMinimal(id, fetchOpts)
+        movieMap.set(id, movie)
+        return movie
+      } catch {
+        return null
+      }
     })
+
+    let movieDone = 0
+    for (let j = 0; j < movieTasks.length; j += 50) {
+      const chunk = movieTasks.slice(j, j + 50)
+      await runQueue(chunk, CONCURRENCY_MOVIE, {
+        signal,
+        onProgress: (done, batchLen) => {
+          movieDone = j + done
+          const calculatedPercent = 75 + Math.min(15, Math.round((movieDone / uniqueIds.length) * 15))
+          if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: calculatedPercent })
+        },
+      })
+    }
   }
 
   const films = rows.map((row, i) => {
@@ -437,47 +572,154 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const creditsToFetch = idList.slice(0, CREDITS_CAP)
   const keywordsToFetch = idList.slice(0, KEYWORDS_CAP)
 
-  const creditTasks = creditsToFetch.map((id) => async () => {
-    try {
-      return await getCredits(id, fetchOpts)
-    } catch {
-      return null
+  if (API_BASE && creditsToFetch.length > 0) {
+    let creditsDone = 0
+    for (let j = 0; j < creditsToFetch.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = creditsToFetch.slice(j, j + BATCH_SIZE)
+      try {
+        const data = await fetchJsonPost(
+          `${API_BASE}/tmdb/movies/credits/batch`,
+          { tmdb_ids: chunk },
+          fetchOpts
+        )
+        
+        const cachePromises = []
+        data.results?.forEach((result) => {
+          if (result.credits) {
+            creditsMap.set(result.tmdb_id, result.credits)
+            cachePromises.push(
+              cache.setCredits(result.tmdb_id, result.credits).catch((err) => {
+                console.warn('Failed to cache credits:', err)
+              })
+            )
+          }
+        })
+        
+        await Promise.allSettled(cachePromises)
+        
+        creditsDone = j + (data.results?.length || 0)
+        if (onProgress) {
+          onProgress({
+            stage: 'credits_keywords',
+            message: 'Загрузка актёров и режиссёров (опционально)',
+            done: creditsDone,
+            total: creditsToFetch.length,
+            percent: 90 + Math.min(2.5, Math.round((creditsDone / creditsToFetch.length) * 2.5)),
+          })
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const creditTasks = chunk.map((id) => async () => {
+          try {
+            return await getCredits(id, fetchOpts)
+          } catch {
+            return null
+          }
+        })
+        const results = await runQueue(creditTasks, CONCURRENCY_CREDITS, { signal })
+        chunk.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
+        creditsDone = j + chunk.length
+      }
     }
-  })
-  const keywordTasks = keywordsToFetch.map((id) => async () => {
-    try {
-      return await getKeywords(id, fetchOpts)
-    } catch {
-      return null
-    }
-  })
-
-  let creditsDone = 0
-  for (let j = 0; j < creditTasks.length; j += 20) {
-    const chunk = creditTasks.slice(j, j + 20)
-    const chunkIds = creditsToFetch.slice(j, j + 20)
-    const results = await runQueue(chunk, CONCURRENCY_CREDITS, {
-      signal,
-      onProgress: (done, batchLen) => {
-        creditsDone = j + done
-        if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: creditsDone, total: creditTasks.length, percent: 90 + Math.min(5, Math.round((creditsDone / creditTasks.length) * 5)) })
-      },
+  } else {
+    const creditTasks = creditsToFetch.map((id) => async () => {
+      try {
+        return await getCredits(id, fetchOpts)
+      } catch {
+        return null
+      }
     })
-    chunkIds.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
+
+    let creditsDone = 0
+    for (let j = 0; j < creditTasks.length; j += 20) {
+      const chunk = creditTasks.slice(j, j + 20)
+      const chunkIds = creditsToFetch.slice(j, j + 20)
+      const results = await runQueue(chunk, CONCURRENCY_CREDITS, {
+        signal,
+        onProgress: (done, batchLen) => {
+          creditsDone = j + done
+          if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: creditsDone, total: creditTasks.length, percent: 90 + Math.min(5, Math.round((creditsDone / creditTasks.length) * 5)) })
+        },
+      })
+      chunkIds.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
+    }
   }
 
-  let keywordsDone = 0
-  for (let j = 0; j < keywordTasks.length; j += 20) {
-    const chunk = keywordTasks.slice(j, j + 20)
-    const chunkIds = keywordsToFetch.slice(j, j + 20)
-    const results = await runQueue(chunk, CONCURRENCY_KEYWORDS, {
-      signal,
-      onProgress: (done, batchLen) => {
-        keywordsDone = j + done
-        if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: keywordsDone, total: keywordTasks.length, percent: 90 + Math.min(5, Math.round((keywordsDone / keywordTasks.length) * 5)) })
-      },
+  if (API_BASE && keywordsToFetch.length > 0) {
+    let keywordsDone = 0
+    for (let j = 0; j < keywordsToFetch.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = keywordsToFetch.slice(j, j + BATCH_SIZE)
+      try {
+        const data = await fetchJsonPost(
+          `${API_BASE}/tmdb/movies/keywords/batch`,
+          { tmdb_ids: chunk },
+          fetchOpts
+        )
+        
+        const cachePromises = []
+        data.results?.forEach((result) => {
+          if (result.keywords) {
+            keywordsMap.set(result.tmdb_id, { keywords: result.keywords })
+            cachePromises.push(
+              cache.setKeywords(result.tmdb_id, result.keywords).catch((err) => {
+                console.warn('Failed to cache keywords:', err)
+              })
+            )
+          }
+        })
+        
+        await Promise.allSettled(cachePromises)
+        
+        keywordsDone = j + (data.results?.length || 0)
+        if (onProgress) {
+          onProgress({
+            stage: 'credits_keywords',
+            message: 'Загрузка актёров и режиссёров (опционально)',
+            done: keywordsDone,
+            total: keywordsToFetch.length,
+            percent: 92.5 + Math.min(2.5, Math.round((keywordsDone / keywordsToFetch.length) * 2.5)),
+          })
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const keywordTasks = chunk.map((id) => async () => {
+          try {
+            return await getKeywords(id, fetchOpts)
+          } catch {
+            return null
+          }
+        })
+        const results = await runQueue(keywordTasks, CONCURRENCY_KEYWORDS, { signal })
+        chunk.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
+        keywordsDone = j + chunk.length
+      }
+    }
+  } else {
+    const keywordTasks = keywordsToFetch.map((id) => async () => {
+      try {
+        return await getKeywords(id, fetchOpts)
+      } catch {
+        return null
+      }
     })
-    chunkIds.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
+
+    let keywordsDone = 0
+    for (let j = 0; j < keywordTasks.length; j += 20) {
+      const chunk = keywordTasks.slice(j, j + 20)
+      const chunkIds = keywordsToFetch.slice(j, j + 20)
+      const results = await runQueue(chunk, CONCURRENCY_KEYWORDS, {
+        signal,
+        onProgress: (done, batchLen) => {
+          keywordsDone = j + done
+          if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: keywordsDone, total: keywordTasks.length, percent: 90 + Math.min(5, Math.round((keywordsDone / keywordTasks.length) * 5)) })
+        },
+      })
+      chunkIds.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
+    }
   }
 
   films.forEach((f) => {

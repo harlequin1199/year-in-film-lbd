@@ -26,7 +26,8 @@ _DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_DIR, "cache.db")
 TTL_DAYS = 30
 
-# Writer: one thread, one connection, processes this queue (item = ("search", title, year, tmdb_id) | ("movie", tmdb_id, payload))
+# Writer: one thread, one connection, processes this queue 
+# item = ("search", title, year, tmdb_id) | ("movie", tmdb_id, payload) | ("credits", tmdb_id, payload) | ("keywords", tmdb_id, keywords)
 # Bounded queue for backpressure (300-500); commit every 50 writes or 1s
 _WRITE_QUEUE_MAXSIZE = 500
 _WRITE_QUEUE: queue.Queue = queue.Queue(maxsize=_WRITE_QUEUE_MAXSIZE)
@@ -85,6 +86,20 @@ def init_cache_db(db_path: Optional[str] = None) -> None:
                 updated_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ix_movie_updated ON movie_cache(updated_at);
+
+            CREATE TABLE IF NOT EXISTS credits_cache (
+                tmdb_id INTEGER PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_credits_updated ON credits_cache(updated_at);
+
+            CREATE TABLE IF NOT EXISTS keywords_cache (
+                tmdb_id INTEGER PRIMARY KEY,
+                keywords_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_keywords_updated ON keywords_cache(updated_at);
         """)
         conn.commit()
     finally:
@@ -117,13 +132,21 @@ def _flush_batch(conn: sqlite3.Connection, batch: List[Tuple]) -> None:
     now = datetime.utcnow().isoformat() + "Z"
     search_items: List[Tuple] = []
     movie_items: List[Tuple] = []
+    credits_items: List[Tuple] = []
+    keywords_items: List[Tuple] = []
     for x in batch:
         if x[0] == "search":
             _, t, y, tid = x
             search_items.append((t, y, tid, now))
-        else:
+        elif x[0] == "movie":
             _, tid, p = x
             movie_items.append((tid, p, now))
+        elif x[0] == "credits":
+            _, tid, p = x
+            credits_items.append((tid, p, now))
+        elif x[0] == "keywords":
+            _, tid, kw = x
+            keywords_items.append((tid, kw, now))
 
     last_err: Optional[Exception] = None
     for attempt in range(_FLUSH_MAX_RETRIES):
@@ -138,6 +161,16 @@ def _flush_batch(conn: sqlite3.Connection, batch: List[Tuple]) -> None:
                 conn.executemany(
                     "INSERT OR REPLACE INTO movie_cache (tmdb_id, payload_json, updated_at) VALUES (?, ?, ?)",
                     movie_items,
+                )
+            if credits_items:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO credits_cache (tmdb_id, payload_json, updated_at) VALUES (?, ?, ?)",
+                    credits_items,
+                )
+            if keywords_items:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO keywords_cache (tmdb_id, keywords_json, updated_at) VALUES (?, ?, ?)",
+                    keywords_items,
                 )
             conn.commit()
             return
@@ -267,6 +300,42 @@ def get_movie(tmdb_id: int) -> Optional[Any]:
 def set_movie(tmdb_id: int, payload: Any) -> None:
     payload_json = json.dumps(payload)
     _WRITE_QUEUE.put(("movie", tmdb_id, payload_json))
+
+
+def get_credits(tmdb_id: int) -> Optional[Any]:
+    conn = _get_read_conn()
+    row = conn.execute(
+        "SELECT payload_json, updated_at FROM credits_cache WHERE tmdb_id = ?",
+        (tmdb_id,),
+    ).fetchone()
+    if not row:
+        return None
+    if _is_expired(row["updated_at"]):
+        return None
+    return json.loads(row["payload_json"])
+
+
+def set_credits(tmdb_id: int, payload: Any) -> None:
+    payload_json = json.dumps(payload)
+    _WRITE_QUEUE.put(("credits", tmdb_id, payload_json))
+
+
+def get_keywords(tmdb_id: int) -> Optional[List[str]]:
+    conn = _get_read_conn()
+    row = conn.execute(
+        "SELECT keywords_json, updated_at FROM keywords_cache WHERE tmdb_id = ?",
+        (tmdb_id,),
+    ).fetchone()
+    if not row:
+        return None
+    if _is_expired(row["updated_at"]):
+        return None
+    return json.loads(row["keywords_json"])
+
+
+def set_keywords(tmdb_id: int, keywords: List[str]) -> None:
+    keywords_json = json.dumps(keywords)
+    _WRITE_QUEUE.put(("keywords", tmdb_id, keywords_json))
 
 
 # --- Legacy CacheConnection: keep for compatibility but route to module API ---

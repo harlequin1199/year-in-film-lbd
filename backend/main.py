@@ -99,6 +99,10 @@ class BatchSearchRequest(BaseModel):
     items: List[BatchSearchItem]
 
 
+class BatchMoviesRequest(BaseModel):
+    tmdb_ids: List[int]
+
+
 @app.post("/tmdb/search/batch")
 async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -133,6 +137,81 @@ async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str
         return {"results": results}
     except Exception as e:
         logger.exception("Error in batch search endpoint: %s", e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/tmdb/movies/batch")
+async def tmdb_movies_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
+    """Batch movie details endpoint."""
+    try:
+        logger.info("Batch movies request received: %s items", len(request.tmdb_ids))
+        api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+        if not api_key:
+            raise HTTPException(status_code=500, detail="TMDB_API_KEY is not set")
+        
+        if not request.tmdb_ids:
+            return {"results": []}
+        
+        if len(request.tmdb_ids) > 1000:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        
+        import tmdb_batch_movies
+        results = await tmdb_batch_movies.movies_batch(request.tmdb_ids, api_key)
+        logger.info("Batch movies completed: %s results", len(results))
+        
+        return {"results": results}
+    except Exception as e:
+        logger.exception("Error in batch movies endpoint: %s", e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/tmdb/movies/credits/batch")
+async def tmdb_credits_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
+    """Batch credits endpoint."""
+    try:
+        logger.info("Batch credits request received: %s items", len(request.tmdb_ids))
+        api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+        if not api_key:
+            raise HTTPException(status_code=500, detail="TMDB_API_KEY is not set")
+        
+        if not request.tmdb_ids:
+            return {"results": []}
+        
+        if len(request.tmdb_ids) > 1000:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        
+        import tmdb_batch_movies
+        results = await tmdb_batch_movies.credits_batch(request.tmdb_ids, api_key)
+        logger.info("Batch credits completed: %s results", len(results))
+        
+        return {"results": results}
+    except Exception as e:
+        logger.exception("Error in batch credits endpoint: %s", e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/tmdb/movies/keywords/batch")
+async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
+    """Batch keywords endpoint."""
+    try:
+        logger.info("Batch keywords request received: %s items", len(request.tmdb_ids))
+        api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+        if not api_key:
+            raise HTTPException(status_code=500, detail="TMDB_API_KEY is not set")
+        
+        if not request.tmdb_ids:
+            return {"results": []}
+        
+        if len(request.tmdb_ids) > 1000:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        
+        import tmdb_batch_movies
+        results = await tmdb_batch_movies.keywords_batch(request.tmdb_ids, api_key)
+        logger.info("Batch keywords completed: %s results", len(results))
+        
+        return {"results": results}
+    except Exception as e:
+        logger.exception("Error in batch keywords endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
