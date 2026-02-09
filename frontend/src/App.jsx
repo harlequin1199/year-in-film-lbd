@@ -36,7 +36,6 @@ function isMobile() {
 
 const BIG_FILE_MOBILE_THRESHOLD = 2000
 const RESUME_PERSIST_INTERVAL_MS = 3000
-const ETA_UPDATE_INTERVAL_MS = 2000
 
 function App() {
   const [analysis, setAnalysis] = useState(null)
@@ -58,9 +57,7 @@ function App() {
 
   const abortControllerRef = useRef(null)
   const progressRef = useRef(null)
-  const etaRef = useRef({ lastDone: 0, lastTime: 0 })
   const persistIntervalRef = useRef(null)
-  const etaIntervalRef = useRef(null)
 
   useEffect(() => {
     getResumeState().then((s) => {
@@ -173,16 +170,11 @@ function App() {
     setLastUploadedFileName(ratingsFile?.name || '')
     abortControllerRef.current = new AbortController()
     const fileName = ratingsFile?.name || ''
-    etaRef.current = { lastDone: 0, lastTime: 0 }
 
     const clearTimers = () => {
       if (persistIntervalRef.current) {
         clearInterval(persistIntervalRef.current)
         persistIntervalRef.current = null
-      }
-      if (etaIntervalRef.current) {
-        clearInterval(etaIntervalRef.current)
-        etaIntervalRef.current = null
       }
     }
 
@@ -245,22 +237,6 @@ function App() {
         }
       }, RESUME_PERSIST_INTERVAL_MS)
 
-      etaIntervalRef.current = setInterval(() => {
-        const p = progressRef.current
-        if (!p || !p.total || p.done >= p.total) return
-        const now = Date.now()
-        const prev = etaRef.current
-        if (prev.lastTime && p.done > prev.lastDone) {
-          const elapsed = (now - prev.lastTime) / 1000
-          const delta = p.done - prev.lastDone
-          if (delta > 0 && elapsed > 0) {
-            const rate = delta / elapsed
-            const remaining = (p.total - p.done) / rate
-            setProgress((prevP) => ({ ...prevP, etaSeconds: Math.round(remaining) }))
-          }
-        }
-        etaRef.current = { lastDone: p.done, lastTime: now }
-      }, ETA_UPDATE_INTERVAL_MS)
 
       await runAnalysisFromRows(parsedRows, parsedDiary, simplified, abortControllerRef.current.signal, fileName)
       if (simplified) setSimplifiedMode(true)
