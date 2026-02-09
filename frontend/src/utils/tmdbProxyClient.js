@@ -8,7 +8,7 @@ const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
 const MAX_IN_FLIGHT = 200
 const BATCH_SIZE = 25
-const PARALLEL_BATCHES = 10
+const PARALLEL_BATCHES = 20
 
 function tmdbRating5(voteAverage) {
   if (voteAverage == null || Number.isNaN(voteAverage)) return null
@@ -237,7 +237,12 @@ function runQueue(tasks, concurrency, opts = {}) {
   })
 }
 
-async function processBatchesParallel(items, batchSize, parallelBatches, processor, opts = {}) {
+/**
+ * Process items in batches with a concurrency limit. As soon as one batch request
+ * completes, the next one is started (no waiting for the whole "wave"). All
+ * requests go to the Render backend API; Cloudflare Worker is not used.
+ */
+function processBatchesParallel(items, batchSize, parallelBatches, processor, opts = {}) {
   const { signal, onProgress } = opts
   const batches = []
   for (let i = 0; i < items.length; i += batchSize) {
@@ -246,35 +251,42 @@ async function processBatchesParallel(items, batchSize, parallelBatches, process
       startIndex: i,
     })
   }
-  
+
   let processed = 0
-  const results = []
-  
-  for (let i = 0; i < batches.length; i += parallelBatches) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    
-    const batchGroup = batches.slice(i, i + parallelBatches)
-    const batchPromises = batchGroup.map(async (batch) => {
-      const batchResults = await processor(batch.items, batch.startIndex)
-      processed += batch.items.length
-      if (onProgress) {
-        onProgress({
-          done: processed,
-          total: items.length,
-        })
+  const results = new Array(batches.length)
+
+  return new Promise((resolve, reject) => {
+    let index = 0
+    let inFlight = 0
+
+    const next = () => {
+      if (signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'))
+        return
       }
-      return batchResults
-    })
-    
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
-    
-    if (i + parallelBatches < batches.length) {
-      await new Promise(resolve => setTimeout(resolve, 50))
+      while (inFlight < parallelBatches && index < batches.length) {
+        const i = index++
+        const batch = batches[i]
+        inFlight++
+        Promise.resolve(processor(batch.items, batch.startIndex))
+          .then((batchResults) => {
+            results[i] = batchResults
+            processed += batch.items.length
+            if (onProgress) onProgress({ done: processed, total: items.length })
+            inFlight--
+            next()
+          })
+          .catch((err) => {
+            inFlight--
+            reject(err)
+          })
+      }
+      if (inFlight === 0 && index >= batches.length) {
+        resolve(results.flat())
+      }
     }
-  }
-  
-  return results
+    next()
+  })
 }
 
 const CONCURRENCY_SEARCH = 3
