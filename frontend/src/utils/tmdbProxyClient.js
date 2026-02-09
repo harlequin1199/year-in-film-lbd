@@ -348,7 +348,6 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       }
     })
 
-    let searchDone = 0
     const batchProcessor = async (chunk, startIndex) => {
       const chunkKeys = uniqueKeys.slice(startIndex, startIndex + chunk.length)
       try {
