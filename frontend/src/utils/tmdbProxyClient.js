@@ -904,20 +904,45 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
   const movieTotal = uniqueIds.length
   const movieMap = new Map()
 
-  const movieTasks = uniqueIds.map((id) => async () => {
-    const movie = await getMovieMinimal(id, fetchOpts)
-    movieMap.set(id, movie)
-    return movie
-  })
-
-  let movieDone = 0
-  for (let j = 0; j < movieTasks.length; j += batchSize) {
-    const chunk = movieTasks.slice(j, j + batchSize)
-    const chunkIds = uniqueIds.slice(j, j + batchSize)
-    await runQueue(chunk, concurrency, {
-      signal,
-      onProgress: (done, batchLen) => {
-        movieDone = j + done
+  if (API_BASE && uniqueIds.length > 0) {
+    let movieDone = 0
+    for (let j = 0; j < uniqueIds.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = uniqueIds.slice(j, j + BATCH_SIZE)
+      try {
+        const data = await fetchJsonPost(
+          `${API_BASE}/tmdb/movies/batch`,
+          { tmdb_ids: chunk },
+          fetchOpts
+        )
+        
+        const cachePromises = []
+        data.results?.forEach((result) => {
+          if (result.movie) {
+            const movie = {
+              id: result.movie.id,
+              poster_path: result.movie.poster_path ?? null,
+              genres: result.movie.genres || [],
+              runtime: result.movie.runtime ?? null,
+              vote_average: result.movie.vote_average ?? null,
+              vote_count: result.movie.vote_count || 0,
+              original_language: result.movie.original_language ?? null,
+              production_countries: result.movie.production_countries || [],
+              release_date: result.movie.release_date ?? null,
+            }
+            movieMap.set(result.tmdb_id, movie)
+            cachePromises.push(
+              cache.setMovie(result.tmdb_id, movie).catch((err) => {
+                console.warn('Failed to cache movie:', err)
+              })
+            )
+          }
+        })
+        
+        await Promise.allSettled(cachePromises)
+        
+        movieDone = j + (data.results?.length || 0)
         if (onProgress) {
           onProgress({
             stage: 'tmdb_details',
@@ -927,8 +952,44 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
             percent: 75 + Math.min(15, Math.round((movieDone / movieTotal) * 15)),
           })
         }
-      },
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const movieTasks = chunk.map((id) => async () => {
+          const movie = await getMovieMinimal(id, fetchOpts)
+          movieMap.set(id, movie)
+          return movie
+        })
+        await runQueue(movieTasks, concurrency, { signal })
+        movieDone = j + chunk.length
+      }
+    }
+  } else {
+    const movieTasks = uniqueIds.map((id) => async () => {
+      const movie = await getMovieMinimal(id, fetchOpts)
+      movieMap.set(id, movie)
+      return movie
     })
+
+    let movieDone = 0
+    for (let j = 0; j < movieTasks.length; j += batchSize) {
+      const chunk = movieTasks.slice(j, j + batchSize)
+      const chunkIds = uniqueIds.slice(j, j + batchSize)
+      await runQueue(chunk, concurrency, {
+        signal,
+        onProgress: (done, batchLen) => {
+          movieDone = j + done
+          if (onProgress) {
+            onProgress({
+              stage: 'tmdb_details',
+              message: `Загрузка данных TMDb: ${movieDone} / ${movieTotal}`,
+              done: movieDone,
+              total: movieTotal,
+              percent: 75 + Math.min(15, Math.round((movieDone / movieTotal) * 15)),
+            })
+          }
+        },
+      })
+    }
   }
 
   const films = rows.map((row, i) => {
@@ -1010,24 +1071,84 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
   const idList = [...idsForPhase2]
   const creditsMap = new Map()
   const keywordsMap = new Map()
-  for (let j = 0; j < idList.length; j += batchSize) {
-    const chunk = idList.slice(j, j + batchSize)
-    const creditTasks = chunk.map((id) => () => getCredits(id, fetchOpts))
-    const keywordTasks = chunk.map((id) => () => getKeywords(id, fetchOpts))
-    const credResults = await runQueue(creditTasks, concurrency, { signal })
-    const kwResults = await runQueue(keywordTasks, concurrency, { signal })
-    chunk.forEach((id, i) => {
-      if (credResults[i]) creditsMap.set(id, credResults[i])
-      if (kwResults[i]) keywordsMap.set(id, kwResults[i])
-    })
-    if (onProgress) {
-      onProgress({
-        stage: 'tmdb_details',
-        message: 'Загрузка данных TMDb (фаза 2)',
-        done: total,
-        total,
-        percent: 95,
+  
+  if (API_BASE && idList.length > 0) {
+    for (let j = 0; j < idList.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = idList.slice(j, j + BATCH_SIZE)
+      
+      try {
+        const [creditsData, keywordsData] = await Promise.all([
+          fetchJsonPost(`${API_BASE}/tmdb/movies/credits/batch`, { tmdb_ids: chunk }, fetchOpts),
+          fetchJsonPost(`${API_BASE}/tmdb/movies/keywords/batch`, { tmdb_ids: chunk }, fetchOpts),
+        ])
+        
+        const cachePromises = []
+        creditsData.results?.forEach((result) => {
+          if (result.credits) {
+            creditsMap.set(result.tmdb_id, result.credits)
+            cachePromises.push(
+              cache.setCredits(result.tmdb_id, result.credits).catch((err) => {
+                console.warn('Failed to cache credits:', err)
+              })
+            )
+          }
+        })
+        keywordsData.results?.forEach((result) => {
+          if (result.keywords) {
+            keywordsMap.set(result.tmdb_id, { keywords: result.keywords })
+            cachePromises.push(
+              cache.setKeywords(result.tmdb_id, result.keywords).catch((err) => {
+                console.warn('Failed to cache keywords:', err)
+              })
+            )
+          }
+        })
+        
+        await Promise.allSettled(cachePromises)
+        
+        if (onProgress) {
+          onProgress({
+            stage: 'tmdb_details',
+            message: 'Загрузка данных TMDb (фаза 2)',
+            done: total,
+            total,
+            percent: 90 + Math.min(5, Math.round(((j + chunk.length) / idList.length) * 5)),
+          })
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const creditTasks = chunk.map((id) => () => getCredits(id, fetchOpts))
+        const keywordTasks = chunk.map((id) => () => getKeywords(id, fetchOpts))
+        const credResults = await runQueue(creditTasks, concurrency, { signal })
+        const kwResults = await runQueue(keywordTasks, concurrency, { signal })
+        chunk.forEach((id, i) => {
+          if (credResults[i]) creditsMap.set(id, credResults[i])
+          if (kwResults[i]) keywordsMap.set(id, kwResults[i])
+        })
+      }
+    }
+  } else {
+    for (let j = 0; j < idList.length; j += batchSize) {
+      const chunk = idList.slice(j, j + batchSize)
+      const creditTasks = chunk.map((id) => () => getCredits(id, fetchOpts))
+      const keywordTasks = chunk.map((id) => () => getKeywords(id, fetchOpts))
+      const credResults = await runQueue(creditTasks, concurrency, { signal })
+      const kwResults = await runQueue(keywordTasks, concurrency, { signal })
+      chunk.forEach((id, i) => {
+        if (credResults[i]) creditsMap.set(id, credResults[i])
+        if (kwResults[i]) keywordsMap.set(id, kwResults[i])
       })
+      if (onProgress) {
+        onProgress({
+          stage: 'tmdb_details',
+          message: 'Загрузка данных TMDb (фаза 2)',
+          done: total,
+          total,
+          percent: 95,
+        })
+      }
     }
   }
 
