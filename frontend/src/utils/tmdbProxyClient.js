@@ -1,11 +1,13 @@
 import * as cache from './indexedDbCache.js'
 import { fetchWithRetry } from './fetchWithRetry.js'
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
 const PROXY_BASE = (import.meta.env.VITE_TMDB_PROXY_BASE || '').trim().replace(/\/$/, '')
 const DEFAULT_CONCURRENCY = 4
 const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
 const MAX_IN_FLIGHT = 200
+const BATCH_SIZE = 100
 
 function tmdbRating5(voteAverage) {
   if (voteAverage == null || Number.isNaN(voteAverage)) return null
@@ -23,9 +25,55 @@ async function fetchJson(url, opts = {}) {
   return data
 }
 
+async function fetchJsonPost(url, body, opts = {}) {
+  const { onRetryMessage, signal } = opts
+  const res = await fetchWithRetry(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal,
+    },
+    { onRetryMessage }
+  )
+  const data = await res.json()
+  return data
+}
+
 export async function searchMovie(title, year, opts = {}) {
   const cached = await cache.getSearch(title, year)
   if (cached !== undefined) return cached
+  
+  if (API_BASE) {
+    const data = await fetchJsonPost(
+      `${API_BASE}/tmdb/search/batch`,
+      { items: [{ title, year }] },
+      opts
+    )
+    const result = data.results?.[0]
+    if (result) {
+      const id = result.tmdb?.tmdb_id ?? null
+      await cache.setSearch(title, year, id)
+      if (id && result.tmdb) {
+        await cache.setMovie(id, {
+          id: result.tmdb.tmdb_id,
+          poster_path: result.tmdb.poster_path,
+          genres: result.tmdb.genres || [],
+          runtime: result.tmdb.runtime,
+          vote_average: result.tmdb.vote_average,
+          vote_count: result.tmdb.vote_count || 0,
+          original_language: result.tmdb.original_language,
+          production_countries: result.tmdb.production_countries || [],
+          release_date: result.tmdb.release_date,
+        })
+      }
+      return id
+    }
+    return null
+  }
+  
+  if (!PROXY_BASE) throw new Error('VITE_API_URL or VITE_TMDB_PROXY_BASE must be set')
   const qs = new URLSearchParams({ title: (title || '').trim().slice(0, 120) })
   if (year != null && year >= 1800 && year <= 2100) qs.set('year', String(year))
   const data = await fetchJson(`${PROXY_BASE}/search?${qs}`, opts)
@@ -37,6 +85,21 @@ export async function searchMovie(title, year, opts = {}) {
 export async function getMovieMinimal(tmdbId, opts = {}) {
   const cached = await cache.getMovie(tmdbId)
   if (cached) return cached
+  
+  if (!PROXY_BASE) {
+    return {
+      id: tmdbId,
+      poster_path: null,
+      genres: [],
+      runtime: null,
+      vote_average: null,
+      vote_count: 0,
+      original_language: null,
+      production_countries: [],
+      release_date: null,
+    }
+  }
+  
   const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}`, opts)
   const out = {
     id: data.id,
@@ -131,12 +194,25 @@ function emptyFilm(row) {
   }
 }
 
+async function searchBatch(items, opts = {}) {
+  if (!API_BASE) {
+    throw new Error('VITE_API_URL не задан')
+  }
+  const { signal, onRetryMessage } = opts
+  const data = await fetchJsonPost(
+    `${API_BASE}/tmdb/search/batch`,
+    { items },
+    { signal, onRetryMessage }
+  )
+  return data.results || []
+}
+
 /**
  * Progressive staged analysis: Stage 2 (search) -> Stage 3 (movie) -> Stage 4 (credits/keywords capped).
  * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
  */
 export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
-  if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
+  if (!API_BASE && !PROXY_BASE) throw new Error('VITE_API_URL или VITE_TMDB_PROXY_BASE должен быть задан')
   const fetchOpts = { signal, onRetryMessage }
 
   const keyToIndexes = new Map()
@@ -149,33 +225,112 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
-  const searchTasks = uniqueKeys.map((k) => {
-    const parts = k.split(':')
-    const yearPart = parts.length > 1 ? parts.pop() : '0'
-    const title = parts.join(':') || ''
-    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
-    return async () => {
+  if (API_BASE) {
+    let searchDone = 0
+    const searchItems = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return {
+        title,
+        year: Number.isNaN(year) ? null : year,
+      }
+    })
+
+    for (let j = 0; j < searchItems.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = searchItems.slice(j, j + BATCH_SIZE)
+      const chunkKeys = uniqueKeys.slice(j, j + BATCH_SIZE)
+      
       try {
-        return await searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
-      } catch {
-        return null
+        const results = await searchBatch(chunk, fetchOpts)
+        
+        results.forEach((result, idx) => {
+          if (idx >= chunkKeys.length) return
+          const key = chunkKeys[idx]
+          const tmdbId = result.tmdb?.tmdb_id ?? null
+          keyToTmdbId.set(key, tmdbId)
+          
+          if (tmdbId && result.tmdb) {
+            cache.setMovie(tmdbId, {
+              id: result.tmdb.tmdb_id,
+              poster_path: result.tmdb.poster_path,
+              genres: result.tmdb.genres || [],
+              runtime: result.tmdb.runtime,
+              vote_average: result.tmdb.vote_average,
+              vote_count: result.tmdb.vote_count || 0,
+              original_language: result.tmdb.original_language,
+              production_countries: result.tmdb.production_countries || [],
+              release_date: result.tmdb.release_date,
+            }).catch(() => {})
+          }
+          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+        })
+        
+        searchDone = j + results.length
+        if (onProgress) {
+          const calculatedPercent = 8 + Math.min(17, Math.round((searchDone / uniqueKeys.length) * 17))
+          onProgress({
+            stage: 'tmdb_search',
+            message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`,
+            done: searchDone,
+            total: uniqueKeys.length,
+            percent: calculatedPercent,
+          })
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        console.warn('Batch search failed, falling back to individual requests', err)
+        const searchTasks = chunk.map((item) => {
+          const k = chunkKeys[chunk.indexOf(item)]
+          const parts = k.split(':')
+          const yearPart = parts.length > 1 ? parts.pop() : '0'
+          const title = parts.join(':') || ''
+          const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+          return async () => {
+            try {
+              return await searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+            } catch {
+              return null
+            }
+          }
+        })
+        const fallbackResults = await runQueue(searchTasks, CONCURRENCY_SEARCH, { signal })
+        chunkKeys.forEach((key, i) => keyToTmdbId.set(key, fallbackResults[i]))
+        searchDone = j + fallbackResults.length
       }
     }
-  })
-
-  let searchDone = 0
-  for (let j = 0; j < searchTasks.length; j += 50) {
-    const chunk = searchTasks.slice(j, j + 50)
-    const chunkKeys = uniqueKeys.slice(j, j + 50)
-    const results = await runQueue(chunk, CONCURRENCY_SEARCH, {
-      signal,
-      onProgress: (done, batchLen) => {
-        searchDone = j + done
-        const calculatedPercent = 8 + Math.min(17, Math.round((searchDone / uniqueKeys.length) * 17))
-        if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: calculatedPercent })
-      },
+  } else {
+    const searchTasks = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return async () => {
+        try {
+          return await searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+        } catch {
+          return null
+        }
+      }
     })
-    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+
+    let searchDone = 0
+    for (let j = 0; j < searchTasks.length; j += 50) {
+      const chunk = searchTasks.slice(j, j + 50)
+      const chunkKeys = uniqueKeys.slice(j, j + 50)
+      const results = await runQueue(chunk, CONCURRENCY_SEARCH, {
+        signal,
+        onProgress: (done, batchLen) => {
+          searchDone = j + done
+          const calculatedPercent = 8 + Math.min(17, Math.round((searchDone / uniqueKeys.length) * 17))
+          if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: calculatedPercent })
+        },
+      })
+      chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+    }
   }
 
   rows.forEach((row, i) => {
@@ -357,7 +512,7 @@ function mergeDiary(filmsList, diary) {
  */
 export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}) {
   const { signal, onRetryMessage } = opts
-  if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
+  if (!API_BASE && !PROXY_BASE) throw new Error('VITE_API_URL или VITE_TMDB_PROXY_BASE должен быть задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
   const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))
@@ -375,22 +530,51 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
-  const searchTasks = uniqueKeys.map((k) => {
-    const parts = k.split(':')
-    const yearPart = parts.length > 1 ? parts.pop() : '0'
-    const title = parts.join(':') || ''
-    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
-    return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
-  })
+  if (API_BASE) {
+    const searchItems = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return {
+        title,
+        year: Number.isNaN(year) ? null : year,
+      }
+    })
 
-  let searchDone = 0
-  for (let j = 0; j < searchTasks.length; j += batchSize) {
-    const chunk = searchTasks.slice(j, j + batchSize)
-    const chunkKeys = uniqueKeys.slice(j, j + batchSize)
-    const results = await runQueue(chunk, concurrency, {
-      signal,
-      onProgress: (done, batchLen) => {
-        searchDone = j + done
+    let searchDone = 0
+    for (let j = 0; j < searchItems.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = searchItems.slice(j, j + BATCH_SIZE)
+      const chunkKeys = uniqueKeys.slice(j, j + BATCH_SIZE)
+      
+      try {
+        const results = await searchBatch(chunk, fetchOpts)
+        
+        results.forEach((result, idx) => {
+          if (idx >= chunkKeys.length) return
+          const key = chunkKeys[idx]
+          const tmdbId = result.tmdb?.tmdb_id ?? null
+          keyToTmdbId.set(key, tmdbId)
+          
+          if (tmdbId && result.tmdb) {
+            cache.setMovie(tmdbId, {
+              id: result.tmdb.tmdb_id,
+              poster_path: result.tmdb.poster_path,
+              genres: result.tmdb.genres || [],
+              runtime: result.tmdb.runtime,
+              vote_average: result.tmdb.vote_average,
+              vote_count: result.tmdb.vote_count || 0,
+              original_language: result.tmdb.original_language,
+              production_countries: result.tmdb.production_countries || [],
+              release_date: result.tmdb.release_date,
+            }).catch(() => {})
+          }
+          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+        })
+        
+        searchDone = j + results.length
         if (onProgress) {
           onProgress({
             stage: 'tmdb_search',
@@ -400,9 +584,51 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
             percent: Math.min(99, Math.round((searchDone / searchTotal) * 45)),
           })
         }
-      },
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const searchTasks = chunk.map((item) => {
+          const k = chunkKeys[chunk.indexOf(item)]
+          const parts = k.split(':')
+          const yearPart = parts.length > 1 ? parts.pop() : '0'
+          const title = parts.join(':') || ''
+          const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+          return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+        })
+        const fallbackResults = await runQueue(searchTasks, concurrency, { signal })
+        chunkKeys.forEach((key, i) => keyToTmdbId.set(key, fallbackResults[i]))
+        searchDone = j + fallbackResults.length
+      }
+    }
+  } else {
+    const searchTasks = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
     })
-    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+
+    let searchDone = 0
+    for (let j = 0; j < searchTasks.length; j += batchSize) {
+      const chunk = searchTasks.slice(j, j + batchSize)
+      const chunkKeys = uniqueKeys.slice(j, j + batchSize)
+      const results = await runQueue(chunk, concurrency, {
+        signal,
+        onProgress: (done, batchLen) => {
+          searchDone = j + done
+          if (onProgress) {
+            onProgress({
+              stage: 'tmdb_search',
+              message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
+              done: searchDone,
+              total: searchTotal,
+              percent: Math.min(99, Math.round((searchDone / searchTotal) * 45)),
+            })
+          }
+        },
+      })
+      chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+    }
   }
 
   rows.forEach((row, i) => {
@@ -558,7 +784,7 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
 
 export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = {}) {
   const { signal, onRetryMessage } = opts
-  if (!PROXY_BASE) throw new Error('VITE_TMDB_PROXY_BASE не задан')
+  if (!API_BASE && !PROXY_BASE) throw new Error('VITE_API_URL или VITE_TMDB_PROXY_BASE должен быть задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
   const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))
@@ -575,22 +801,51 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
-  const searchTasks = uniqueKeys.map((k) => {
-    const parts = k.split(':')
-    const yearPart = parts.length > 1 ? parts.pop() : '0'
-    const title = parts.join(':') || ''
-    const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
-    return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
-  })
+  if (API_BASE) {
+    const searchItems = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return {
+        title,
+        year: Number.isNaN(year) ? null : year,
+      }
+    })
 
-  let searchDone = 0
-  for (let j = 0; j < searchTasks.length; j += batchSize) {
-    const chunk = searchTasks.slice(j, j + batchSize)
-    const chunkKeys = uniqueKeys.slice(j, j + batchSize)
-    const results = await runQueue(chunk, concurrency, {
-      signal,
-      onProgress: (done, batchLen) => {
-        searchDone = j + done
+    let searchDone = 0
+    for (let j = 0; j < searchItems.length; j += BATCH_SIZE) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      
+      const chunk = searchItems.slice(j, j + BATCH_SIZE)
+      const chunkKeys = uniqueKeys.slice(j, j + BATCH_SIZE)
+      
+      try {
+        const results = await searchBatch(chunk, fetchOpts)
+        
+        results.forEach((result, idx) => {
+          if (idx >= chunkKeys.length) return
+          const key = chunkKeys[idx]
+          const tmdbId = result.tmdb?.tmdb_id ?? null
+          keyToTmdbId.set(key, tmdbId)
+          
+          if (tmdbId && result.tmdb) {
+            cache.setMovie(tmdbId, {
+              id: result.tmdb.tmdb_id,
+              poster_path: result.tmdb.poster_path,
+              genres: result.tmdb.genres || [],
+              runtime: result.tmdb.runtime,
+              vote_average: result.tmdb.vote_average,
+              vote_count: result.tmdb.vote_count || 0,
+              original_language: result.tmdb.original_language,
+              production_countries: result.tmdb.production_countries || [],
+              release_date: result.tmdb.release_date,
+            }).catch(() => {})
+          }
+          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+        })
+        
+        searchDone = j + results.length
         if (onProgress) {
           onProgress({
             stage: 'tmdb_search',
@@ -600,9 +855,51 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
             percent: Math.min(99, Math.round((searchDone / searchTotal) * 50)),
           })
         }
-      },
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        const searchTasks = chunk.map((item) => {
+          const k = chunkKeys[chunk.indexOf(item)]
+          const parts = k.split(':')
+          const yearPart = parts.length > 1 ? parts.pop() : '0'
+          const title = parts.join(':') || ''
+          const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+          return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
+        })
+        const fallbackResults = await runQueue(searchTasks, concurrency, { signal })
+        chunkKeys.forEach((key, i) => keyToTmdbId.set(key, fallbackResults[i]))
+        searchDone = j + fallbackResults.length
+      }
+    }
+  } else {
+    const searchTasks = uniqueKeys.map((k) => {
+      const parts = k.split(':')
+      const yearPart = parts.length > 1 ? parts.pop() : '0'
+      const title = parts.join(':') || ''
+      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
+      return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
     })
-    chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+
+    let searchDone = 0
+    for (let j = 0; j < searchTasks.length; j += batchSize) {
+      const chunk = searchTasks.slice(j, j + batchSize)
+      const chunkKeys = uniqueKeys.slice(j, j + batchSize)
+      const results = await runQueue(chunk, concurrency, {
+        signal,
+        onProgress: (done, batchLen) => {
+          searchDone = j + done
+          if (onProgress) {
+            onProgress({
+              stage: 'tmdb_search',
+              message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
+              done: searchDone,
+              total: searchTotal,
+              percent: Math.min(99, Math.round((searchDone / searchTotal) * 50)),
+            })
+          }
+        },
+      })
+      chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
+    }
   }
 
   rows.forEach((row, i) => {

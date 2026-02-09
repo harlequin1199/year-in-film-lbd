@@ -5,15 +5,17 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, List
 from uuid import uuid4
 
 TMP_CLEANUP_AGE_SEC = 2 * 60 * 60  # 2 hours
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import List, Optional
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent / ".env"
@@ -70,12 +72,62 @@ def _startup():
             "TMDB_API_KEY is not set. Set it in the environment (e.g. Render dashboard or backend/.env)."
         )
     _cleanup_old_tmp_files()
+    import cache
+    cache.init_cache_db()
+    cache.start_writer()
     logger.info("Backend started; TMDB_API_KEY is set (worker runs analysis in separate process).")
+
+
+@app.on_event("shutdown")
+def _shutdown():
+    import cache
+    cache.stop_writer()
+    logger.info("Backend shutting down; cache writer stopped.")
 
 
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+class BatchSearchItem(BaseModel):
+    title: str
+    year: Optional[int] = None
+
+
+class BatchSearchRequest(BaseModel):
+    items: List[BatchSearchItem]
+
+
+@app.post("/tmdb/search/batch")
+async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Batch search endpoint for TMDB.
+    Processes multiple search requests with rate limiting, retry, and caching.
+    """
+    api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="TMDB_API_KEY is not set",
+        )
+    
+    if not request.items:
+        return {"results": []}
+    
+    if len(request.items) > 1000:
+        raise HTTPException(
+            status_code=400,
+            detail="Too many items. Maximum 1000 items per batch.",
+        )
+    
+    import tmdb_batch
+    import asyncio
+    
+    items_dict = [{"title": item.title, "year": item.year} for item in request.items]
+    results = await tmdb_batch.search_batch(items_dict, api_key)
+    
+    return {"results": results}
 
 
 def _worker_lock_try_acquire() -> bool:
