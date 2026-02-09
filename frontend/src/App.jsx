@@ -71,94 +71,99 @@ function App() {
   }, [resumeState, loading])
 
   const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false, signal = null, fileName = '') => {
-    const hasDiary = parsedDiary && parsedDiary.length > 0
-    const opts = {
-      signal: signal || abortControllerRef.current?.signal,
-      onRetryMessage: (msg) => setRetryMessage(msg || ''),
-    }
+    try {
+      const hasDiary = parsedDiary && parsedDiary.length > 0
+      const opts = {
+        signal: signal || abortControllerRef.current?.signal,
+        onRetryMessage: (msg) => setRetryMessage(msg || ''),
+      }
 
-    setProgress({ stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 5 })
-    const stage1 = computeStage1FromRows(parsedRows)
-    setAnalysis({
-      stage1,
-      filmsLite: [],
-      filmsLiteAll: [],
-      hasDiary,
-      dataSource: hasDiary ? 'both' : 'ratings',
-      availableYears: [],
-      simplifiedMode: simplified,
-      fileName,
-      warnings: [],
-    })
+      setProgress({ stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 5 })
+      const stage1 = computeStage1FromRows(parsedRows)
+      setAnalysis({
+        stage1,
+        filmsLite: [],
+        filmsLiteAll: [],
+        hasDiary,
+        dataSource: hasDiary ? 'both' : 'ratings',
+        availableYears: [],
+        simplifiedMode: simplified,
+        fileName,
+        warnings: [],
+      })
 
-    if (simplified) {
-      const films = await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
+      if (simplified) {
+        const films = await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
+        const availableYearsFromFilms = [...new Set(films.map((f) => {
+          const d = f.watchedDate || f.date
+          if (!d) return null
+          const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+          return y ? parseInt(y, 10) : null
+        }).filter(Boolean))].sort((a, b) => a - b)
+        setAnalysis((prev) => ({
+          ...prev,
+          filmsLite: films,
+          filmsLiteAll: films,
+          stage1: undefined,
+          availableYears: availableYearsFromFilms,
+        }))
+        setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
+        await setLastReport({ filmsLite: films, filmsLiteAll: films, hasDiary, dataSource: hasDiary ? 'both' : 'ratings', availableYears: availableYearsFromFilms, simplifiedMode: true, fileName })
+        setLastReportAvailable(true)
+        await clearResumeState()
+        return
+      }
+
+      setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 8 })
+      const films = await runStagedAnalysis(parsedRows, parsedDiary, {
+        ...opts,
+        onProgress: (p) => { progressRef.current = p; setProgress(p) },
+        onPartialResult: (partial) => {
+          if (partial.films) {
+            const years = [...new Set(partial.films.map((f) => {
+              const d = f.watchedDate || f.date
+              if (!d) return null
+              const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+              return y ? parseInt(y, 10) : null
+            }).filter(Boolean))].sort((a, b) => a - b)
+            setAnalysis((prev) => ({
+              ...prev,
+              filmsLite: partial.films,
+              filmsLiteAll: partial.films,
+              ...(partial.stage >= 3 ? { stage1: undefined } : {}),
+              availableYears: years,
+              warnings: partial.warnings || prev.warnings,
+            }))
+          }
+        },
+      })
+
+      setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 98 })
       const availableYearsFromFilms = [...new Set(films.map((f) => {
         const d = f.watchedDate || f.date
         if (!d) return null
         const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
         return y ? parseInt(y, 10) : null
       }).filter(Boolean))].sort((a, b) => a - b)
-      setAnalysis((prev) => ({
-        ...prev,
+      const result = {
         filmsLite: films,
         filmsLiteAll: films,
-        stage1: undefined,
+        hasDiary,
+        dataSource: hasDiary ? 'both' : 'ratings',
         availableYears: availableYearsFromFilms,
-      }))
+        simplifiedMode: false,
+        fileName,
+        warnings: [],
+      }
+      setAnalysis(result)
       setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
-      await setLastReport({ filmsLite: films, filmsLiteAll: films, hasDiary, dataSource: hasDiary ? 'both' : 'ratings', availableYears: availableYearsFromFilms, simplifiedMode: true, fileName })
+      await setLastReport(result)
       setLastReportAvailable(true)
       await clearResumeState()
-      return
+    } catch (err) {
+      setAnalysis(null)
+      throw err
     }
-
-    setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 8 })
-    const films = await runStagedAnalysis(parsedRows, parsedDiary, {
-      ...opts,
-      onProgress: (p) => { progressRef.current = p; setProgress(p) },
-      onPartialResult: (partial) => {
-        if (partial.films) {
-          const years = [...new Set(partial.films.map((f) => {
-            const d = f.watchedDate || f.date
-            if (!d) return null
-            const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-            return y ? parseInt(y, 10) : null
-          }).filter(Boolean))].sort((a, b) => a - b)
-          setAnalysis((prev) => ({
-            ...prev,
-            filmsLite: partial.films,
-            filmsLiteAll: partial.films,
-            ...(partial.stage >= 3 ? { stage1: undefined } : {}),
-            availableYears: years,
-            warnings: partial.warnings || prev.warnings,
-          }))
-        }
-      },
-    })
-
-    setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 98 })
-    const availableYearsFromFilms = [...new Set(films.map((f) => {
-      const d = f.watchedDate || f.date
-      if (!d) return null
-      const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-      return y ? parseInt(y, 10) : null
-    }).filter(Boolean))].sort((a, b) => a - b)
-    const result = {
-      filmsLite: films,
-      filmsLiteAll: films,
-      hasDiary,
-      dataSource: hasDiary ? 'both' : 'ratings',
-      availableYears: availableYearsFromFilms,
-      simplifiedMode: false,
-      fileName,
-      warnings: [],
-    }
-    setAnalysis(result)
-    setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
-    await setLastReport(result)
-    setLastReportAvailable(true)
-    await clearResumeState()
   }
 
   const runAnalysis = async (ratingsFile, diaryFile, simplified = false) => {
@@ -241,6 +246,7 @@ function App() {
       await runAnalysisFromRows(parsedRows, parsedDiary, simplified, abortControllerRef.current.signal, fileName)
       if (simplified) setSimplifiedMode(true)
     } catch (err) {
+      setAnalysis(null)
       if (err?.name === 'AbortError') {
         setError('Анализ остановлен.')
         clearResumeState().catch(() => {})
@@ -284,6 +290,7 @@ function App() {
         await runAnalysisFromRows(pendingFiles.parsedRows, pendingFiles.parsedDiary, true, abortControllerRef.current.signal, '')
         setSimplifiedMode(true)
       } catch (err) {
+        setAnalysis(null)
         if (err?.name !== 'AbortError') setError(err.message || 'Произошла ошибка')
       } finally {
         setLoading(false)
@@ -438,6 +445,7 @@ function App() {
       
       setLoading(false)
       if (mockError) {
+        setAnalysis(null)
         setError(mockError)
         setProgress(null)
         return
@@ -449,6 +457,7 @@ function App() {
       setLastUploadedFileName('демо')
       setProgress(null)
     } catch (err) {
+      setAnalysis(null)
       setLoading(false)
       setProgress(null)
       setError(err.message || 'Не удалось загрузить демо')
