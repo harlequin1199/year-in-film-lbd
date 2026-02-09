@@ -349,6 +349,10 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         
         await Promise.allSettled(cachePromises)
         
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
+        
         searchDone = j + results.length
         if (onProgress) {
           const calculatedPercent = 8 + Math.min(67, Math.round((searchDone / uniqueKeys.length) * 67))
@@ -461,6 +465,10 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         })
         
         await Promise.allSettled(cachePromises)
+        
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
         
         movieDone = j + (data.results?.length || 0)
         if (onProgress) {
@@ -599,6 +607,10 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         
         await Promise.allSettled(cachePromises)
         
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
+        
         creditsDone = j + (data.results?.length || 0)
         if (onProgress) {
           onProgress({
@@ -673,6 +685,10 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         })
         
         await Promise.allSettled(cachePromises)
+        
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
         
         keywordsDone = j + (data.results?.length || 0)
         if (onProgress) {
@@ -838,6 +854,10 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
         
         await Promise.allSettled(cachePromises)
         
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
+        
         searchDone = j + results.length
         if (onProgress) {
           onProgress({
@@ -941,6 +961,10 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
         })
         
         await Promise.allSettled(cachePromises)
+        
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
         
         movieDone = j + (data.results?.length || 0)
         if (onProgress) {
@@ -1108,6 +1132,10 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
         
         await Promise.allSettled(cachePromises)
         
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
+        
         if (onProgress) {
           onProgress({
             stage: 'tmdb_details',
@@ -1240,6 +1268,10 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
         })
         
         await Promise.allSettled(cachePromises)
+        
+        if (cachePromises.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+        }
         
         searchDone = j + results.length
         if (onProgress) {
