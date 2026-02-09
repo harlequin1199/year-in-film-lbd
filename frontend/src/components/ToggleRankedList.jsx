@@ -55,17 +55,24 @@ function ToggleRankedList({
             <span>Средняя</span>
             <span>4.5–5★</span>
           </div>
-          {list.map((item, index) => (
-            <div className="table-row table-row--wide" key={`${item.name}-${index}`}>
-              <span className="tag-name">{displayName(item)}</span>
-              <span>{formatNumber(item.count)}</span>
-              <span className="rating-cell">
-                {formatRating(item.avg_rating)}
-                <Stars rating={item.avg_rating} />
-              </span>
-              <span>{formatNumber(item.high_45)}</span>
-            </div>
-          ))}
+          {list.map((item, index) => {
+            const rank = index + 1
+            const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
+            return (
+              <div className={`table-row table-row--wide ${rankClass}`} key={`${item.name}-${index}`}>
+                <span className="tag-name">
+                  {rank <= 3 && <span className="rank-badge">{rank}</span>}
+                  {displayName(item)}
+                </span>
+                <span>{formatNumber(item.count)}</span>
+                <span className="rating-cell">
+                  {formatRating(item.avg_rating)}
+                  <Stars rating={item.avg_rating} />
+                </span>
+                <span>{formatNumber(item.high_45)}</span>
+              </div>
+            )
+          })}
         </div>
       )}
       {hasMore && (

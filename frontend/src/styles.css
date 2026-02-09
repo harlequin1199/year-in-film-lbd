@@ -823,8 +823,35 @@ h3, .card-header h3 {
   background: #151923;
   border: 1px solid #1f2430;
   border-radius: 12px;
-  padding: 16px 20px;
+  padding: 0;
   margin-bottom: 24px;
+  overflow: hidden;
+  position: relative;
+}
+
+.genres-year-content {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  min-height: 128px;
+  position: relative;
+}
+
+.genres-year-left {
+  min-width: 0;
+  padding: 16px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.genres-year-left::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, #151923);
+  z-index: 1;
 }
 
 .genres-year-label {
@@ -857,6 +884,84 @@ h3, .card-header h3 {
 .genres-year-index {
   font-size: 12px;
   color: #6d7a90;
+}
+
+.genres-year-right {
+  background: var(--genre-bg-color, #252A2E);
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 20px;
+  padding-bottom: 20px;
+  clip-path: polygon(0% 0%, 30% 100%, 100% 100%, 100% 0%);
+}
+
+.genres-year-right::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--genre-bg-color, #252A2E), color-mix(in srgb, var(--genre-bg-color, #252A2E) 90%, black));
+  opacity: 0.95;
+}
+
+.genres-year-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.15), transparent 60%);
+  pointer-events: none;
+}
+
+.genres-year-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  /* Позиционирование у правого края с отступами */
+  position: absolute;
+  bottom: 20px;
+  right: calc(20px + 24px); /* 20px отступ + 24px (четверть ширины иконки) */
+}
+
+.genres-year-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 60%);
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+.genres-year-icon-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) brightness(1.1);
+  position: relative;
+  z-index: 1;
+}
+
+.genres-year-icon-fallback {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  position: relative;
+  z-index: 1;
 }
 
 .genres-columns {
@@ -1013,6 +1118,39 @@ h3, .card-header h3 {
   box-sizing: border-box;
   border-radius: var(--radius-sm);
   transition: background 0.15s ease;
+  position: relative;
+}
+
+/* Облегчённое выделение топ-3 для жанров */
+.genres-list-item.rank-1 {
+  border-left: 2px solid #f7c843;
+  padding-left: calc(var(--space-md) + 2px);
+  margin-left: calc(-1 * var(--space-md) - 2px);
+}
+
+.genres-list-item.rank-2 {
+  border-left: 2px solid #c0c0c0;
+  padding-left: calc(var(--space-md) + 2px);
+  margin-left: calc(-1 * var(--space-md) - 2px);
+}
+
+.genres-list-item.rank-3 {
+  border-left: 2px solid #cd7f32;
+  padding-left: calc(var(--space-md) + 2px);
+  margin-left: calc(-1 * var(--space-md) - 2px);
+}
+
+/* При наведении выделение топ-3 сохраняется, но не перекрывает highlight */
+.genres-list-item.rank-1:not(.genres-list-item-highlight) {
+  background: rgba(247, 200, 67, 0.04);
+}
+
+.genres-list-item.rank-2:not(.genres-list-item-highlight) {
+  background: rgba(192, 192, 192, 0.03);
+}
+
+.genres-list-item.rank-3:not(.genres-list-item-highlight) {
+  background: rgba(205, 127, 50, 0.03);
 }
 
 .genres-list-name {
@@ -1021,6 +1159,36 @@ h3, .card-header h3 {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.genres-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 10px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.genres-list-item.rank-1 .genres-rank-badge {
+  background: #f7c843;
+  color: #1b1302;
+}
+
+.genres-list-item.rank-2 .genres-rank-badge {
+  background: #c0c0c0;
+  color: #1a1a1a;
+}
+
+.genres-list-item.rank-3 .genres-rank-badge {
+  background: #cd7f32;
+  color: #ffffff;
 }
 
 .genres-list-meta {
@@ -1288,16 +1456,72 @@ h3, .card-header h3 {
   padding: 10px 0;
   border-bottom: 1px solid var(--border-subtle);
   transition: background 0.15s ease;
+  position: relative;
 }
 
 .table-row:hover {
   background: var(--bg-card-hover);
 }
 
+/* Выделение топ-3 позиций */
+.table-row.rank-1 {
+  border-left: 4px solid #f7c843;
+  background: rgba(247, 200, 67, 0.08);
+  padding-left: 12px;
+  margin-left: -12px;
+  border-radius: 0 8px 8px 0;
+}
+
+.table-row.rank-2 {
+  border-left: 4px solid #c0c0c0;
+  background: rgba(192, 192, 192, 0.06);
+  padding-left: 12px;
+  margin-left: -12px;
+  border-radius: 0 8px 8px 0;
+}
+
+.table-row.rank-3 {
+  border-left: 4px solid #cd7f32;
+  background: rgba(205, 127, 50, 0.06);
+  padding-left: 12px;
+  margin-left: -12px;
+  border-radius: 0 8px 8px 0;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.rank-1 .rank-badge {
+  background: #f7c843;
+  color: #1b1302;
+}
+
+.rank-2 .rank-badge {
+  background: #c0c0c0;
+  color: #1a1a1a;
+}
+
+.rank-3 .rank-badge {
+  background: #cd7f32;
+  color: #ffffff;
+}
+
 .tag-name {
   font-weight: 600;
   word-break: break-word;
   min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 .card[data-section="countries"] { border-left: 3px solid #26a69a; }
@@ -2032,6 +2256,25 @@ h3, .card-header h3 {
   .genres-col-donut {
     justify-content: flex-start;
     padding-right: 0;
+  }
+  .genres-year-content {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .genres-year-right {
+    clip-path: polygon(0% 0%, 25% 100%, 100% 100%, 100% 0%);
+    padding: 16px;
+    min-height: 120px;
+  }
+  .genres-year-left::after {
+    display: none;
+  }
+  .genres-year-icon {
+    width: 80px;
+    height: 80px;
+  }
+  .genres-year-icon-emoji {
+    font-size: 40px;
   }
 }
 
