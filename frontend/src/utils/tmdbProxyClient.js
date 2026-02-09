@@ -7,8 +7,20 @@ const DEFAULT_CONCURRENCY = 4
 const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
 const MAX_IN_FLIGHT = 200
-const BATCH_SIZE = 150
-const PARALLEL_BATCHES = 12
+
+/**
+ * Adaptive batch processing parameters based on data volume.
+ * Optimized for smooth progress and maximum backend utilization (TMDb ~25 req/s).
+ */
+function getBatchParams(totalItems) {
+  if (totalItems <= 1000) {
+    // Small volume (≤1000): maximize speed with smooth progress
+    return { batchSize: 100, parallelBatches: 6 }
+  } else {
+    // Large volume (1000-10000): balance speed and stability
+    return { batchSize: 80, parallelBatches: 5 }
+  }
+}
 
 function tmdbRating5(voteAverage) {
   if (voteAverage == null || Number.isNaN(voteAverage)) return null
@@ -425,10 +437,11 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       }
     }
     
+    const searchParams = getBatchParams(searchItems.length)
     await processBatchesParallel(
       searchItems,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      searchParams.batchSize,
+      searchParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -544,10 +557,11 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       }
     }
     
+    const movieParams = getBatchParams(uniqueIds.length)
     await processBatchesParallel(
       uniqueIds,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      movieParams.batchSize,
+      movieParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -693,10 +707,11 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       }
     }
     
+    const creditsParams = getBatchParams(creditsToFetch.length)
     await processBatchesParallel(
       creditsToFetch,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      creditsParams.batchSize,
+      creditsParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -781,10 +796,11 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       }
     }
     
+    const keywordsParams = getBatchParams(keywordsToFetch.length)
     await processBatchesParallel(
       keywordsToFetch,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      keywordsParams.batchSize,
+      keywordsParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -958,10 +974,11 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
       }
     }
     
+    const searchParams = getBatchParams(searchItems.length)
     await processBatchesParallel(
       searchItems,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      searchParams.batchSize,
+      searchParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -1071,10 +1088,11 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
       }
     }
     
+    const movieParams = getBatchParams(uniqueIds.length)
     await processBatchesParallel(
       uniqueIds,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      movieParams.batchSize,
+      movieParams.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -1252,10 +1270,11 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
       }
     }
     
+    const phase2Params = getBatchParams(idList.length)
     await processBatchesParallel(
       idList,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      phase2Params.batchSize,
+      phase2Params.parallelBatches,
       batchProcessor,
       {
         signal,
@@ -1401,10 +1420,11 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
       }
     }
     
+    const searchParams = getBatchParams(searchItems.length)
     await processBatchesParallel(
       searchItems,
-      BATCH_SIZE,
-      PARALLEL_BATCHES,
+      searchParams.batchSize,
+      searchParams.parallelBatches,
       batchProcessor,
       {
         signal,

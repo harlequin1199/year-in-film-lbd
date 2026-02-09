@@ -13,8 +13,9 @@ import cache as cache_module
 logger = logging.getLogger(__name__)
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
-MAX_CONCURRENCY = 4
-RATE_LIMIT_PER_SECOND = 6.0
+# TMDb docs: no strict limit, upper bound ~40 req/s. Use 25 for speed while staying safe.
+MAX_CONCURRENCY = 10
+RATE_LIMIT_PER_SECOND = 25.0
 MAX_RETRIES = 3
 RETRY_DELAYS = (0.5, 1.0, 2.0)
 
@@ -26,7 +27,7 @@ _rate_lock = asyncio.Lock()
 
 
 async def _rate_limit() -> None:
-    """Wait if needed to respect rate limit (6 req/sec)."""
+    """Wait if needed to respect rate limit (RATE_LIMIT_PER_SECOND)."""
     async with _rate_lock:
         now = time.time()
         while _request_times and _request_times[0] < now - 1.0:
