@@ -105,29 +105,35 @@ async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str
     Batch search endpoint for TMDB.
     Processes multiple search requests with rate limiting, retry, and caching.
     """
-    api_key = (os.getenv("TMDB_API_KEY") or "").strip()
-    if not api_key:
-        raise HTTPException(
-            status_code=500,
-            detail="TMDB_API_KEY is not set",
-        )
-    
-    if not request.items:
-        return {"results": []}
-    
-    if len(request.items) > 1000:
-        raise HTTPException(
-            status_code=400,
-            detail="Too many items. Maximum 1000 items per batch.",
-        )
-    
-    import tmdb_batch
-    import asyncio
-    
-    items_dict = [{"title": item.title, "year": item.year} for item in request.items]
-    results = await tmdb_batch.search_batch(items_dict, api_key)
-    
-    return {"results": results}
+    try:
+        logger.info("Batch search request received: %s items", len(request.items))
+        api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+        if not api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="TMDB_API_KEY is not set",
+            )
+        
+        if not request.items:
+            return {"results": []}
+        
+        if len(request.items) > 1000:
+            raise HTTPException(
+                status_code=400,
+                detail="Too many items. Maximum 1000 items per batch.",
+            )
+        
+        import tmdb_batch
+        
+        items_dict = [{"title": item.title, "year": item.year} for item in request.items]
+        logger.info("Processing batch search for %s items", len(items_dict))
+        results = await tmdb_batch.search_batch(items_dict, api_key)
+        logger.info("Batch search completed: %s results", len(results))
+        
+        return {"results": results}
+    except Exception as e:
+        logger.exception("Error in batch search endpoint: %s", e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 def _worker_lock_try_acquire() -> bool:

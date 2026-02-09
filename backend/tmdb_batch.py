@@ -65,21 +65,30 @@ async def _search_single(
     year_val = year or 0
     
     # Check cache first
-    tmdb_id = await asyncio.to_thread(cache_module.get_search, title_norm, year)
-    if tmdb_id is not None:
-        movie_data = await asyncio.to_thread(cache_module.get_movie, tmdb_id)
-        if movie_data:
-            return tmdb_id, movie_data, None
+    try:
+        tmdb_id = await asyncio.to_thread(cache_module.get_search, title_norm, year)
+        if tmdb_id is not None:
+            movie_data = await asyncio.to_thread(cache_module.get_movie, tmdb_id)
+            if movie_data:
+                logger.debug("Cache hit for %s (%s)", title, year)
+                return tmdb_id, movie_data, None
+    except Exception as e:
+        logger.warning("Cache read error for %s: %s", title, e)
     
     # Not in cache, fetch from TMDB
     params = {"api_key": api_key, "query": title}
     if year:
         params["year"] = year
     
+    tmdb_id = None
+    movie_data = None
+    
+    # Search for movie
     for attempt in range(MAX_RETRIES + 1):
         try:
             await _rate_limit()
             async with semaphore:
+                logger.debug("Searching TMDB for %s (%s), attempt %s", title, year, attempt + 1)
                 response = await client.get(
                     f"{TMDB_BASE_URL}/search/movie",
                     params=params,
@@ -113,37 +122,12 @@ async def _search_single(
                 
                 if not results:
                     tmdb_id = None
-                    movie_data = None
+                    break
                 else:
                     first = results[0]
                     tmdb_id = first.get("id")
-                    if tmdb_id:
-                        # Fetch movie details
-                        await _rate_limit()
-                        async with semaphore:
-                            movie_response = await client.get(
-                                f"{TMDB_BASE_URL}/movie/{tmdb_id}",
-                                params={"api_key": api_key},
-                                timeout=20.0,
-                            )
-                        if movie_response.status_code == 429 or movie_response.status_code >= 500:
-                            if attempt >= MAX_RETRIES:
-                                return tmdb_id, None, f"TMDb error {movie_response.status_code}"
-                            delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
-                            await asyncio.sleep(delay)
-                            continue
-                        movie_response.raise_for_status()
-                        movie_data = movie_response.json()
-                    else:
-                        movie_data = None
-                
-                # Cache results
-                await asyncio.to_thread(cache_module.set_search, title_norm, year, tmdb_id)
-                if tmdb_id and movie_data:
-                    await asyncio.to_thread(cache_module.set_movie, tmdb_id, movie_data)
-                
-                return tmdb_id, movie_data, None
-                
+                    break
+                    
         except httpx.HTTPStatusError as e:
             if attempt >= MAX_RETRIES:
                 return None, None, f"HTTP {e.response.status_code}"
@@ -153,7 +137,58 @@ async def _search_single(
                 return None, None, str(e)
             await asyncio.sleep(RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)])
     
-    return None, None, "Max retries exceeded"
+    if tmdb_id is None:
+        # Cache negative result
+        try:
+            await asyncio.to_thread(cache_module.set_search, title_norm, year, None)
+        except Exception:
+            pass
+        return None, None, None
+    
+    # Fetch movie details
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            await _rate_limit()
+            async with semaphore:
+                logger.debug("Fetching movie details for TMDB ID %s, attempt %s", tmdb_id, attempt + 1)
+                movie_response = await client.get(
+                    f"{TMDB_BASE_URL}/movie/{tmdb_id}",
+                    params={"api_key": api_key},
+                    timeout=20.0,
+                )
+                if movie_response.status_code == 429 or movie_response.status_code >= 500:
+                    if attempt >= MAX_RETRIES:
+                        return tmdb_id, None, f"TMDb error {movie_response.status_code}"
+                    delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+                    retry_after = movie_response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            delay = float(retry_after)
+                        except ValueError:
+                            pass
+                    await asyncio.sleep(delay)
+                    continue
+                movie_response.raise_for_status()
+                movie_data = movie_response.json()
+                break
+        except httpx.HTTPStatusError as e:
+            if attempt >= MAX_RETRIES:
+                return tmdb_id, None, f"HTTP {e.response.status_code}"
+            await asyncio.sleep(RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)])
+        except (httpx.RequestError, httpx.HTTPError) as e:
+            if attempt >= MAX_RETRIES:
+                return tmdb_id, None, str(e)
+            await asyncio.sleep(RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)])
+    
+    # Cache results
+    try:
+        await asyncio.to_thread(cache_module.set_search, title_norm, year, tmdb_id)
+        if movie_data:
+            await asyncio.to_thread(cache_module.set_movie, tmdb_id, movie_data)
+    except Exception as e:
+        logger.warning("Cache write error for %s: %s", title, e)
+    
+    return tmdb_id, movie_data, None
 
 
 def _format_result(
