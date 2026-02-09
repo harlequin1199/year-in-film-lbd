@@ -247,6 +247,7 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       try {
         const results = await searchBatch(chunk, fetchOpts)
         
+        const cachePromises = []
         results.forEach((result, idx) => {
           if (idx >= chunkKeys.length) return
           const key = chunkKeys[idx]
@@ -254,20 +255,30 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
           keyToTmdbId.set(key, tmdbId)
           
           if (tmdbId && result.tmdb) {
-            cache.setMovie(tmdbId, {
-              id: result.tmdb.tmdb_id,
-              poster_path: result.tmdb.poster_path,
-              genres: result.tmdb.genres || [],
-              runtime: result.tmdb.runtime,
-              vote_average: result.tmdb.vote_average,
-              vote_count: result.tmdb.vote_count || 0,
-              original_language: result.tmdb.original_language,
-              production_countries: result.tmdb.production_countries || [],
-              release_date: result.tmdb.release_date,
-            }).catch(() => {})
+            cachePromises.push(
+              cache.setMovie(tmdbId, {
+                id: result.tmdb.tmdb_id,
+                poster_path: result.tmdb.poster_path,
+                genres: result.tmdb.genres || [],
+                runtime: result.tmdb.runtime,
+                vote_average: result.tmdb.vote_average,
+                vote_count: result.tmdb.vote_count || 0,
+                original_language: result.tmdb.original_language,
+                production_countries: result.tmdb.production_countries || [],
+                release_date: result.tmdb.release_date,
+              }).catch((err) => {
+                console.warn('Failed to cache movie:', err)
+              })
+            )
           }
-          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+          cachePromises.push(
+            cache.setSearch(result.title, result.year, tmdbId).catch((err) => {
+              console.warn('Failed to cache search:', err)
+            })
+          )
         })
+        
+        await Promise.allSettled(cachePromises)
         
         searchDone = j + results.length
         if (onProgress) {
@@ -552,6 +563,7 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
       try {
         const results = await searchBatch(chunk, fetchOpts)
         
+        const cachePromises = []
         results.forEach((result, idx) => {
           if (idx >= chunkKeys.length) return
           const key = chunkKeys[idx]
@@ -559,20 +571,30 @@ export async function enrichFilmsTwoPhase(rows, diaryRows, onProgress, opts = {}
           keyToTmdbId.set(key, tmdbId)
           
           if (tmdbId && result.tmdb) {
-            cache.setMovie(tmdbId, {
-              id: result.tmdb.tmdb_id,
-              poster_path: result.tmdb.poster_path,
-              genres: result.tmdb.genres || [],
-              runtime: result.tmdb.runtime,
-              vote_average: result.tmdb.vote_average,
-              vote_count: result.tmdb.vote_count || 0,
-              original_language: result.tmdb.original_language,
-              production_countries: result.tmdb.production_countries || [],
-              release_date: result.tmdb.release_date,
-            }).catch(() => {})
+            cachePromises.push(
+              cache.setMovie(tmdbId, {
+                id: result.tmdb.tmdb_id,
+                poster_path: result.tmdb.poster_path,
+                genres: result.tmdb.genres || [],
+                runtime: result.tmdb.runtime,
+                vote_average: result.tmdb.vote_average,
+                vote_count: result.tmdb.vote_count || 0,
+                original_language: result.tmdb.original_language,
+                production_countries: result.tmdb.production_countries || [],
+                release_date: result.tmdb.release_date,
+              }).catch((err) => {
+                console.warn('Failed to cache movie:', err)
+              })
+            )
           }
-          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+          cachePromises.push(
+            cache.setSearch(result.title, result.year, tmdbId).catch((err) => {
+              console.warn('Failed to cache search:', err)
+            })
+          )
         })
+        
+        await Promise.allSettled(cachePromises)
         
         searchDone = j + results.length
         if (onProgress) {
@@ -823,6 +845,7 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
       try {
         const results = await searchBatch(chunk, fetchOpts)
         
+        const cachePromises = []
         results.forEach((result, idx) => {
           if (idx >= chunkKeys.length) return
           const key = chunkKeys[idx]
@@ -830,20 +853,30 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
           keyToTmdbId.set(key, tmdbId)
           
           if (tmdbId && result.tmdb) {
-            cache.setMovie(tmdbId, {
-              id: result.tmdb.tmdb_id,
-              poster_path: result.tmdb.poster_path,
-              genres: result.tmdb.genres || [],
-              runtime: result.tmdb.runtime,
-              vote_average: result.tmdb.vote_average,
-              vote_count: result.tmdb.vote_count || 0,
-              original_language: result.tmdb.original_language,
-              production_countries: result.tmdb.production_countries || [],
-              release_date: result.tmdb.release_date,
-            }).catch(() => {})
+            cachePromises.push(
+              cache.setMovie(tmdbId, {
+                id: result.tmdb.tmdb_id,
+                poster_path: result.tmdb.poster_path,
+                genres: result.tmdb.genres || [],
+                runtime: result.tmdb.runtime,
+                vote_average: result.tmdb.vote_average,
+                vote_count: result.tmdb.vote_count || 0,
+                original_language: result.tmdb.original_language,
+                production_countries: result.tmdb.production_countries || [],
+                release_date: result.tmdb.release_date,
+              }).catch((err) => {
+                console.warn('Failed to cache movie:', err)
+              })
+            )
           }
-          cache.setSearch(result.title, result.year, tmdbId).catch(() => {})
+          cachePromises.push(
+            cache.setSearch(result.title, result.year, tmdbId).catch((err) => {
+              console.warn('Failed to cache search:', err)
+            })
+          )
         })
+        
+        await Promise.allSettled(cachePromises)
         
         searchDone = j + results.length
         if (onProgress) {
