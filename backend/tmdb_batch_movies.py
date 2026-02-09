@@ -13,9 +13,9 @@ import cache as cache_module
 logger = logging.getLogger(__name__)
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
-# TMDb docs: no strict limit, upper bound ~40 req/s. Use 25 for speed while staying safe.
+# TMDb docs: no strict limit, upper bound ~40 req/s. Using 40 for maximum speed.
 MAX_CONCURRENCY = 10
-RATE_LIMIT_PER_SECOND = 25.0
+RATE_LIMIT_PER_SECOND = 40.0
 MAX_RETRIES = 3
 RETRY_DELAYS = (0.5, 1.0, 2.0)
 
