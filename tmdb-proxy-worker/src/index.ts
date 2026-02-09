@@ -125,7 +125,7 @@ export default {
           return jsonError({ error: 'Title too long' }, 400)
         }
         const year = yearRaw ? parseInt(yearRaw, 10) : undefined
-        if (yearRaw !== undefined && yearRaw !== '' && (Number.isNaN(year) || year < YEAR_MIN || year > YEAR_MAX)) {
+        if (yearRaw !== undefined && yearRaw !== '' && year !== undefined && (Number.isNaN(year) || year < YEAR_MIN || year > YEAR_MAX)) {
           return jsonError({ error: 'Invalid year' }, 400)
         }
 
