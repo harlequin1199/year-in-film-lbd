@@ -5,11 +5,34 @@ const STORES = ['searchCache', 'movieCache', 'creditsCache', 'keywordsCache', 'r
 let dbPromise = null
 
 function openDb() {
-  if (dbPromise) return dbPromise
+  if (dbPromise) {
+    return dbPromise.then(db => {
+      if (db && !db.objectStoreNames.length) {
+        dbPromise = null
+        return openDb()
+      }
+      return db
+    }).catch(() => {
+      dbPromise = null
+      return openDb()
+    })
+  }
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onerror = () => reject(req.error)
-    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => {
+      dbPromise = null
+      reject(req.error)
+    }
+    req.onsuccess = () => {
+      const db = req.result
+      db.onclose = () => {
+        dbPromise = null
+      }
+      db.onerror = () => {
+        dbPromise = null
+      }
+      resolve(db)
+    }
     req.onupgradeneeded = (e) => {
       const db = e.target.result
       for (const name of STORES) {
@@ -27,75 +50,208 @@ function normalizeKey(key) {
 }
 
 export async function getSearch(title, year) {
-  const db = await openDb()
-  const key = `${(title || '').trim().toLowerCase()}:${year ?? 0}`
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('searchCache', 'readonly')
-    const req = tx.objectStore('searchCache').get(key)
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    const db = await openDb()
+    const key = `${(title || '').trim().toLowerCase()}:${year ?? 0}`
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('searchCache', 'readonly')
+        const req = tx.objectStore('searchCache').get(key)
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => {
+          if (req.error?.name === 'InvalidStateError' || req.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(req.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function setSearch(title, year, tmdbId) {
-  const db = await openDb()
-  const key = `${(title || '').trim().toLowerCase()}:${year ?? 0}`
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('searchCache', 'readwrite')
-    tx.objectStore('searchCache').put(tmdbId, key)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  try {
+    const db = await openDb()
+    const key = `${(title || '').trim().toLowerCase()}:${year ?? 0}`
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('searchCache', 'readwrite')
+        tx.objectStore('searchCache').put(tmdbId, key)
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => {
+          if (tx.error?.name === 'InvalidStateError' || tx.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(tx.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function getMovie(tmdbId) {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('movieCache', 'readonly')
-    const req = tx.objectStore('movieCache').get(normalizeKey(tmdbId))
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('movieCache', 'readonly')
+        const req = tx.objectStore('movieCache').get(normalizeKey(tmdbId))
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => {
+          if (req.error?.name === 'InvalidStateError' || req.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(req.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function setMovie(tmdbId, data) {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('movieCache', 'readwrite')
-    tx.objectStore('movieCache').put(data, normalizeKey(tmdbId))
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  try {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('movieCache', 'readwrite')
+        tx.objectStore('movieCache').put(data, normalizeKey(tmdbId))
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => {
+          if (tx.error?.name === 'InvalidStateError' || tx.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(tx.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function getCredits(tmdbId) {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('creditsCache', 'readonly')
-    const req = tx.objectStore('creditsCache').get(normalizeKey(tmdbId))
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('creditsCache', 'readonly')
+        const req = tx.objectStore('creditsCache').get(normalizeKey(tmdbId))
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => {
+          if (req.error?.name === 'InvalidStateError' || req.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(req.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function setCredits(tmdbId, data) {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('creditsCache', 'readwrite')
-    tx.objectStore('creditsCache').put(data, normalizeKey(tmdbId))
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  try {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('creditsCache', 'readwrite')
+        tx.objectStore('creditsCache').put(data, normalizeKey(tmdbId))
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => {
+          if (tx.error?.name === 'InvalidStateError' || tx.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(tx.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function getKeywords(tmdbId) {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('keywordsCache', 'readonly')
-    const req = tx.objectStore('keywordsCache').get(normalizeKey(tmdbId))
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('keywordsCache', 'readonly')
+        const req = tx.objectStore('keywordsCache').get(normalizeKey(tmdbId))
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => {
+          if (req.error?.name === 'InvalidStateError' || req.error?.message?.includes('closing')) {
+            dbPromise = null
+          }
+          reject(req.error)
+        }
+      } catch (err) {
+        if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+          dbPromise = null
+        }
+        reject(err)
+      }
+    })
+  } catch (err) {
+    if (err?.name === 'InvalidStateError' || err?.message?.includes('closing')) {
+      dbPromise = null
+    }
+    throw err
+  }
 }
 
 export async function setKeywords(tmdbId, data) {
