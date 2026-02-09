@@ -8,7 +8,7 @@ const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
 const MAX_IN_FLIGHT = 200
 const BATCH_SIZE = 25
-const PARALLEL_BATCHES = 3
+const PARALLEL_BATCHES = 10
 
 function tmdbRating5(voteAverage) {
   if (voteAverage == null || Number.isNaN(voteAverage)) return null
