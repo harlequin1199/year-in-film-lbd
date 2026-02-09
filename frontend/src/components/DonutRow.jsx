@@ -1,5 +1,6 @@
 import { formatNumber } from '../utils/format.js'
 import { CHART_COLORS } from '../utils/colors.js'
+import { getGenreNameRu } from '../utils/genresRu.js'
 
 function DonutRow({ genres }) {
   const top = (genres || []).slice(0, 6)
@@ -39,7 +40,7 @@ function DonutRow({ genres }) {
           {top.map((genre, index) => (
             <div className="legend-item" key={genre.name}>
               <span className="swatch" style={{ background: CHART_COLORS[index % CHART_COLORS.length] }} />
-              <span>{genre.name}</span>
+              <span>{getGenreNameRu(genre.name)}</span>
               <span className="legend-count">{formatNumber(genre.count)}</span>
             </div>
           ))}

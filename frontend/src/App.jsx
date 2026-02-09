@@ -22,6 +22,7 @@ import {
 } from './utils/analyticsClient.js'
 import { enrichFilmsPhase1Only, enrichFilmsTwoPhase, runStagedAnalysis } from './utils/tmdbProxyClient.js'
 import { clearCache, clearResumeState, getResumeState, getLastReport, setLastReport, setResumeState as persistResumeState } from './utils/indexedDbCache.js'
+import { getCountryNameRu } from './utils/countriesRu.js'
 import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
 const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
@@ -694,6 +695,7 @@ function App() {
               byAvg={computed.topCountriesByAvgRating}
               emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по странам.'}
               sectionKey="countries"
+              translateName={getCountryNameRu}
             />
             <ToggleRankedList
               title="Режиссёры"

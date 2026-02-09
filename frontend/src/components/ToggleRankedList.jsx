@@ -11,6 +11,7 @@ function ToggleRankedList({
   countLabel = 'Чаще всего',
   avgLabel = 'Самые любимые',
   sectionKey,
+  translateName,
 }) {
   const [mode, setMode] = useState('count')
   const [expanded, setExpanded] = useState(false)
@@ -20,6 +21,7 @@ function ToggleRankedList({
   const list = expanded ? fullList : fullList.slice(0, limit)
   const hasMore = fullList.length > limit
   const fewItems = fullList.length > 0 && fullList.length < 3
+  const displayName = (item) => (translateName ? translateName(item.name) : item.name)
 
   return (
     <section className="card" data-section={sectionKey || undefined}>
@@ -55,7 +57,7 @@ function ToggleRankedList({
           </div>
           {list.map((item, index) => (
             <div className="table-row table-row--wide" key={`${item.name}-${index}`}>
-              <span className="tag-name">{item.name}</span>
+              <span className="tag-name">{displayName(item)}</span>
               <span>{formatNumber(item.count)}</span>
               <span className="rating-cell">
                 {formatRating(item.avg_rating)}

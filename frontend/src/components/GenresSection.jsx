@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatNumber, formatRating } from '../utils/format.js'
+import { getGenreNameRu } from '../utils/genresRu.js'
 import Stars from './Stars.jsx'
 
 function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
@@ -21,7 +22,7 @@ function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHo
             onMouseEnter={() => onHoverGenre?.(g.name)}
             onMouseLeave={() => onHoverGenre?.(null)}
           >
-            <span className="genres-list-name">{g.name}</span>
+            <span className="genres-list-name">{getGenreNameRu(g.name)}</span>
             <span className="genres-list-meta">
               {formatNumber(g.count)}
               {showPct && ` (${pct}%)`}
@@ -65,7 +66,7 @@ export default function GenresSection({
       {genreOfTheYear && (
         <div className="genres-year-block">
           <div className="genres-year-label">Жанр года</div>
-          <div className="genres-year-name">{genreOfTheYear.name}</div>
+          <div className="genres-year-name">{getGenreNameRu(genreOfTheYear.name)}</div>
           <div className="genres-year-subtitle">
             Фильмов: {formatNumber(genreOfTheYear.count)} • Средняя:{' '}
             <span className="genres-year-stars">

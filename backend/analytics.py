@@ -20,6 +20,69 @@ CAP_GENRES = 500
 CAP_COUNTRIES = 500
 CAP_LANGUAGES = 100
 
+# Локализация названий жанров и стран (EN → RU) для отображения в отчёте
+GENRE_NAMES_RU = {
+    "Action": "Боевик",
+    "Adventure": "Приключения",
+    "Animation": "Анимация",
+    "Comedy": "Комедия",
+    "Crime": "Криминал",
+    "Documentary": "Документальный",
+    "Drama": "Драма",
+    "Family": "Семейный",
+    "Fantasy": "Фэнтези",
+    "History": "История",
+    "Horror": "Ужасы",
+    "Music": "Музыкальный",
+    "Mystery": "Детектив",
+    "Romance": "Мелодрама",
+    "Science Fiction": "Научная фантастика",
+    "TV Movie": "ТВ фильм",
+    "Thriller": "Триллер",
+    "War": "Военный",
+    "Western": "Вестерн",
+}
+COUNTRY_NAMES_RU = {
+    "United States of America": "США",
+    "United States": "США",
+    "USA": "США",
+    "United Kingdom": "Великобритания",
+    "UK": "Великобритания",
+    "France": "Франция",
+    "Germany": "Германия",
+    "Japan": "Япония",
+    "South Korea": "Южная Корея",
+    "India": "Индия",
+    "Italy": "Италия",
+    "Spain": "Испания",
+    "China": "Китай",
+    "Hong Kong": "Гонконг",
+    "Canada": "Канада",
+    "Australia": "Австралия",
+    "Russia": "Россия",
+    "Russian Federation": "Россия",
+    "Brazil": "Бразилия",
+    "Mexico": "Мексика",
+    "Sweden": "Швеция",
+    "Denmark": "Дания",
+    "Norway": "Норвегия",
+    "Finland": "Финляндия",
+    "Poland": "Польша",
+    "Czech Republic": "Чехия",
+    "Czechia": "Чехия",
+    "Ukraine": "Украина",
+    "Kazakhstan": "Казахстан",
+    "Soviet Union": "СССР",
+}
+
+
+def _genre_name_ru(name: str) -> str:
+    return GENRE_NAMES_RU.get(name, name) if name else ""
+
+
+def _country_name_ru(name: str) -> str:
+    return COUNTRY_NAMES_RU.get(name, name) if name else ""
+
 
 def _parse_month(date_str: Optional[str]) -> Optional[str]:
     if not date_str:
@@ -384,12 +447,12 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
     if most_active_month:
         insights.append(f"Ты чаще всего смотрел фильмы в {most_active_month}.")
     if top_countries:
-        insights.append(f"Твоя самая любимая страна: {top_countries[0]['name']}.")
+        insights.append(f"Твоя самая любимая страна: {_country_name_ru(top_countries[0]['name'])}.")
     insights.append(f"Ты поставил 5★ {five_star_count} фильмам.")
     if most_active_weekday is not None:
         insights.append(f"Самый активный день недели: {weekday_names[most_active_weekday]}.")
     if top_genres:
-        insights.append(f"Твой главный жанр года: {top_genres[0]['name']}.")
+        insights.append(f"Твой главный жанр года: {_genre_name_ru(top_genres[0]['name'])}.")
     insights = insights[:5]
 
     decade_stats = defaultdict(lambda: {"count": 0, "sum_rating": 0.0, "rated": 0})
@@ -460,7 +523,7 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         add_badge(
             "Самый частый жанр",
             top_genres[0]["count"],
-            f"Жанр: {top_genres[0]['name']}",
+            f"Жанр: {_genre_name_ru(top_genres[0]['name'])}",
             "tag",
             "green",
         )
@@ -468,7 +531,7 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         add_badge(
             "Самый любимый жанр",
             top_genres_by_avg[0]["avg_rating"],
-            f"Жанр: {top_genres_by_avg[0]['name']}",
+            f"Жанр: {_genre_name_ru(top_genres_by_avg[0]['name'])}",
             "heart",
             "green",
             True,
@@ -477,7 +540,7 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         add_badge(
             "Самая частая страна",
             top_countries_by_count[0]["count"],
-            f"Страна: {top_countries_by_count[0]['name']}",
+            f"Страна: {_country_name_ru(top_countries_by_count[0]['name'])}",
             "globe",
             "blue",
         )
@@ -485,7 +548,7 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         add_badge(
             "Самая любимая страна",
             top_countries_by_avg[0]["avg_rating"],
-            f"Страна: {top_countries_by_avg[0]['name']}",
+            f"Страна: {_country_name_ru(top_countries_by_avg[0]['name'])}",
             "heart",
             "blue",
             True,

@@ -1,4 +1,6 @@
 import { formatYear } from './format.js'
+import { getGenreNameRu } from './genresRu.js'
+import { getCountryNameRu } from './countriesRu.js'
 
 const parseDate = (value) => {
   if (!value) return null
@@ -342,26 +344,26 @@ export const computeAggregations = (films) => {
   addBadge('Пятёрки', fiveStarCount, 'Оценки 5★', 'star', 'purple')
   addBadge('Оценки 4.5–5★', stats.count45, 'Очень высокие оценки', 'star', 'purple')
   if (topGenres.length) {
-    addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${topGenres[0].name}`, 'tag', 'green')
+    addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${getGenreNameRu(topGenres[0].name)}`, 'tag', 'green')
   }
   if (topGenresByAvg.length) {
     addBadge(
       'Самый любимый жанр',
       topGenresByAvg[0].avg_rating,
-      `Жанр: ${topGenresByAvg[0].name}`,
+      `Жанр: ${getGenreNameRu(topGenresByAvg[0].name)}`,
       'heart',
       'green',
       true,
     )
   }
   if (countriesByCount.length) {
-    addBadge('Самая частая страна', countriesByCount[0].count, `Страна: ${countriesByCount[0].name}`, 'globe', 'blue')
+    addBadge('Самая частая страна', countriesByCount[0].count, `Страна: ${getCountryNameRu(countriesByCount[0].name)}`, 'globe', 'blue')
   }
   if (topCountriesByAvg.length) {
     addBadge(
       'Самая любимая страна',
       topCountriesByAvg[0].avg_rating,
-      `Страна: ${topCountriesByAvg[0].name}`,
+      `Страна: ${getCountryNameRu(topCountriesByAvg[0].name)}`,
       'heart',
       'blue',
       true,
@@ -493,23 +495,25 @@ export function generateSummarySentence(computed) {
   if (!computed) return ''
   const { stats, topGenres, decades, topCountriesByCount, topLanguagesByCount, hiddenGems, filmsCount } = computed
   const genre = topGenres?.[0]?.name
+  const genreRu = genre ? getGenreNameRu(genre) : ''
   const decade = decades?.[0]?.decade
   const avg = stats?.avgRating
   const country = topCountriesByCount?.[0]?.name
+  const countryRu = country ? getCountryNameRu(country) : ''
   const lang = topLanguagesByCount?.[0]?.name
   const gemsRatio = filmsCount > 0 && hiddenGems?.length > 0 ? hiddenGems.length / filmsCount : 0
 
   let main = ''
   if (genre && decade != null) {
-    main = `в этом году ты чаще всего выбирал ${genre.toLowerCase()} ${decade}-х`
+    main = `в этом году ты чаще всего выбирал ${genreRu.toLowerCase()} ${decade}-х`
   } else if (genre) {
-    main = `твой главный жанр года — ${genre.toLowerCase()}`
+    main = `твой главный жанр года — ${genreRu.toLowerCase()}`
   } else {
     main = 'твой год в кино собран и посчитан'
   }
   let tail = ' — и явно любишь, когда атмосфера важнее сюжета.'
   if (country && (lang === undefined || lang === 'en')) {
-    tail = ` — и география года явно за ${country}.`
+    tail = ` — и география года явно за ${countryRu}.`
   } else if (gemsRatio > 0.08) {
     tail = ' — и ты умеешь находить скрытые жемчужины.'
   }
