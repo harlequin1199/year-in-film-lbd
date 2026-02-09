@@ -171,7 +171,8 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       signal,
       onProgress: (done, batchLen) => {
         searchDone = j + done
-        if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: Math.min(25, Math.round((searchDone / uniqueKeys.length) * 25)) })
+        const calculatedPercent = 8 + Math.min(17, Math.round((searchDone / uniqueKeys.length) * 17))
+        if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: calculatedPercent })
       },
     })
     chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
@@ -205,7 +206,8 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
       signal,
       onProgress: (done, batchLen) => {
         movieDone = j + done
-        if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: 25 + Math.min(45, Math.round((movieDone / uniqueIds.length) * 45)) })
+        const calculatedPercent = 25 + Math.min(45, Math.round((movieDone / uniqueIds.length) * 45))
+        if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: calculatedPercent })
       },
     })
   }
