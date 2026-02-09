@@ -105,9 +105,9 @@ self.onmessage = async (e) => {
   const { type, ratingsText, diaryText } = e.data
   if (type !== 'parse') return
   try {
-    self.postMessage({ type: 'progress', stage: 'parsing', message: 'Чтение CSV', done: 0, total: 1 })
+    self.postMessage({ type: 'progress', stage: 'parsing', message: 'Чтение CSV', done: 0, total: 1, percent: 0 })
     const rows = parseRatings(ratingsText || '')
-    self.postMessage({ type: 'progress', stage: 'parsing', message: 'Чтение CSV', done: 1, total: 1 })
+    self.postMessage({ type: 'progress', stage: 'parsing', message: 'Чтение CSV', done: 1, total: 1, percent: 4 })
     self.postMessage({ type: 'rows', rows })
     if (diaryText) {
       const diaryRows = parseDiary(diaryText)

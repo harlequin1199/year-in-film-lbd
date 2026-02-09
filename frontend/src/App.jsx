@@ -78,7 +78,7 @@ function App() {
         onRetryMessage: (msg) => setRetryMessage(msg || ''),
       }
 
-      setProgress({ stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 5 })
+      setProgress({ stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 8 })
       const stage1 = computeStage1FromRows(parsedRows)
       setAnalysis({
         stage1,
@@ -138,7 +138,7 @@ function App() {
         },
       })
 
-      setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 98 })
+      setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 95 })
       const availableYearsFromFilms = [...new Set(films.map((f) => {
         const d = f.watchedDate || f.date
         if (!d) return null
