@@ -475,7 +475,7 @@ def analyze_films(films: List[Dict], has_diary: bool = False) -> Dict:
         loved_candidates = [
             (decade, stats)
             for decade, stats in decade_stats.items()
-            if stats["count"] >= 5 and stats["rated"]
+            if stats["count"] > 12 and stats["rated"]
         ]
         if loved_candidates:
             most_loved_decade = max(

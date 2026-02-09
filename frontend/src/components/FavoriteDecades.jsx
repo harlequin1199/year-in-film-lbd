@@ -34,7 +34,7 @@ function FavoriteDecades({ films }) {
           .map((film) => film.poster_url || null),
       }
     })
-    .filter((entry) => entry.count >= 5)
+    .filter((entry) => entry.count > 12)
     .sort((a, b) => {
       if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating
       return b.count - a.count

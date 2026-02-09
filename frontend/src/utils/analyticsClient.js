@@ -417,6 +417,7 @@ export const computeAggregations = (films) => {
       count: data.count,
       avgRating: data.rated ? Number((data.sum / data.rated).toFixed(2)) : 0,
     }))
+    .filter((entry) => entry.count > 12)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
