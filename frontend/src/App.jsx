@@ -403,39 +403,9 @@ function App() {
     setSimplifiedMode(false)
     abortControllerRef.current = new AbortController()
     
-    // Симуляция прогресса загрузки демо-отчёта
-    const simulateProgress = async () => {
-      const stages = [
-        { stage: 'parsing', message: 'Чтение CSV', percent: 5, delay: 300 },
-        { stage: 'stage1', message: 'Базовая статистика', percent: 10, delay: 400 },
-        { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', percent: 25, delay: 600 },
-        { stage: 'tmdb_details', message: 'Загрузка данных TMDb', percent: 60, delay: 800 },
-        { stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров', percent: 85, delay: 500 },
-        { stage: 'finalizing', message: 'Финализация отчёта', percent: 98, delay: 300 },
-      ]
-      
-      for (const stageInfo of stages) {
-        if (abortControllerRef.current?.signal.aborted) return
-        setProgress({
-          stage: stageInfo.stage,
-          message: stageInfo.message,
-          total: 100,
-          done: stageInfo.percent,
-          percent: stageInfo.percent,
-        })
-        await new Promise(resolve => setTimeout(resolve, stageInfo.delay))
-      }
-    }
-    
     try {
-      // Запускаем симуляцию прогресса параллельно с загрузкой данных
-      const [progressPromise, dataPromise] = [
-        simulateProgress(),
-        loadMock(demoMockId)
-      ]
-      
-      await progressPromise
-      const { data, error: mockError } = await dataPromise
+      // Сначала загружаем данные, чтобы узнать реальное количество фильмов
+      const { data, error: mockError } = await loadMock(demoMockId)
       
       if (abortControllerRef.current?.signal.aborted) {
         setLoading(false)
@@ -443,18 +413,55 @@ function App() {
         return
       }
       
-      setLoading(false)
       if (mockError) {
         setAnalysis(null)
         setError(mockError)
+        setLoading(false)
         setProgress(null)
         return
       }
       
-      setProgress({ stage: 'finalizing', message: 'Готово', total: 100, done: 100, percent: 100 })
+      // Получаем реальное количество фильмов из загруженных данных
+      const filmsCount = data?.filmsLite?.length || data?.filmsLiteAll?.length || 0
+      
+      // Симуляция прогресса загрузки демо-отчёта с реальным количеством фильмов
+      const simulateProgress = async () => {
+        const stages = [
+          { stage: 'parsing', message: 'Чтение CSV', percent: 5, delay: 300 },
+          { stage: 'stage1', message: 'Базовая статистика', percent: 10, delay: 400 },
+          { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', percent: 25, delay: 600 },
+          { stage: 'tmdb_details', message: 'Загрузка данных TMDb', percent: 60, delay: 800 },
+          { stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров', percent: 85, delay: 500 },
+          { stage: 'finalizing', message: 'Финализация отчёта', percent: 98, delay: 300 },
+        ]
+        
+        for (const stageInfo of stages) {
+          if (abortControllerRef.current?.signal.aborted) return
+          const done = Math.round((stageInfo.percent / 100) * filmsCount)
+          setProgress({
+            stage: stageInfo.stage,
+            message: stageInfo.message,
+            total: filmsCount,
+            done: done,
+            percent: stageInfo.percent,
+          })
+          await new Promise(resolve => setTimeout(resolve, stageInfo.delay))
+        }
+      }
+      
+      await simulateProgress()
+      
+      if (abortControllerRef.current?.signal.aborted) {
+        setLoading(false)
+        setProgress(null)
+        return
+      }
+      
+      setProgress({ stage: 'finalizing', message: 'Готово', total: filmsCount, done: filmsCount, percent: 100 })
       await new Promise(resolve => setTimeout(resolve, 200))
       setAnalysis(data)
       setLastUploadedFileName('демо')
+      setLoading(false)
       setProgress(null)
     } catch (err) {
       setAnalysis(null)
