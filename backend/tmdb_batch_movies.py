@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 # TMDb docs: no strict limit, upper bound ~40 req/s. Using 40 for maximum speed.
-MAX_CONCURRENCY = 10
+MAX_CONCURRENCY = 8
 RATE_LIMIT_PER_SECOND = 40.0
 MAX_RETRIES = 3
 RETRY_DELAYS = (0.5, 1.0, 2.0)
@@ -231,7 +231,7 @@ async def movies_batch(
     async with httpx.AsyncClient(
         base_url=TMDB_BASE_URL,
         timeout=30.0,
-        limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=30.0),
+        limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=30.0),
         trust_env=False,
     ) as client:
         tasks = [
@@ -299,7 +299,7 @@ async def credits_batch(
     async with httpx.AsyncClient(
         base_url=TMDB_BASE_URL,
         timeout=30.0,
-        limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=30.0),
+        limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=30.0),
         trust_env=False,
     ) as client:
         tasks = [
@@ -347,7 +347,7 @@ async def keywords_batch(
     async with httpx.AsyncClient(
         base_url=TMDB_BASE_URL,
         timeout=30.0,
-        limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=30.0),
+        limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=30.0),
         trust_env=False,
     ) as client:
         tasks = [

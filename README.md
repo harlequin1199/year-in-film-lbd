@@ -1,68 +1,141 @@
 # Letterboxd Year in Review
 
-## Setup
+A full-stack web app that turns your [Letterboxd](https://letterboxd.com/) export into a rich, visual **Year in Film** report — think Spotify Wrapped, but for movies.
 
-1) Create `backend/.env` with:
+Upload your `ratings.csv` (and optionally `diary.csv`) and get an interactive dashboard with personalized stats, charts, rankings, and insights about your movie-watching habits.
+
+## Features
+
+- **Overview stats** — total films, average rating, 4.5-5 star count, year range
+- **Top-rated films** — poster grid of your highest-rated movies (via TMDb)
+- **Genre breakdown** — most watched vs. highest-rated genres, Genre of the Year
+- **Hidden gems & overrated** — films where your rating diverges most from the TMDb consensus
+- **Themes & tags** — keyword analysis across your entire watchlist
+- **Directors & actors** — top by count and by average rating
+- **Countries & languages** — geographic diversity of your taste
+- **Decades** — which era you gravitate toward
+- **Watch time** — total hours, longest / shortest film
+- **Timeline & activity** — viewing patterns by month and weekday (diary mode)
+- **Badges** — achievement-style cards summarizing highlights
+- **Year filter** — slice the analysis by specific calendar years
+- **Progressive loading** — instant CSV stats, then TMDb enrichment with resume support
+
+## Architecture
+
 ```
-TMDB_API_KEY=your_tmdb_api_key_here
+┌────────────────────┐      ┌────────────────────┐
+│   Frontend (SPA)   │─────▸│  Backend API (REST) │
+│  React + Vite      │      │  FastAPI + SQLite   │
+│  Cloudflare Pages  │      │  Render (free tier) │
+└────────────────────┘      └────────────────────┘
 ```
 
-2) Install backend dependencies:
-```
-pip install -r backend/requirements.txt
-```
+| Service | Role | Hosting |
+|---|---|---|
+| **Frontend** | CSV parsing, analytics computation, UI | Cloudflare Pages |
+| **Backend** | Batch TMDb search/details/credits/keywords with SQLite cache | Render |
 
-3) Run the API:
-```
+All heavy analytics run **client-side** — the backend is only used for TMDb API batch operations and caching.
+
+## Tech Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | React 19, Vite 7, Web Workers, IndexedDB |
+| Backend | Python, FastAPI, Uvicorn, SQLite, httpx |
+| Data | TMDb API v3, Letterboxd CSV export |
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.10+
+- [TMDb API key](https://www.themoviedb.org/settings/api) (free)
+
+### 1. Backend
+
+```bash
 cd backend
+cp .env.example .env
+# Edit .env and add your TMDB_API_KEY
+
+pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-4) Run the frontend:
-```
+### 2. Frontend
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `localhost:8000` by default.
 
-## Deploy
+## Deployment
 
-### Backend (Render)
+### Backend → Render
 
-1. **New Web Service**, connect the repo.
-2. **Root Directory:** `backend`
-3. **Build Command:** `pip install -r requirements.txt`
-4. **Start Command (uvicorn):**  
-   `uvicorn main:app --host 0.0.0.0 --port $PORT`  
-   Or with gunicorn (recommended):  
-   `gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT`
-5. **Environment variables (required):**
-   - `TMDB_API_KEY` — your TMDb API key
-   - `FRONTEND_ORIGIN` (optional) — frontend URL for CORS, e.g. `https://your-project.pages.dev`. If unset, CORS allows all origins.
-6. Save; Render will build and deploy. Health check: `GET https://your-service.onrender.com/health` → `{"status":"ok"}`.
+1. Create a **Web Service**, connect the repo.
+2. **Root directory:** `backend`
+3. **Build command:** `pip install -r requirements.txt`
+4. **Start command:**
+   ```
+   gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+   ```
+5. **Environment variables:**
+   | Variable | Required | Description |
+   |---|---|---|
+   | `TMDB_API_KEY` | Yes | TMDb API key |
+   | `FRONTEND_ORIGIN` | Recommended | Frontend URL for CORS (e.g. `https://your-project.pages.dev`) |
 
-**Troubleshooting:**
+> Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
 
-- **App crashes on start:** Ensure `TMDB_API_KEY` is set. Backend fails fast if it is missing.
-- **CORS errors from frontend:** Set `FRONTEND_ORIGIN` to the exact frontend URL (e.g. Cloudflare Pages URL).
-- **First request very slow:** Free tier spins down after inactivity; cold start can take 30–60 seconds. Consider showing a “server waking up” message in the UI.
+### Frontend → Cloudflare Pages
 
----
-
-### Frontend (Cloudflare Pages)
-
-1. **Create project** → Connect repository.
+1. Create a project, connect the repo.
 2. **Root directory:** `frontend`
 3. **Build command:** `npm run build`
-4. **Build output directory:** `dist`
-5. **Environment variables (Build):**
-   - `VITE_API_URL` — backend API URL, e.g. `https://your-api.onrender.com` (no trailing slash).  
-   If missing, production build will still use the fallback; set it so production talks to your Render backend.
-6. Save and deploy. SPA routing is handled by `public/_redirects` (`/* /index.html 200`).
+4. **Output directory:** `dist`
+5. **Environment variable:**
+   | Variable | Required | Description |
+   |---|---|---|
+   | `VITE_API_URL` | Yes | Backend URL (e.g. `https://your-api.onrender.com`) |
 
-**Troubleshooting:**
+SPA routing is handled by `public/_redirects`.
 
-- **API requests fail in production:** Check `VITE_API_URL` is set and matches the Render backend URL. Check backend CORS: set `FRONTEND_ORIGIN` to your Cloudflare Pages URL.
-- **404 on refresh / direct URL:** Ensure `_redirects` is in `frontend/public/` and deployed (rewrites to `index.html`).
+## How It Works
+
+1. User uploads their Letterboxd CSV export (`ratings.csv` + optional `diary.csv`)
+2. Frontend parses the CSV in a **Web Worker** and shows instant basic stats
+3. Frontend sends film titles in batches to the backend for TMDb enrichment (posters, genres, directors, actors, keywords, etc.)
+4. Progress is saved to **IndexedDB** — if the page is closed, analysis resumes where it left off
+5. Once enrichment is complete, the full analytics dashboard is rendered client-side
+
+## Project Structure
+
+```
+├── backend/                 # FastAPI backend
+│   ├── main.py              # API endpoints
+│   ├── tmdb_batch.py        # Batch TMDb search
+│   ├── tmdb_batch_movies.py # Batch movie details + credits + keywords
+│   ├── cache.py             # SQLite write-behind cache
+│   └── requirements.txt
+├── frontend/                # React SPA
+│   ├── src/
+│   │   ├── App.jsx          # Main app & orchestration
+│   │   ├── components/      # UI components (sections, charts, cards)
+│   │   ├── utils/           # Analytics engine, CSV parsing, formatting
+│   │   ├── workers/         # Web Workers for heavy parsing
+│   │   └── mocks/           # Demo data for testing
+│   └── vite.config.js
+└── README.md
+```
+
+## License
+
+This project is for personal / portfolio use.
+
+Data provided by [The Movie Database (TMDb)](https://www.themoviedb.org/). This product uses the TMDb API but is not endorsed or certified by TMDb.

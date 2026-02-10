@@ -90,10 +90,10 @@ async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str
         if not request.items:
             return {"results": []}
         
-        if len(request.items) > 1000:
+        if len(request.items) > 500:
             raise HTTPException(
                 status_code=400,
-                detail="Too many items. Maximum 1000 items per batch.",
+                detail="Too many items. Maximum 500 items per batch.",
             )
         
         import tmdb_batch
@@ -121,8 +121,8 @@ async def tmdb_movies_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str
         if not request.tmdb_ids:
             return {"results": []}
         
-        if len(request.tmdb_ids) > 1000:
-            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        if len(request.tmdb_ids) > 500:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
         import tmdb_batch_movies
         results = await tmdb_batch_movies.movies_batch(request.tmdb_ids, api_key)
@@ -146,8 +146,8 @@ async def tmdb_credits_batch(request: BatchMoviesRequest = Body(...)) -> Dict[st
         if not request.tmdb_ids:
             return {"results": []}
         
-        if len(request.tmdb_ids) > 1000:
-            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        if len(request.tmdb_ids) > 500:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
         import tmdb_batch_movies
         results = await tmdb_batch_movies.credits_batch(request.tmdb_ids, api_key)
@@ -171,8 +171,8 @@ async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[s
         if not request.tmdb_ids:
             return {"results": []}
         
-        if len(request.tmdb_ids) > 1000:
-            raise HTTPException(status_code=400, detail="Too many items. Maximum 1000 items per batch.")
+        if len(request.tmdb_ids) > 500:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
         import tmdb_batch_movies
         results = await tmdb_batch_movies.keywords_batch(request.tmdb_ids, api_key)

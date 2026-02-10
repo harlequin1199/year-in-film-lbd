@@ -2,7 +2,6 @@ import * as cache from './indexedDbCache.js'
 import { fetchWithRetry } from './fetchWithRetry.js'
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
-const PROXY_BASE = (import.meta.env.VITE_TMDB_PROXY_BASE || '').trim().replace(/\/$/, '')
 const DEFAULT_CONCURRENCY = 4
 const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
@@ -31,13 +30,6 @@ function searchKey(title, year) {
   return `${(title || '').trim().toLowerCase()}:${year ?? 0}`
 }
 
-async function fetchJson(url, opts = {}) {
-  const { onRetryMessage, signal } = opts
-  const res = await fetchWithRetry(url, { signal }, { onRetryMessage })
-  const data = await res.json()
-  return data
-}
-
 async function fetchJsonPost(url, body, opts = {}) {
   const { onRetryMessage, signal } = opts
   const res = await fetchWithRetry(
@@ -58,162 +50,112 @@ export async function searchMovie(title, year, opts = {}) {
   const cached = await cache.getSearch(title, year)
   if (cached !== undefined) return cached
   
-  if (API_BASE) {
-    const data = await fetchJsonPost(
-      `${API_BASE}/tmdb/search/batch`,
-      { items: [{ title, year }] },
-      opts
-    )
-    const result = data.results?.[0]
-    if (result) {
-      const id = result.tmdb?.tmdb_id ?? null
-      await cache.setSearch(title, year, id)
-      if (id && result.tmdb) {
-        await cache.setMovie(id, {
-          id: result.tmdb.tmdb_id,
-          poster_path: result.tmdb.poster_path,
-          genres: result.tmdb.genres || [],
-          runtime: result.tmdb.runtime,
-          vote_average: result.tmdb.vote_average,
-          vote_count: result.tmdb.vote_count || 0,
-          original_language: result.tmdb.original_language,
-          production_countries: result.tmdb.production_countries || [],
-          release_date: result.tmdb.release_date,
-        })
-      }
-      return id
+  if (!API_BASE) throw new Error('VITE_API_URL must be set')
+  const data = await fetchJsonPost(
+    `${API_BASE}/tmdb/search/batch`,
+    { items: [{ title, year }] },
+    opts
+  )
+  const result = data.results?.[0]
+  if (result) {
+    const id = result.tmdb?.tmdb_id ?? null
+    await cache.setSearch(title, year, id)
+    if (id && result.tmdb) {
+      await cache.setMovie(id, {
+        id: result.tmdb.tmdb_id,
+        poster_path: result.tmdb.poster_path,
+        genres: result.tmdb.genres || [],
+        runtime: result.tmdb.runtime,
+        vote_average: result.tmdb.vote_average,
+        vote_count: result.tmdb.vote_count || 0,
+        original_language: result.tmdb.original_language,
+        production_countries: result.tmdb.production_countries || [],
+        release_date: result.tmdb.release_date,
+      })
     }
-    return null
+    return id
   }
-  
-  if (!PROXY_BASE) throw new Error('VITE_API_URL or VITE_TMDB_PROXY_BASE must be set')
-  const qs = new URLSearchParams({ title: (title || '').trim().slice(0, 120) })
-  if (year != null && year >= 1800 && year <= 2100) qs.set('year', String(year))
-  const data = await fetchJson(`${PROXY_BASE}/search?${qs}`, opts)
-  const id = data.tmdb_id ?? null
-  await cache.setSearch(title, year, id)
-  return id
+  return null
 }
 
 export async function getMovieMinimal(tmdbId, opts = {}) {
   const cached = await cache.getMovie(tmdbId)
   if (cached) return cached
   
-  if (API_BASE) {
-    const data = await fetchJsonPost(
-      `${API_BASE}/tmdb/movies/batch`,
-      { tmdb_ids: [tmdbId] },
-      opts
-    )
-    const result = data.results?.[0]
-    if (result && result.movie) {
-      const out = {
-        id: result.movie.id,
-        poster_path: result.movie.poster_path ?? null,
-        genres: result.movie.genres || [],
-        runtime: result.movie.runtime ?? null,
-        vote_average: result.movie.vote_average ?? null,
-        vote_count: result.movie.vote_count || 0,
-        original_language: result.movie.original_language ?? null,
-        production_countries: result.movie.production_countries || [],
-        release_date: result.movie.release_date ?? null,
-      }
-      await cache.setMovie(tmdbId, out)
-      return out
-    }
+  if (!API_BASE) {
     return {
-      id: tmdbId,
-      poster_path: null,
-      genres: [],
-      runtime: null,
-      vote_average: null,
-      vote_count: 0,
-      original_language: null,
-      production_countries: [],
-      release_date: null,
+      id: tmdbId, poster_path: null, genres: [], runtime: null,
+      vote_average: null, vote_count: 0, original_language: null,
+      production_countries: [], release_date: null,
     }
   }
-  
-  if (!PROXY_BASE) {
-    return {
-      id: tmdbId,
-      poster_path: null,
-      genres: [],
-      runtime: null,
-      vote_average: null,
-      vote_count: 0,
-      original_language: null,
-      production_countries: [],
-      release_date: null,
+
+  const data = await fetchJsonPost(
+    `${API_BASE}/tmdb/movies/batch`,
+    { tmdb_ids: [tmdbId] },
+    opts
+  )
+  const result = data.results?.[0]
+  if (result && result.movie) {
+    const out = {
+      id: result.movie.id,
+      poster_path: result.movie.poster_path ?? null,
+      genres: result.movie.genres || [],
+      runtime: result.movie.runtime ?? null,
+      vote_average: result.movie.vote_average ?? null,
+      vote_count: result.movie.vote_count || 0,
+      original_language: result.movie.original_language ?? null,
+      production_countries: result.movie.production_countries || [],
+      release_date: result.movie.release_date ?? null,
     }
+    await cache.setMovie(tmdbId, out)
+    return out
   }
-  
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}`, opts)
-  const out = {
-    id: data.id,
-    poster_path: data.poster_path ?? null,
-    genres: data.genres || [],
-    runtime: data.runtime ?? null,
-    vote_average: data.vote_average ?? null,
-    vote_count: data.vote_count ?? 0,
-    original_language: data.original_language ?? null,
-    production_countries: data.production_countries || [],
-    release_date: data.release_date ?? null,
+  return {
+    id: tmdbId, poster_path: null, genres: [], runtime: null,
+    vote_average: null, vote_count: 0, original_language: null,
+    production_countries: [], release_date: null,
   }
-  await cache.setMovie(tmdbId, out)
-  return out
 }
 
 export async function getCredits(tmdbId, opts = {}) {
   const cached = await cache.getCredits(tmdbId)
   if (cached) return cached
   
-  if (API_BASE) {
-    const data = await fetchJsonPost(
-      `${API_BASE}/tmdb/movies/credits/batch`,
-      { tmdb_ids: [tmdbId] },
-      opts
-    )
-    const result = data.results?.[0]
-    if (result && result.credits) {
-      const out = { directors: result.credits.directors || [], actors: result.credits.actors || [] }
-      await cache.setCredits(tmdbId, out)
-      return out
-    }
-    return { directors: [], actors: [] }
+  if (!API_BASE) return { directors: [], actors: [] }
+
+  const data = await fetchJsonPost(
+    `${API_BASE}/tmdb/movies/credits/batch`,
+    { tmdb_ids: [tmdbId] },
+    opts
+  )
+  const result = data.results?.[0]
+  if (result && result.credits) {
+    const out = { directors: result.credits.directors || [], actors: result.credits.actors || [] }
+    await cache.setCredits(tmdbId, out)
+    return out
   }
-  
-  if (!PROXY_BASE) return { directors: [], actors: [] }
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/credits`, opts)
-  const out = { directors: data.directors || [], actors: data.actors || [] }
-  await cache.setCredits(tmdbId, out)
-  return out
+  return { directors: [], actors: [] }
 }
 
 export async function getKeywords(tmdbId, opts = {}) {
   const cached = await cache.getKeywords(tmdbId)
   if (cached) return cached
   
-  if (API_BASE) {
-    const data = await fetchJsonPost(
-      `${API_BASE}/tmdb/movies/keywords/batch`,
-      { tmdb_ids: [tmdbId] },
-      opts
-    )
-    const result = data.results?.[0]
-    if (result && result.keywords) {
-      const out = { keywords: result.keywords || [] }
-      await cache.setKeywords(tmdbId, out)
-      return out
-    }
-    return { keywords: [] }
+  if (!API_BASE) return { keywords: [] }
+
+  const data = await fetchJsonPost(
+    `${API_BASE}/tmdb/movies/keywords/batch`,
+    { tmdb_ids: [tmdbId] },
+    opts
+  )
+  const result = data.results?.[0]
+  if (result && result.keywords) {
+    const out = { keywords: result.keywords || [] }
+    await cache.setKeywords(tmdbId, out)
+    return out
   }
-  
-  if (!PROXY_BASE) return { keywords: [] }
-  const data = await fetchJson(`${PROXY_BASE}/movie/${tmdbId}/keywords`, opts)
-  const out = { keywords: data.keywords || [] }
-  await cache.setKeywords(tmdbId, out)
-  return out
+  return { keywords: [] }
 }
 
 function runQueue(tasks, concurrency, opts = {}) {
@@ -252,7 +194,7 @@ function runQueue(tasks, concurrency, opts = {}) {
 /**
  * Process items in batches with a concurrency limit. As soon as one batch request
  * completes, the next one is started (no waiting for the whole "wave"). All
- * requests go to the Render backend API; Cloudflare Worker is not used.
+ * requests go to the backend API.
  */
 function processBatchesParallel(items, batchSize, parallelBatches, processor, opts = {}) {
   const { signal, onProgress } = opts
@@ -346,7 +288,7 @@ async function searchBatch(items, opts = {}) {
  * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
  */
 export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
-  if (!API_BASE && !PROXY_BASE) throw new Error('VITE_API_URL или VITE_TMDB_PROXY_BASE должен быть задан')
+  if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const fetchOpts = { signal, onRetryMessage }
 
   const keyToIndexes = new Map()
@@ -359,7 +301,7 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
-  if (API_BASE) {
+  {
     let searchDone = 0
     const searchItems = uniqueKeys.map((k) => {
       const parts = k.split(':')
@@ -460,35 +402,6 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         },
       }
     )
-  } else {
-    const searchTasks = uniqueKeys.map((k) => {
-      const parts = k.split(':')
-      const yearPart = parts.length > 1 ? parts.pop() : '0'
-      const title = parts.join(':') || ''
-      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
-      return async () => {
-        try {
-          return await searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
-        } catch {
-          return null
-        }
-      }
-    })
-
-    let searchDone = 0
-    for (let j = 0; j < searchTasks.length; j += 50) {
-      const chunk = searchTasks.slice(j, j + 50)
-      const chunkKeys = uniqueKeys.slice(j, j + 50)
-      const results = await runQueue(chunk, CONCURRENCY_SEARCH, {
-        signal,
-        onProgress: (done, batchLen) => {
-          searchDone = j + done
-          const calculatedPercent = 8 + Math.min(67, Math.round((searchDone / uniqueKeys.length) * 67))
-          if (onProgress) onProgress({ stage: 'tmdb_search', message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`, done: searchDone, total: uniqueKeys.length, percent: calculatedPercent })
-        },
-      })
-      chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
-    }
   }
 
   rows.forEach((row, i) => {
@@ -502,7 +415,7 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
   const movieMap = new Map()
 
-  if (API_BASE && uniqueIds.length > 0) {
+  if (uniqueIds.length > 0) {
     let movieDone = 0
     const batchProcessor = async (chunk) => {
       try {
@@ -580,29 +493,6 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         },
       }
     )
-  } else {
-    const movieTasks = uniqueIds.map((id) => async () => {
-      try {
-        const movie = await getMovieMinimal(id, fetchOpts)
-        movieMap.set(id, movie)
-        return movie
-      } catch {
-        return null
-      }
-    })
-
-    let movieDone = 0
-    for (let j = 0; j < movieTasks.length; j += 50) {
-      const chunk = movieTasks.slice(j, j + 50)
-      await runQueue(chunk, CONCURRENCY_MOVIE, {
-        signal,
-        onProgress: (done, batchLen) => {
-          movieDone = j + done
-          const calculatedPercent = 75 + Math.min(15, Math.round((movieDone / uniqueIds.length) * 15))
-          if (onProgress) onProgress({ stage: 'tmdb_details', message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`, done: movieDone, total: uniqueIds.length, percent: calculatedPercent })
-        },
-      })
-    }
   }
 
   const films = rows.map((row, i) => {
@@ -664,7 +554,7 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   const creditsToFetch = idList.slice(0, CREDITS_CAP)
   const keywordsToFetch = idList.slice(0, KEYWORDS_CAP)
 
-  if (API_BASE && creditsToFetch.length > 0) {
+  if (creditsToFetch.length > 0) {
     let creditsDone = 0
     const batchProcessor = async (chunk) => {
       try {
@@ -729,31 +619,9 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         },
       }
     )
-  } else {
-    const creditTasks = creditsToFetch.map((id) => async () => {
-      try {
-        return await getCredits(id, fetchOpts)
-      } catch {
-        return null
-      }
-    })
-
-    let creditsDone = 0
-    for (let j = 0; j < creditTasks.length; j += 20) {
-      const chunk = creditTasks.slice(j, j + 20)
-      const chunkIds = creditsToFetch.slice(j, j + 20)
-      const results = await runQueue(chunk, CONCURRENCY_CREDITS, {
-        signal,
-        onProgress: (done, batchLen) => {
-          creditsDone = j + done
-          if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: creditsDone, total: creditTasks.length, percent: 90 + Math.min(5, Math.round((creditsDone / creditTasks.length) * 5)) })
-        },
-      })
-      chunkIds.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
-    }
   }
 
-  if (API_BASE && keywordsToFetch.length > 0) {
+  if (keywordsToFetch.length > 0) {
     let keywordsDone = 0
     const batchProcessor = async (chunk) => {
       try {
@@ -818,28 +686,6 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
         },
       }
     )
-  } else {
-    const keywordTasks = keywordsToFetch.map((id) => async () => {
-      try {
-        return await getKeywords(id, fetchOpts)
-      } catch {
-        return null
-      }
-    })
-
-    let keywordsDone = 0
-    for (let j = 0; j < keywordTasks.length; j += 20) {
-      const chunk = keywordTasks.slice(j, j + 20)
-      const chunkIds = keywordsToFetch.slice(j, j + 20)
-      const results = await runQueue(chunk, CONCURRENCY_KEYWORDS, {
-        signal,
-        onProgress: (done, batchLen) => {
-          keywordsDone = j + done
-          if (onProgress) onProgress({ stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров (опционально)', done: keywordsDone, total: keywordTasks.length, percent: 90 + Math.min(5, Math.round((keywordsDone / keywordTasks.length) * 5)) })
-        },
-      })
-      chunkIds.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
-    }
   }
 
   films.forEach((f) => {
@@ -881,7 +727,7 @@ function mergeDiary(filmsList, diary) {
 
 export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = {}) {
   const { signal, onRetryMessage } = opts
-  if (!API_BASE && !PROXY_BASE) throw new Error('VITE_API_URL или VITE_TMDB_PROXY_BASE должен быть задан')
+  if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
   const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))
@@ -898,7 +744,7 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
-  if (API_BASE) {
+  {
     const searchItems = uniqueKeys.map((k) => {
       const parts = k.split(':')
       const yearPart = parts.length > 1 ? parts.pop() : '0'
@@ -991,36 +837,6 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
         },
       }
     )
-  } else {
-    const searchTasks = uniqueKeys.map((k) => {
-      const parts = k.split(':')
-      const yearPart = parts.length > 1 ? parts.pop() : '0'
-      const title = parts.join(':') || ''
-      const year = yearPart === '0' || yearPart === '' ? null : parseInt(yearPart, 10)
-      return async () => searchMovie(title, Number.isNaN(year) ? null : year, fetchOpts)
-    })
-
-    let searchDone = 0
-    for (let j = 0; j < searchTasks.length; j += batchSize) {
-      const chunk = searchTasks.slice(j, j + batchSize)
-      const chunkKeys = uniqueKeys.slice(j, j + batchSize)
-      const results = await runQueue(chunk, concurrency, {
-        signal,
-        onProgress: (done, batchLen) => {
-          searchDone = j + done
-          if (onProgress) {
-            onProgress({
-              stage: 'tmdb_search',
-              message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
-              done: searchDone,
-              total: searchTotal,
-              percent: 8 + Math.min(67, Math.round((searchDone / searchTotal) * 67)),
-            })
-          }
-        },
-      })
-      chunkKeys.forEach((key, i) => keyToTmdbId.set(key, results[i]))
-    }
   }
 
   rows.forEach((row, i) => {

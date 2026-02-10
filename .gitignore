@@ -19,7 +19,3 @@ frontend/dist/
 
 # IDE
 .cursor/
-
-# Worker
-tmdb-proxy-worker/node_modules/
-tmdb-proxy-worker/dist/

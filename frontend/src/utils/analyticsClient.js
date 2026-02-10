@@ -339,6 +339,35 @@ export const computeAggregations = (films) => {
     }
   }
 
+  // Compute genreOfTheYear before badges so the badge can reference it
+  let genreOfTheYear = null
+  const genreIndexCandidates = []
+  genreMap.forEach((gStats, name) => {
+    if (gStats.count < 8) return
+    const avg = gStats.count ? gStats.sum / gStats.count : 0
+    const index = gStats.high_45 * avg
+    genreIndexCandidates.push({
+      name,
+      count: gStats.count,
+      avg_rating: Number(avg.toFixed(2)),
+      high_45: gStats.high_45,
+      genreIndex: Number(index.toFixed(2)),
+    })
+  })
+  if (genreIndexCandidates.length > 0) {
+    genreIndexCandidates.sort((a, b) => b.genreIndex - a.genreIndex)
+    genreOfTheYear = genreIndexCandidates[0]
+  } else if (topGenres.length > 0) {
+    const g = topGenres[0]
+    genreOfTheYear = {
+      name: g.name,
+      count: g.count,
+      avg_rating: g.avg_rating,
+      high_45: g.high_45,
+      genreIndex: Number((g.high_45 * g.avg_rating).toFixed(2)),
+    }
+  }
+
   addBadge('Фильмов за год', stats.totalFilms, 'Всего фильмов', 'film', 'gold')
   addBadge('Средняя оценка', stats.avgRating, 'Средняя по всем фильмам', 'star', 'gold', true)
   addBadge('Пятёрки', fiveStarCount, 'Оценки 5★', 'star', 'purple')
@@ -346,11 +375,11 @@ export const computeAggregations = (films) => {
   if (topGenres.length) {
     addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${getGenreNameRu(topGenres[0].name)}`, 'tag', 'green')
   }
-  if (topGenresByAvg.length) {
+  if (genreOfTheYear) {
     addBadge(
       'Самый любимый жанр',
-      topGenresByAvg[0].avg_rating,
-      `Жанр: ${getGenreNameRu(topGenresByAvg[0].name)}`,
+      genreOfTheYear.avg_rating,
+      `Жанр: ${getGenreNameRu(genreOfTheYear.name)}`,
       'heart',
       'green',
       true,
@@ -420,34 +449,6 @@ export const computeAggregations = (films) => {
     .filter((entry) => entry.count > 12)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
-
-  let genreOfTheYear = null
-  const genreIndexCandidates = []
-  genreMap.forEach((stats, name) => {
-    if (stats.count < 8) return
-    const avg = stats.count ? stats.sum / stats.count : 0
-    const index = stats.high_45 * avg
-    genreIndexCandidates.push({
-      name,
-      count: stats.count,
-      avg_rating: Number(avg.toFixed(2)),
-      high_45: stats.high_45,
-      genreIndex: Number(index.toFixed(2)),
-    })
-  })
-  if (genreIndexCandidates.length > 0) {
-    genreIndexCandidates.sort((a, b) => b.genreIndex - a.genreIndex)
-    genreOfTheYear = genreIndexCandidates[0]
-  } else if (topGenres.length > 0) {
-    const g = topGenres[0]
-    genreOfTheYear = {
-      name: g.name,
-      count: g.count,
-      avg_rating: g.avg_rating,
-      high_45: g.high_45,
-      genreIndex: Number((g.high_45 * g.avg_rating).toFixed(2)),
-    }
-  }
 
   const hiddenGems = computeHiddenGems(films)
   const overrated = computeOverrated(films)
