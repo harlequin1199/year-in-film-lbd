@@ -287,7 +287,7 @@ async function searchBatch(items, opts = {}) {
  * Progressive staged analysis: Stage 2 (search) -> Stage 3 (movie) -> Stage 4 (credits/keywords capped).
  * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
  */
-export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
+export async function runStagedAnalysis(rows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
   if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const fetchOpts = { signal, onRetryMessage }
 
@@ -523,7 +523,6 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
     }
   })
 
-  if (diaryRows?.length > 0) mergeDiary(films, diaryRows)
   if (onPartialResult) onPartialResult({ stage: 3, films })
 
   const byRating = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
@@ -706,26 +705,7 @@ export async function runStagedAnalysis(rows, diaryRows, { onProgress, onPartial
   return films
 }
 
-function mergeDiary(filmsList, diary) {
-  const byUri = new Map()
-  const byKey = new Map()
-  diary.forEach((e) => {
-    const d = e.date && e.date.match(/^\d{4}-\d{2}-\d{2}/) ? e.date.slice(0, 10) : e.date
-    if (!d) return
-    const name = (e.name || '').toLowerCase().trim()
-    const year = e.year ?? 0
-    if (e.letterboxd_uri) byUri.set(e.letterboxd_uri, d)
-    byKey.set(`${name}:${year}`, d)
-  })
-  filmsList.forEach((f) => {
-    const uri = (f.letterboxd_url || '').trim()
-    const name = (f.title || '').toLowerCase().trim()
-    const year = f.year ?? 0
-    f.watchedDate = (uri && byUri.get(uri)) || byKey.get(`${name}:${year}`) || null
-  })
-}
-
-export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = {}) {
+export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
   const { signal, onRetryMessage } = opts
   if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const total = rows.length
@@ -920,6 +900,5 @@ export async function enrichFilmsPhase1Only(rows, diaryRows, onProgress, opts = 
     }
   })
 
-  if (diaryRows?.length > 0) mergeDiary(films, diaryRows)
   return films
 }

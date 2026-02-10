@@ -106,8 +106,6 @@ export function getComputedFromStage1(stage1) {
     overrated: [],
     topTags: [],
     watchTime: null,
-    watchesByMonth: [],
-    watchesByWeekday: [],
     totalLanguagesCount: 0,
     topLanguagesByCount: [],
     topCountriesByCount: [],
@@ -116,7 +114,6 @@ export function getComputedFromStage1(stage1) {
     topDirectorsByAvgRating: [],
     topActorsByCount: [],
     topActorsByAvgRating: [],
-    timeline: [],
     badges: [],
     decades: [],
     summarySentence: '',
@@ -143,10 +140,6 @@ export const computeAggregations = (films) => {
 
   const runtimeValues = []
   let totalRuntime = 0
-
-  const monthMap = new Map()
-  const weekdayMap = new Map()
-  const weekdayNames = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
 
   films.forEach((film) => {
     const rating = film.rating || 0
@@ -199,23 +192,6 @@ export const computeAggregations = (films) => {
       runtimeValues.push(film.runtime)
       totalRuntime += film.runtime
     }
-
-    const date = parseDate(film.watchedDate)
-    if (date) {
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const monthStats = monthMap.get(monthKey) || { count: 0, sum: 0, rated: 0 }
-      monthStats.count += 1
-      monthStats.sum += rating
-      if (film.rating !== null && film.rating !== undefined) monthStats.rated += 1
-      monthMap.set(monthKey, monthStats)
-
-      const weekday = date.getDay() === 0 ? 6 : date.getDay() - 1
-      const weekdayStats = weekdayMap.get(weekday) || { count: 0, sum: 0, rated: 0 }
-      weekdayStats.count += 1
-      weekdayStats.sum += rating
-      if (film.rating !== null && film.rating !== undefined) weekdayStats.rated += 1
-      weekdayMap.set(weekday, weekdayStats)
-    }
   })
 
   const topGenres = buildRankedByCount(genreMap)
@@ -253,24 +229,6 @@ export const computeAggregations = (films) => {
       ? Number((runtimeValues.reduce((a, b) => a + b, 0) / runtimeValues.length).toFixed(2))
       : 0,
   }
-
-  const watchesByMonth = Array.from(monthMap.entries())
-    .sort((a, b) => (a[0] > b[0] ? 1 : -1))
-    .map(([month, stats]) => ({
-      month,
-      count: stats.count,
-      avg_rating: stats.rated ? Number((stats.sum / stats.rated).toFixed(2)) : 0,
-    }))
-
-  const watchesByWeekday = Array.from({ length: 7 }).map((_, index) => {
-    const stats = weekdayMap.get(index) || { count: 0, sum: 0, rated: 0 }
-    return {
-      weekday: index,
-      nameRu: weekdayNames[index],
-      count: stats.count,
-      avg_rating: stats.rated ? Number((stats.sum / stats.rated).toFixed(2)) : 0,
-    }
-  })
 
   const countriesByCount = buildRankedByCount(countryMap)
   const countriesByAvg = buildRankedByAvg(countryMap, 5)
@@ -482,8 +440,6 @@ export const computeAggregations = (films) => {
     topTags: topTags.slice(0, TOP_LIST_MAX),
     topRatedFilms,
     watchTime,
-    watchesByMonth,
-    watchesByWeekday,
     totalLanguagesCount: languageMap.size,
     topLanguagesByCount: topLanguagesByCount.slice(0, TOP_LIST_MAX),
     topCountriesByCount: countriesByCount.slice(0, TOP_LIST_MAX),
@@ -492,7 +448,6 @@ export const computeAggregations = (films) => {
     topDirectorsByAvgRating: directorsByAvg.slice(0, TOP_LIST_MAX),
     topActorsByCount: actorsByCount.slice(0, TOP_LIST_MAX),
     topActorsByAvgRating: actorsByAvg.slice(0, TOP_LIST_MAX),
-    timeline: watchesByMonth.map((item) => ({ month: item.month, count: item.count })),
     badges: trimmedBadges,
     decades,
     summarySentence,
@@ -593,7 +548,7 @@ export const filterFilmsByYears = (films, years) => {
   if (!years || years.length === 0) return films
   const yearSet = new Set(years)
   return films.filter((film) => {
-    const date = parseDate(film.watchedDate ?? film.date)
+    const date = parseDate(film.date)
     if (!date) return false
     return yearSet.has(date.getFullYear())
   })

@@ -10,6 +10,7 @@ import WatchTimeCard from './components/WatchTimeCard.jsx'
 import LanguagesSection from './components/LanguagesSection.jsx'
 import ToggleRankedList from './components/ToggleRankedList.jsx'
 import BadgesSection from './components/BadgesSection.jsx'
+import ListsProgressSection from './components/ListsProgressSection.jsx'
 import YearFilter from './components/YearFilter.jsx'
 import { formatNumber, formatRating } from './utils/format.js'
 import {
@@ -71,9 +72,15 @@ function App() {
     if (resumeState && !loading) setShowResumeModal(true)
   }, [resumeState, loading])
 
-  const runAnalysisFromRows = async (parsedRows, parsedDiary, simplified = false, signal = null, fileName = '') => {
+  const extractYears = (films) => [...new Set(films.map((f) => {
+    const d = f.date
+    if (!d) return null
+    const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+    return y ? parseInt(y, 10) : null
+  }).filter(Boolean))].sort((a, b) => a - b)
+
+  const runAnalysisFromRows = async (parsedRows, simplified = false, signal = null, fileName = '') => {
     try {
-      const hasDiary = parsedDiary && parsedDiary.length > 0
       const opts = {
         signal: signal || abortControllerRef.current?.signal,
         onRetryMessage: (msg) => setRetryMessage(msg || ''),
@@ -85,8 +92,6 @@ function App() {
         stage1,
         filmsLite: [],
         filmsLiteAll: [],
-        hasDiary,
-        dataSource: hasDiary ? 'both' : 'ratings',
         availableYears: [],
         simplifiedMode: simplified,
         fileName,
@@ -94,13 +99,8 @@ function App() {
       })
 
       if (simplified) {
-        const films = await enrichFilmsPhase1Only(parsedRows, parsedDiary, (p) => { progressRef.current = p; setProgress(p) }, opts)
-        const availableYearsFromFilms = [...new Set(films.map((f) => {
-          const d = f.watchedDate || f.date
-          if (!d) return null
-          const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-          return y ? parseInt(y, 10) : null
-        }).filter(Boolean))].sort((a, b) => a - b)
+        const films = await enrichFilmsPhase1Only(parsedRows, (p) => { progressRef.current = p; setProgress(p) }, opts)
+        const availableYearsFromFilms = extractYears(films)
         setAnalysis((prev) => ({
           ...prev,
           filmsLite: films,
@@ -109,24 +109,19 @@ function App() {
           availableYears: availableYearsFromFilms,
         }))
         setProgress({ stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 })
-        await setLastReport({ filmsLite: films, filmsLiteAll: films, hasDiary, dataSource: hasDiary ? 'both' : 'ratings', availableYears: availableYearsFromFilms, simplifiedMode: true, fileName })
+        await setLastReport({ filmsLite: films, filmsLiteAll: films, availableYears: availableYearsFromFilms, simplifiedMode: true, fileName })
         setLastReportAvailable(true)
         await clearResumeState()
         return
       }
 
       setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 8 })
-      const films = await runStagedAnalysis(parsedRows, parsedDiary, {
+      const films = await runStagedAnalysis(parsedRows, {
         ...opts,
         onProgress: (p) => { progressRef.current = p; setProgress(p) },
         onPartialResult: (partial) => {
           if (partial.films) {
-            const years = [...new Set(partial.films.map((f) => {
-              const d = f.watchedDate || f.date
-              if (!d) return null
-              const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-              return y ? parseInt(y, 10) : null
-            }).filter(Boolean))].sort((a, b) => a - b)
+            const years = extractYears(partial.films)
             setAnalysis((prev) => ({
               ...prev,
               filmsLite: partial.films,
@@ -140,17 +135,10 @@ function App() {
       })
 
       setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 95 })
-      const availableYearsFromFilms = [...new Set(films.map((f) => {
-        const d = f.watchedDate || f.date
-        if (!d) return null
-        const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-        return y ? parseInt(y, 10) : null
-      }).filter(Boolean))].sort((a, b) => a - b)
+      const availableYearsFromFilms = extractYears(films)
       const result = {
         filmsLite: films,
         filmsLiteAll: films,
-        hasDiary,
-        dataSource: hasDiary ? 'both' : 'ratings',
         availableYears: availableYearsFromFilms,
         simplifiedMode: false,
         fileName,
@@ -167,7 +155,7 @@ function App() {
     }
   }
 
-  const runAnalysis = async (ratingsFile, diaryFile, simplified = false) => {
+  const runAnalysis = async (ratingsFile, simplified = false) => {
     setError('')
     setRetryMessage('')
     setLoading(true)
@@ -186,31 +174,24 @@ function App() {
 
     try {
       const ratingsText = await ratingsFile.text()
-      const diaryText = diaryFile ? await diaryFile.text() : null
 
-      const rows = await new Promise((resolve, reject) => {
+      const parsedRows = await new Promise((resolve, reject) => {
         const worker = new Worker(new URL('./workers/csvParse.worker.js', import.meta.url), { type: 'module' })
-        let ratingRows = null
-        let diaryRows = []
-        worker.postMessage({ type: 'parse', ratingsText, diaryText })
+        worker.postMessage({ type: 'parse', ratingsText })
         worker.onmessage = (ev) => {
           if (ev.data.type === 'progress') setProgress(ev.data)
-          if (ev.data.type === 'rows') ratingRows = ev.data.rows
-          if (ev.data.type === 'diary') diaryRows = ev.data.rows || []
+          if (ev.data.type === 'rows') {
+            worker.terminate()
+            resolve(ev.data.rows)
+          }
           if (ev.data.type === 'error') {
             worker.terminate()
             reject(new Error(ev.data.message))
-            return
-          }
-          if (ratingRows !== null) {
-            worker.terminate()
-            resolve({ rows: ratingRows, diaryRows })
           }
         }
         worker.onerror = () => reject(new Error('Ошибка парсинга CSV'))
       })
 
-      const { rows: parsedRows, diaryRows: parsedDiary } = rows
       if (!parsedRows || parsedRows.length === 0) {
         setError('В CSV нет записей о фильмах')
         setLoading(false)
@@ -220,7 +201,7 @@ function App() {
 
       const mobile = isMobile()
       if (mobile && parsedRows.length > BIG_FILE_MOBILE_THRESHOLD && !simplified) {
-        setPendingFiles({ parsedRows, parsedDiary })
+        setPendingFiles({ parsedRows })
         setShowMobileModal(true)
         setLoading(false)
         setProgress(null)
@@ -243,8 +224,7 @@ function App() {
         }
       }, RESUME_PERSIST_INTERVAL_MS)
 
-
-      await runAnalysisFromRows(parsedRows, parsedDiary, simplified, abortControllerRef.current.signal, fileName)
+      await runAnalysisFromRows(parsedRows, simplified, abortControllerRef.current.signal, fileName)
       if (simplified) setSimplifiedMode(true)
     } catch (err) {
       setAnalysis(null)
@@ -269,13 +249,13 @@ function App() {
     }
   }
 
-  const handleUpload = async (ratingsFile, diaryFile = null) => {
+  const handleUpload = async (ratingsFile) => {
     if (!ratingsFile) return
     if (USE_MOCKS) {
       setError('В режиме демо используйте блок «Демо-отчёт» ниже.')
       return
     }
-    await runAnalysis(ratingsFile, diaryFile, false)
+    await runAnalysis(ratingsFile, false)
   }
 
   const handleMobileContinue = async () => {
@@ -288,7 +268,7 @@ function App() {
       setProgress({ stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: pendingFiles.parsedRows.length, done: 0, percent: 2 })
       setLastUploadedFileName('')
       try {
-        await runAnalysisFromRows(pendingFiles.parsedRows, pendingFiles.parsedDiary, true, abortControllerRef.current.signal, '')
+        await runAnalysisFromRows(pendingFiles.parsedRows, true, abortControllerRef.current.signal, '')
         setSimplifiedMode(true)
       } catch (err) {
         setAnalysis(null)
@@ -665,11 +645,10 @@ function App() {
               tags={computed.topTags}
               emptyMessage={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : undefined}
             />
+            <ListsProgressSection films={filteredFilms} />
             <Suspense fallback={null}>
               <LazyChartsSection
-                timeline={computed.timeline}
                 films={filteredFilms}
-                hasDiary={analysis.hasDiary}
               />
             </Suspense>
           </section>

@@ -15,7 +15,6 @@ export default defineConfig({
           }
           if (
             id.includes('LazyChartsSection') ||
-            id.includes('TimelineChart') ||
             id.includes('ByYearChart')
           ) {
             return 'vendor-charts'

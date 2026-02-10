@@ -1,12 +1,11 @@
 {
   "filmsLite": [
-    { "title": "Без постера 1", "year": 2024, "rating": 4, "poster_url": null, "letterboxd_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 100, "watchedDate": null },
-    { "title": "Без постера 2", "year": 2023, "rating": 3.5, "poster_url": null, "letterboxd_url": null, "genres": ["Комедия"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null }
+    { "title": "Без постера 1", "year": 2024, "rating": 4, "poster_url": null, "letterboxd_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 100 },
+    { "title": "Без постера 2", "year": 2023, "rating": 3.5, "poster_url": null, "letterboxd_url": null, "genres": ["Комедия"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null }
   ],
   "filmsLiteAll": [
-    { "title": "Без постера 1", "year": 2024, "rating": 4, "poster_url": null, "letterboxd_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 100, "watchedDate": null },
-    { "title": "Без постера 2", "year": 2023, "rating": 3.5, "poster_url": null, "letterboxd_url": null, "genres": ["Комедия"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null }
+    { "title": "Без постера 1", "year": 2024, "rating": 4, "poster_url": null, "letterboxd_url": null, "genres": ["Драма"], "keywords": ["а"], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 100 },
+    { "title": "Без постера 2", "year": 2023, "rating": 3.5, "poster_url": null, "letterboxd_url": null, "genres": ["Комедия"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null }
   ],
-  "availableYears": [2023, 2024],
-  "hasDiary": false
+  "availableYears": [2023, 2024]
 }

@@ -355,10 +355,6 @@ h3, .card-header h3 {
   color: #e8a0a8;
 }
 
-.activity-unavailable .card-header p {
-  margin-top: 8px;
-}
-
 .progress-banner,
 .error-banner {
   margin: var(--space-lg) 0;
@@ -589,7 +585,7 @@ h3, .card-header h3 {
   grid-column: 1 / -1;
 }
 
-/* Row 1: Любимые темы | Активность (2 cols). Row 2: По годам full width. */
+/* Row 1: Любимые темы | Прогресс по спискам (2 cols). Row 2: По годам full width. */
 .grid--two-cols {
   grid-template-columns: repeat(2, 1fr);
 }
@@ -1746,47 +1742,6 @@ h3, .card-header h3 {
   background: #f7c843;
 }
 
-.activity-grid {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
-}
-
-.activity-panel h4 {
-  margin: 0 0 12px;
-  font-size: 14px;
-  color: #c5cfde;
-}
-
-.activity-bars {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18px, 1fr));
-  gap: 8px;
-  align-items: end;
-  height: 180px;
-}
-
-.activity-bars--compact {
-  grid-template-columns: repeat(auto-fit, minmax(26px, 1fr));
-}
-
-.activity-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #93a0b5;
-}
-
-.activity-bar-fill {
-  width: 100%;
-  background: linear-gradient(180deg, #f7c843, #c07b32);
-  border-radius: 10px 10px 4px 4px;
-  min-height: 6px;
-}
-
 .milestone-grid {
   margin-top: 16px;
   display: grid;
@@ -2167,33 +2122,6 @@ h3, .card-header h3 {
   box-shadow: 0 8px 18px rgba(247, 200, 67, 0.18);
 }
 
-.timeline {
-  margin-top: 20px;
-  display: grid;
-  gap: 10px;
-}
-
-.timeline-bar {
-  display: grid;
-  grid-template-columns: 90px 1fr 40px;
-  gap: 10px;
-  align-items: center;
-  font-size: 12px;
-  color: #9fb0c8;
-}
-
-.timeline-track {
-  height: 8px;
-  background: #1c2230;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.timeline-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #f7c843, #c07b32);
-}
-
 @media (max-width: 960px) {
   .hero {
     flex-direction: column;
@@ -2225,6 +2153,13 @@ h3, .card-header h3 {
   .donut-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .lists-progress-ring-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lists-progress-ring {
+    width: 90px;
+    height: 90px;
   }
   .table-head,
   .table-row {
@@ -2331,4 +2266,100 @@ h3, .card-header h3 {
   color: var(--text-muted);
   font-size: 14px;
   font-style: italic;
+}
+
+/* ── Lists Progress Section (circular rings) ── */
+
+.lists-progress {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.lists-progress-ring-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-content: space-evenly;
+  justify-items: center;
+  margin-top: 12px;
+}
+
+.lists-progress-ring-item {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  justify-items: center;
+  text-align: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 180px;
+}
+
+.lists-progress-ring {
+  width: 140px;
+  height: 140px;
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  fill: none;
+  stroke: #1c2230;
+  stroke-width: 8;
+}
+
+.ring-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease;
+}
+
+.ring-percent {
+  font-size: 22px;
+  font-weight: 700;
+  fill: #f7c843;
+  text-anchor: middle;
+  dominant-baseline: auto;
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+
+.ring-count {
+  font-size: 12px;
+  font-weight: 500;
+  fill: #6b7a90;
+  text-anchor: middle;
+  dominant-baseline: auto;
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+
+.ring-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+  line-height: 1.3;
+  min-height: 2.6em;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.ring-label a {
+  color: #f7c843;
+  text-decoration: none;
+}
+
+.ring-label a:hover {
+  text-decoration: underline;
+}
+
+.ring-desc {
+  font-size: 11px;
+  color: #6b7a90;
+  line-height: 1.3;
+  min-height: 2.6em;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }

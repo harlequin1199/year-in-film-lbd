@@ -1,14 +1,13 @@
 {
   "filmsLite": [
-    { "title": "Без жанров", "year": 2024, "rating": 4, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null },
-    { "title": "Минимум полей", "year": 2023, "rating": 3.5, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null },
-    { "title": "Один жанр", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Драма"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 90, "watchedDate": null }
+    { "title": "Без жанров", "year": 2024, "rating": 4, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null },
+    { "title": "Минимум полей", "year": 2023, "rating": 3.5, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null },
+    { "title": "Один жанр", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Драма"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 90 }
   ],
   "filmsLiteAll": [
-    { "title": "Без жанров", "year": 2024, "rating": 4, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null },
-    { "title": "Минимум полей", "year": 2023, "rating": 3.5, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null, "watchedDate": null },
-    { "title": "Один жанр", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Драма"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 90, "watchedDate": null }
+    { "title": "Без жанров", "year": 2024, "rating": 4, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null },
+    { "title": "Минимум полей", "year": 2023, "rating": 3.5, "poster_url": null, "genres": [], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": null },
+    { "title": "Один жанр", "year": 2024, "rating": 5, "poster_url": null, "genres": ["Драма"], "keywords": [], "directors": [], "actors": [], "countries": [], "original_language": null, "runtime": 90 }
   ],
-  "availableYears": [2023, 2024],
-  "hasDiary": false
+  "availableYears": [2023, 2024]
 }

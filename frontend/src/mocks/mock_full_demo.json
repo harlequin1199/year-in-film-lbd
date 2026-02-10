@@ -5,14 +5,28 @@
       "year": 1972,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["mafia", "family", "crime"],
-      "directors": ["Francis Ford Coppola"],
-      "actors": ["Marlon Brando", "Al Pacino", "James Caan"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "mafia",
+        "family",
+        "crime"
+      ],
+      "directors": [
+        "Francis Ford Coppola"
+      ],
+      "actors": [
+        "Marlon Brando",
+        "Al Pacino",
+        "James Caan"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 175,
-      "watchedDate": "2024-01-15T00:00:00",
       "tmdb_id": 238,
       "date": "2024-01-15T00:00:00"
     },
@@ -21,14 +35,30 @@
       "year": 2008,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Action", "Crime", "Drama"],
-      "keywords": ["superhero", "batman", "crime"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Christian Bale", "Heath Ledger", "Aaron Eckhart"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "superhero",
+        "batman",
+        "crime"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Christian Bale",
+        "Heath Ledger",
+        "Aaron Eckhart"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 152,
-      "watchedDate": "2024-02-10T00:00:00",
       "tmdb_id": 155,
       "date": "2024-02-10T00:00:00"
     },
@@ -37,14 +67,27 @@
       "year": 1994,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["prison", "friendship", "hope"],
-      "directors": ["Frank Darabont"],
-      "actors": ["Tim Robbins", "Morgan Freeman", "Bob Gunton"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "prison",
+        "friendship",
+        "hope"
+      ],
+      "directors": [
+        "Frank Darabont"
+      ],
+      "actors": [
+        "Tim Robbins",
+        "Morgan Freeman",
+        "Bob Gunton"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 142,
-      "watchedDate": "2024-03-05T00:00:00",
       "tmdb_id": 278,
       "date": "2024-03-05T00:00:00"
     },
@@ -53,14 +96,28 @@
       "year": 1994,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["crime", "violence", "non-linear"],
-      "directors": ["Quentin Tarantino"],
-      "actors": ["John Travolta", "Samuel L. Jackson", "Uma Thurman"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "crime",
+        "violence",
+        "non-linear"
+      ],
+      "directors": [
+        "Quentin Tarantino"
+      ],
+      "actors": [
+        "John Travolta",
+        "Samuel L. Jackson",
+        "Uma Thurman"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 154,
-      "watchedDate": "2024-01-20T00:00:00",
       "tmdb_id": 680,
       "date": "2024-01-20T00:00:00"
     },
@@ -69,14 +126,28 @@
       "year": 1999,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["violence", "society", "rebellion"],
-      "directors": ["David Fincher"],
-      "actors": ["Brad Pitt", "Edward Norton", "Helena Bonham Carter"],
-      "countries": ["United States", "Germany"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "violence",
+        "society",
+        "rebellion"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Brad Pitt",
+        "Edward Norton",
+        "Helena Bonham Carter"
+      ],
+      "countries": [
+        "United States",
+        "Germany"
+      ],
       "original_language": "en",
       "runtime": 139,
-      "watchedDate": "2024-02-15T00:00:00",
       "tmdb_id": 550,
       "date": "2024-02-15T00:00:00"
     },
@@ -85,14 +156,28 @@
       "year": 1994,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Romance"],
-      "keywords": ["life", "love", "history"],
-      "directors": ["Robert Zemeckis"],
-      "actors": ["Tom Hanks", "Robin Wright", "Gary Sinise"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Romance"
+      ],
+      "keywords": [
+        "life",
+        "love",
+        "history"
+      ],
+      "directors": [
+        "Robert Zemeckis"
+      ],
+      "actors": [
+        "Tom Hanks",
+        "Robin Wright",
+        "Gary Sinise"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 142,
-      "watchedDate": "2024-03-10T00:00:00",
       "tmdb_id": 13,
       "date": "2024-03-10T00:00:00"
     },
@@ -101,14 +186,30 @@
       "year": 2014,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Adventure", "Drama", "Science Fiction"],
-      "keywords": ["space", "time", "family"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Matthew McConaughey", "Anne Hathaway", "Jessica Chastain"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Adventure",
+        "Drama",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "space",
+        "time",
+        "family"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Matthew McConaughey",
+        "Anne Hathaway",
+        "Jessica Chastain"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 169,
-      "watchedDate": "2024-04-01T00:00:00",
       "tmdb_id": 157336,
       "date": "2024-04-01T00:00:00"
     },
@@ -117,14 +218,30 @@
       "year": 1999,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Science Fiction"],
-      "keywords": ["reality", "simulation", "philosophy"],
-      "directors": ["Lana Wachowski", "Lilly Wachowski"],
-      "actors": ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss"],
-      "countries": ["United States", "Australia"],
+      "genres": [
+        "Action",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "reality",
+        "simulation",
+        "philosophy"
+      ],
+      "directors": [
+        "Lana Wachowski",
+        "Lilly Wachowski"
+      ],
+      "actors": [
+        "Keanu Reeves",
+        "Laurence Fishburne",
+        "Carrie-Anne Moss"
+      ],
+      "countries": [
+        "United States",
+        "Australia"
+      ],
       "original_language": "en",
       "runtime": 136,
-      "watchedDate": "2024-04-15T00:00:00",
       "tmdb_id": 603,
       "date": "2024-04-15T00:00:00"
     },
@@ -133,14 +250,29 @@
       "year": 2001,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Comedy", "Romance"],
-      "keywords": ["love", "paris", "whimsical"],
-      "directors": ["Jean-Pierre Jeunet"],
-      "actors": ["Audrey Tautou", "Mathieu Kassovitz", "Rufus"],
-      "countries": ["France", "Germany"],
+      "genres": [
+        "Comedy",
+        "Romance"
+      ],
+      "keywords": [
+        "love",
+        "paris",
+        "whimsical"
+      ],
+      "directors": [
+        "Jean-Pierre Jeunet"
+      ],
+      "actors": [
+        "Audrey Tautou",
+        "Mathieu Kassovitz",
+        "Rufus"
+      ],
+      "countries": [
+        "France",
+        "Germany"
+      ],
       "original_language": "fr",
       "runtime": 122,
-      "watchedDate": "2024-05-01T00:00:00",
       "tmdb_id": 194,
       "date": "2024-05-01T00:00:00"
     },
@@ -149,14 +281,28 @@
       "year": 1979,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Science Fiction"],
-      "keywords": ["philosophy", "zone", "mystery"],
-      "directors": ["Andrei Tarkovsky"],
-      "actors": ["Alexander Kaidanovsky", "Anatoly Solonitsyn", "Nikolai Grinko"],
-      "countries": ["Soviet Union"],
+      "genres": [
+        "Drama",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "philosophy",
+        "zone",
+        "mystery"
+      ],
+      "directors": [
+        "Andrei Tarkovsky"
+      ],
+      "actors": [
+        "Alexander Kaidanovsky",
+        "Anatoly Solonitsyn",
+        "Nikolai Grinko"
+      ],
+      "countries": [
+        "Soviet Union"
+      ],
       "original_language": "ru",
       "runtime": 162,
-      "watchedDate": "2024-05-10T00:00:00",
       "tmdb_id": 448,
       "date": "2024-05-10T00:00:00"
     },
@@ -165,14 +311,29 @@
       "year": 2001,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Animation", "Adventure", "Family"],
-      "keywords": ["spirits", "journey", "coming-of-age"],
-      "directors": ["Hayao Miyazaki"],
-      "actors": ["Rumi Hiiragi", "Miyu Irino", "Mari Natsuki"],
-      "countries": ["Japan"],
+      "genres": [
+        "Animation",
+        "Adventure",
+        "Family"
+      ],
+      "keywords": [
+        "spirits",
+        "journey",
+        "coming-of-age"
+      ],
+      "directors": [
+        "Hayao Miyazaki"
+      ],
+      "actors": [
+        "Rumi Hiiragi",
+        "Miyu Irino",
+        "Mari Natsuki"
+      ],
+      "countries": [
+        "Japan"
+      ],
       "original_language": "ja",
       "runtime": 125,
-      "watchedDate": "2024-05-20T00:00:00",
       "tmdb_id": 129,
       "date": "2024-05-20T00:00:00"
     },
@@ -181,14 +342,29 @@
       "year": 2019,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Comedy", "Drama", "Thriller"],
-      "keywords": ["class", "society", "satire"],
-      "directors": ["Bong Joon-ho"],
-      "actors": ["Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong"],
-      "countries": ["South Korea"],
+      "genres": [
+        "Comedy",
+        "Drama",
+        "Thriller"
+      ],
+      "keywords": [
+        "class",
+        "society",
+        "satire"
+      ],
+      "directors": [
+        "Bong Joon-ho"
+      ],
+      "actors": [
+        "Song Kang-ho",
+        "Lee Sun-kyun",
+        "Cho Yeo-jeong"
+      ],
+      "countries": [
+        "South Korea"
+      ],
       "original_language": "ko",
       "runtime": 132,
-      "watchedDate": "2024-06-01T00:00:00",
       "tmdb_id": 496243,
       "date": "2024-06-01T00:00:00"
     },
@@ -197,14 +373,28 @@
       "year": 1941,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Mystery"],
-      "keywords": ["media", "power", "mystery"],
-      "directors": ["Orson Welles"],
-      "actors": ["Orson Welles", "Joseph Cotten", "Dorothy Comingore"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "media",
+        "power",
+        "mystery"
+      ],
+      "directors": [
+        "Orson Welles"
+      ],
+      "actors": [
+        "Orson Welles",
+        "Joseph Cotten",
+        "Dorothy Comingore"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 119,
-      "watchedDate": "2024-06-10T00:00:00",
       "tmdb_id": 15,
       "date": "2024-06-10T00:00:00"
     },
@@ -213,14 +403,29 @@
       "year": 1995,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama", "Mystery"],
-      "keywords": ["crime", "detective", "sin"],
-      "directors": ["David Fincher"],
-      "actors": ["Morgan Freeman", "Brad Pitt", "Kevin Spacey"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "crime",
+        "detective",
+        "sin"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Morgan Freeman",
+        "Brad Pitt",
+        "Kevin Spacey"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 127,
-      "watchedDate": "2024-06-15T00:00:00",
       "tmdb_id": 807,
       "date": "2024-06-15T00:00:00"
     },
@@ -229,14 +434,30 @@
       "year": 2001,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Drama"],
-      "keywords": ["fantasy", "journey", "friendship"],
-      "directors": ["Peter Jackson"],
-      "actors": ["Elijah Wood", "Ian McKellen", "Viggo Mortensen"],
-      "countries": ["New Zealand", "United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Drama"
+      ],
+      "keywords": [
+        "fantasy",
+        "journey",
+        "friendship"
+      ],
+      "directors": [
+        "Peter Jackson"
+      ],
+      "actors": [
+        "Elijah Wood",
+        "Ian McKellen",
+        "Viggo Mortensen"
+      ],
+      "countries": [
+        "New Zealand",
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 178,
-      "watchedDate": "2024-07-01T00:00:00",
       "tmdb_id": 120,
       "date": "2024-07-01T00:00:00"
     },
@@ -245,14 +466,30 @@
       "year": 2010,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Science Fiction"],
-      "keywords": ["dreams", "reality", "mind"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Leonardo DiCaprio", "Marion Cotillard", "Tom Hardy"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "dreams",
+        "reality",
+        "mind"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Marion Cotillard",
+        "Tom Hardy"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 148,
-      "watchedDate": "2024-07-10T00:00:00",
       "tmdb_id": 27205,
       "date": "2024-07-10T00:00:00"
     },
@@ -261,14 +498,29 @@
       "year": 1966,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Western"],
-      "keywords": ["western", "treasure", "rivalry"],
-      "directors": ["Sergio Leone"],
-      "actors": ["Clint Eastwood", "Lee Van Cleef", "Eli Wallach"],
-      "countries": ["Italy", "Spain", "West Germany"],
+      "genres": [
+        "Western"
+      ],
+      "keywords": [
+        "western",
+        "treasure",
+        "rivalry"
+      ],
+      "directors": [
+        "Sergio Leone"
+      ],
+      "actors": [
+        "Clint Eastwood",
+        "Lee Van Cleef",
+        "Eli Wallach"
+      ],
+      "countries": [
+        "Italy",
+        "Spain",
+        "West Germany"
+      ],
       "original_language": "it",
       "runtime": 178,
-      "watchedDate": "2024-07-15T00:00:00",
       "tmdb_id": 429,
       "date": "2024-07-15T00:00:00"
     },
@@ -277,14 +529,29 @@
       "year": 2019,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Comedy", "Drama"],
-      "keywords": ["hollywood", "1960s", "nostalgia"],
-      "directors": ["Quentin Tarantino"],
-      "actors": ["Leonardo DiCaprio", "Brad Pitt", "Margot Robbie"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Comedy",
+        "Drama"
+      ],
+      "keywords": [
+        "hollywood",
+        "1960s",
+        "nostalgia"
+      ],
+      "directors": [
+        "Quentin Tarantino"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Brad Pitt",
+        "Margot Robbie"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 161,
-      "watchedDate": "2024-08-01T00:00:00",
       "tmdb_id": 466272,
       "date": "2024-08-01T00:00:00"
     },
@@ -293,14 +560,29 @@
       "year": 2019,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama", "Thriller"],
-      "keywords": ["mental illness", "society", "violence"],
-      "directors": ["Todd Phillips"],
-      "actors": ["Joaquin Phoenix", "Robert De Niro", "Zazie Beetz"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama",
+        "Thriller"
+      ],
+      "keywords": [
+        "mental illness",
+        "society",
+        "violence"
+      ],
+      "directors": [
+        "Todd Phillips"
+      ],
+      "actors": [
+        "Joaquin Phoenix",
+        "Robert De Niro",
+        "Zazie Beetz"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 122,
-      "watchedDate": "2024-08-10T00:00:00",
       "tmdb_id": 475557,
       "date": "2024-08-10T00:00:00"
     },
@@ -309,14 +591,32 @@
       "year": 2017,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Drama", "History"],
-      "keywords": ["war", "survival", "world war 2"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Fionn Whitehead", "Tom Hardy", "Mark Rylance"],
-      "countries": ["United States", "United Kingdom", "France", "Netherlands"],
+      "genres": [
+        "Action",
+        "Drama",
+        "History"
+      ],
+      "keywords": [
+        "war",
+        "survival",
+        "world war 2"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Fionn Whitehead",
+        "Tom Hardy",
+        "Mark Rylance"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom",
+        "France",
+        "Netherlands"
+      ],
       "original_language": "en",
       "runtime": 106,
-      "watchedDate": "2024-08-15T00:00:00",
       "tmdb_id": 374720,
       "date": "2024-08-15T00:00:00"
     },
@@ -325,14 +625,30 @@
       "year": 2000,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Drama"],
-      "keywords": ["ancient rome", "revenge", "honor"],
-      "directors": ["Ridley Scott"],
-      "actors": ["Russell Crowe", "Joaquin Phoenix", "Connie Nielsen"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Drama"
+      ],
+      "keywords": [
+        "ancient rome",
+        "revenge",
+        "honor"
+      ],
+      "directors": [
+        "Ridley Scott"
+      ],
+      "actors": [
+        "Russell Crowe",
+        "Joaquin Phoenix",
+        "Connie Nielsen"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 155,
-      "watchedDate": "2024-09-01T00:00:00",
       "tmdb_id": 98,
       "date": "2024-09-01T00:00:00"
     },
@@ -341,14 +657,29 @@
       "year": 2013,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Biography", "Comedy", "Crime"],
-      "keywords": ["money", "corruption", "excess"],
-      "directors": ["Martin Scorsese"],
-      "actors": ["Leonardo DiCaprio", "Jonah Hill", "Margot Robbie"],
-      "countries": ["United States"],
+      "genres": [
+        "Biography",
+        "Comedy",
+        "Crime"
+      ],
+      "keywords": [
+        "money",
+        "corruption",
+        "excess"
+      ],
+      "directors": [
+        "Martin Scorsese"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Jonah Hill",
+        "Margot Robbie"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 180,
-      "watchedDate": "2024-09-10T00:00:00",
       "tmdb_id": 106646,
       "date": "2024-09-10T00:00:00"
     },
@@ -357,14 +688,28 @@
       "year": 2010,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["mystery", "island", "investigation"],
-      "directors": ["Martin Scorsese"],
-      "actors": ["Leonardo DiCaprio", "Mark Ruffalo", "Ben Kingsley"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "mystery",
+        "island",
+        "investigation"
+      ],
+      "directors": [
+        "Martin Scorsese"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Mark Ruffalo",
+        "Ben Kingsley"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 138,
-      "watchedDate": "2024-09-15T00:00:00",
       "tmdb_id": 11324,
       "date": "2024-09-15T00:00:00"
     },
@@ -373,14 +718,30 @@
       "year": 2015,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Science Fiction"],
-      "keywords": ["post-apocalyptic", "survival", "action"],
-      "directors": ["George Miller"],
-      "actors": ["Tom Hardy", "Charlize Theron", "Nicholas Hoult"],
-      "countries": ["Australia", "United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "post-apocalyptic",
+        "survival",
+        "action"
+      ],
+      "directors": [
+        "George Miller"
+      ],
+      "actors": [
+        "Tom Hardy",
+        "Charlize Theron",
+        "Nicholas Hoult"
+      ],
+      "countries": [
+        "Australia",
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 120,
-      "watchedDate": "2024-10-01T00:00:00",
       "tmdb_id": 76341,
       "date": "2024-10-01T00:00:00"
     },
@@ -389,14 +750,28 @@
       "year": 2011,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["driver", "crime", "romance"],
-      "directors": ["Nicolas Winding Refn"],
-      "actors": ["Ryan Gosling", "Carey Mulligan", "Bryan Cranston"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "driver",
+        "crime",
+        "romance"
+      ],
+      "directors": [
+        "Nicolas Winding Refn"
+      ],
+      "actors": [
+        "Ryan Gosling",
+        "Carey Mulligan",
+        "Bryan Cranston"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 100,
-      "watchedDate": "2024-10-10T00:00:00",
       "tmdb_id": 64690,
       "date": "2024-10-10T00:00:00"
     },
@@ -405,14 +780,27 @@
       "year": 2008,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["veteran", "neighborhood", "redemption"],
-      "directors": ["Clint Eastwood"],
-      "actors": ["Clint Eastwood", "Bee Vang", "Ahney Her"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "veteran",
+        "neighborhood",
+        "redemption"
+      ],
+      "directors": [
+        "Clint Eastwood"
+      ],
+      "actors": [
+        "Clint Eastwood",
+        "Bee Vang",
+        "Ahney Her"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 116,
-      "watchedDate": "2024-10-15T00:00:00",
       "tmdb_id": 13223,
       "date": "2024-10-15T00:00:00"
     },
@@ -421,14 +809,28 @@
       "year": 2000,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["memory", "revenge", "non-linear"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Guy Pearce", "Carrie-Anne Moss", "Joe Pantoliano"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "memory",
+        "revenge",
+        "non-linear"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Guy Pearce",
+        "Carrie-Anne Moss",
+        "Joe Pantoliano"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 113,
-      "watchedDate": "2024-11-01T00:00:00",
       "tmdb_id": 77,
       "date": "2024-11-01T00:00:00"
     },
@@ -437,14 +839,29 @@
       "year": 2003,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Drama", "Mystery"],
-      "keywords": ["revenge", "prison", "mystery"],
-      "directors": ["Park Chan-wook"],
-      "actors": ["Choi Min-sik", "Yoo Ji-tae", "Kang Hye-jeong"],
-      "countries": ["South Korea"],
+      "genres": [
+        "Action",
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "revenge",
+        "prison",
+        "mystery"
+      ],
+      "directors": [
+        "Park Chan-wook"
+      ],
+      "actors": [
+        "Choi Min-sik",
+        "Yoo Ji-tae",
+        "Kang Hye-jeong"
+      ],
+      "countries": [
+        "South Korea"
+      ],
       "original_language": "ko",
       "runtime": 120,
-      "watchedDate": "2024-11-10T00:00:00",
       "tmdb_id": 670,
       "date": "2024-11-10T00:00:00"
     },
@@ -453,14 +870,28 @@
       "year": 2014,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["disappearance", "mystery", "marriage"],
-      "directors": ["David Fincher"],
-      "actors": ["Ben Affleck", "Rosamund Pike", "Neil Patrick Harris"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "disappearance",
+        "mystery",
+        "marriage"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Ben Affleck",
+        "Rosamund Pike",
+        "Neil Patrick Harris"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 149,
-      "watchedDate": "2024-11-15T00:00:00",
       "tmdb_id": 210577,
       "date": "2024-11-15T00:00:00"
     },
@@ -469,14 +900,28 @@
       "year": 1991,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Science Fiction"],
-      "keywords": ["cyborg", "future", "action"],
-      "directors": ["James Cameron"],
-      "actors": ["Arnold Schwarzenegger", "Linda Hamilton", "Edward Furlong"],
-      "countries": ["United States"],
+      "genres": [
+        "Action",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "cyborg",
+        "future",
+        "action"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Arnold Schwarzenegger",
+        "Linda Hamilton",
+        "Edward Furlong"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 137,
-      "watchedDate": "2024-12-01T00:00:00",
       "tmdb_id": 280,
       "date": "2024-12-01T00:00:00"
     },
@@ -485,14 +930,29 @@
       "year": 2009,
       "rating": 4,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Fantasy"],
-      "keywords": ["aliens", "nature", "adventure"],
-      "directors": ["James Cameron"],
-      "actors": ["Sam Worthington", "Zoe Saldana", "Sigourney Weaver"],
-      "countries": ["United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Fantasy"
+      ],
+      "keywords": [
+        "aliens",
+        "nature",
+        "adventure"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Sam Worthington",
+        "Zoe Saldana",
+        "Sigourney Weaver"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 162,
-      "watchedDate": "2024-12-10T00:00:00",
       "tmdb_id": 19995,
       "date": "2024-12-10T00:00:00"
     },
@@ -501,14 +961,28 @@
       "year": 1997,
       "rating": 4,
       "poster_url": null,
-      "genres": ["Drama", "Romance"],
-      "keywords": ["ship", "love", "tragedy"],
-      "directors": ["James Cameron"],
-      "actors": ["Leonardo DiCaprio", "Kate Winslet", "Billy Zane"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Romance"
+      ],
+      "keywords": [
+        "ship",
+        "love",
+        "tragedy"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Kate Winslet",
+        "Billy Zane"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 194,
-      "watchedDate": "2024-12-15T00:00:00",
       "tmdb_id": 597,
       "date": "2024-12-15T00:00:00"
     }
@@ -519,14 +993,28 @@
       "year": 1972,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["mafia", "family", "crime"],
-      "directors": ["Francis Ford Coppola"],
-      "actors": ["Marlon Brando", "Al Pacino", "James Caan"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "mafia",
+        "family",
+        "crime"
+      ],
+      "directors": [
+        "Francis Ford Coppola"
+      ],
+      "actors": [
+        "Marlon Brando",
+        "Al Pacino",
+        "James Caan"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 175,
-      "watchedDate": "2024-01-15T00:00:00",
       "tmdb_id": 238,
       "date": "2024-01-15T00:00:00"
     },
@@ -535,14 +1023,30 @@
       "year": 2008,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Action", "Crime", "Drama"],
-      "keywords": ["superhero", "batman", "crime"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Christian Bale", "Heath Ledger", "Aaron Eckhart"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "superhero",
+        "batman",
+        "crime"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Christian Bale",
+        "Heath Ledger",
+        "Aaron Eckhart"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 152,
-      "watchedDate": "2024-02-10T00:00:00",
       "tmdb_id": 155,
       "date": "2024-02-10T00:00:00"
     },
@@ -551,14 +1055,27 @@
       "year": 1994,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["prison", "friendship", "hope"],
-      "directors": ["Frank Darabont"],
-      "actors": ["Tim Robbins", "Morgan Freeman", "Bob Gunton"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "prison",
+        "friendship",
+        "hope"
+      ],
+      "directors": [
+        "Frank Darabont"
+      ],
+      "actors": [
+        "Tim Robbins",
+        "Morgan Freeman",
+        "Bob Gunton"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 142,
-      "watchedDate": "2024-03-05T00:00:00",
       "tmdb_id": 278,
       "date": "2024-03-05T00:00:00"
     },
@@ -567,14 +1084,28 @@
       "year": 1994,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["crime", "violence", "non-linear"],
-      "directors": ["Quentin Tarantino"],
-      "actors": ["John Travolta", "Samuel L. Jackson", "Uma Thurman"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "crime",
+        "violence",
+        "non-linear"
+      ],
+      "directors": [
+        "Quentin Tarantino"
+      ],
+      "actors": [
+        "John Travolta",
+        "Samuel L. Jackson",
+        "Uma Thurman"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 154,
-      "watchedDate": "2024-01-20T00:00:00",
       "tmdb_id": 680,
       "date": "2024-01-20T00:00:00"
     },
@@ -583,14 +1114,28 @@
       "year": 1999,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["violence", "society", "rebellion"],
-      "directors": ["David Fincher"],
-      "actors": ["Brad Pitt", "Edward Norton", "Helena Bonham Carter"],
-      "countries": ["United States", "Germany"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "violence",
+        "society",
+        "rebellion"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Brad Pitt",
+        "Edward Norton",
+        "Helena Bonham Carter"
+      ],
+      "countries": [
+        "United States",
+        "Germany"
+      ],
       "original_language": "en",
       "runtime": 139,
-      "watchedDate": "2024-02-15T00:00:00",
       "tmdb_id": 550,
       "date": "2024-02-15T00:00:00"
     },
@@ -599,14 +1144,28 @@
       "year": 1994,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Romance"],
-      "keywords": ["life", "love", "history"],
-      "directors": ["Robert Zemeckis"],
-      "actors": ["Tom Hanks", "Robin Wright", "Gary Sinise"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Romance"
+      ],
+      "keywords": [
+        "life",
+        "love",
+        "history"
+      ],
+      "directors": [
+        "Robert Zemeckis"
+      ],
+      "actors": [
+        "Tom Hanks",
+        "Robin Wright",
+        "Gary Sinise"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 142,
-      "watchedDate": "2024-03-10T00:00:00",
       "tmdb_id": 13,
       "date": "2024-03-10T00:00:00"
     },
@@ -615,14 +1174,30 @@
       "year": 2014,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Adventure", "Drama", "Science Fiction"],
-      "keywords": ["space", "time", "family"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Matthew McConaughey", "Anne Hathaway", "Jessica Chastain"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Adventure",
+        "Drama",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "space",
+        "time",
+        "family"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Matthew McConaughey",
+        "Anne Hathaway",
+        "Jessica Chastain"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 169,
-      "watchedDate": "2024-04-01T00:00:00",
       "tmdb_id": 157336,
       "date": "2024-04-01T00:00:00"
     },
@@ -631,14 +1206,30 @@
       "year": 1999,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Science Fiction"],
-      "keywords": ["reality", "simulation", "philosophy"],
-      "directors": ["Lana Wachowski", "Lilly Wachowski"],
-      "actors": ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss"],
-      "countries": ["United States", "Australia"],
+      "genres": [
+        "Action",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "reality",
+        "simulation",
+        "philosophy"
+      ],
+      "directors": [
+        "Lana Wachowski",
+        "Lilly Wachowski"
+      ],
+      "actors": [
+        "Keanu Reeves",
+        "Laurence Fishburne",
+        "Carrie-Anne Moss"
+      ],
+      "countries": [
+        "United States",
+        "Australia"
+      ],
       "original_language": "en",
       "runtime": 136,
-      "watchedDate": "2024-04-15T00:00:00",
       "tmdb_id": 603,
       "date": "2024-04-15T00:00:00"
     },
@@ -647,14 +1238,29 @@
       "year": 2001,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Comedy", "Romance"],
-      "keywords": ["love", "paris", "whimsical"],
-      "directors": ["Jean-Pierre Jeunet"],
-      "actors": ["Audrey Tautou", "Mathieu Kassovitz", "Rufus"],
-      "countries": ["France", "Germany"],
+      "genres": [
+        "Comedy",
+        "Romance"
+      ],
+      "keywords": [
+        "love",
+        "paris",
+        "whimsical"
+      ],
+      "directors": [
+        "Jean-Pierre Jeunet"
+      ],
+      "actors": [
+        "Audrey Tautou",
+        "Mathieu Kassovitz",
+        "Rufus"
+      ],
+      "countries": [
+        "France",
+        "Germany"
+      ],
       "original_language": "fr",
       "runtime": 122,
-      "watchedDate": "2024-05-01T00:00:00",
       "tmdb_id": 194,
       "date": "2024-05-01T00:00:00"
     },
@@ -663,14 +1269,28 @@
       "year": 1979,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Science Fiction"],
-      "keywords": ["philosophy", "zone", "mystery"],
-      "directors": ["Andrei Tarkovsky"],
-      "actors": ["Alexander Kaidanovsky", "Anatoly Solonitsyn", "Nikolai Grinko"],
-      "countries": ["Soviet Union"],
+      "genres": [
+        "Drama",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "philosophy",
+        "zone",
+        "mystery"
+      ],
+      "directors": [
+        "Andrei Tarkovsky"
+      ],
+      "actors": [
+        "Alexander Kaidanovsky",
+        "Anatoly Solonitsyn",
+        "Nikolai Grinko"
+      ],
+      "countries": [
+        "Soviet Union"
+      ],
       "original_language": "ru",
       "runtime": 162,
-      "watchedDate": "2024-05-10T00:00:00",
       "tmdb_id": 448,
       "date": "2024-05-10T00:00:00"
     },
@@ -679,14 +1299,29 @@
       "year": 2001,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Animation", "Adventure", "Family"],
-      "keywords": ["spirits", "journey", "coming-of-age"],
-      "directors": ["Hayao Miyazaki"],
-      "actors": ["Rumi Hiiragi", "Miyu Irino", "Mari Natsuki"],
-      "countries": ["Japan"],
+      "genres": [
+        "Animation",
+        "Adventure",
+        "Family"
+      ],
+      "keywords": [
+        "spirits",
+        "journey",
+        "coming-of-age"
+      ],
+      "directors": [
+        "Hayao Miyazaki"
+      ],
+      "actors": [
+        "Rumi Hiiragi",
+        "Miyu Irino",
+        "Mari Natsuki"
+      ],
+      "countries": [
+        "Japan"
+      ],
       "original_language": "ja",
       "runtime": 125,
-      "watchedDate": "2024-05-20T00:00:00",
       "tmdb_id": 129,
       "date": "2024-05-20T00:00:00"
     },
@@ -695,14 +1330,29 @@
       "year": 2019,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Comedy", "Drama", "Thriller"],
-      "keywords": ["class", "society", "satire"],
-      "directors": ["Bong Joon-ho"],
-      "actors": ["Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong"],
-      "countries": ["South Korea"],
+      "genres": [
+        "Comedy",
+        "Drama",
+        "Thriller"
+      ],
+      "keywords": [
+        "class",
+        "society",
+        "satire"
+      ],
+      "directors": [
+        "Bong Joon-ho"
+      ],
+      "actors": [
+        "Song Kang-ho",
+        "Lee Sun-kyun",
+        "Cho Yeo-jeong"
+      ],
+      "countries": [
+        "South Korea"
+      ],
       "original_language": "ko",
       "runtime": 132,
-      "watchedDate": "2024-06-01T00:00:00",
       "tmdb_id": 496243,
       "date": "2024-06-01T00:00:00"
     },
@@ -711,14 +1361,28 @@
       "year": 1941,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama", "Mystery"],
-      "keywords": ["media", "power", "mystery"],
-      "directors": ["Orson Welles"],
-      "actors": ["Orson Welles", "Joseph Cotten", "Dorothy Comingore"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "media",
+        "power",
+        "mystery"
+      ],
+      "directors": [
+        "Orson Welles"
+      ],
+      "actors": [
+        "Orson Welles",
+        "Joseph Cotten",
+        "Dorothy Comingore"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 119,
-      "watchedDate": "2024-06-10T00:00:00",
       "tmdb_id": 15,
       "date": "2024-06-10T00:00:00"
     },
@@ -727,14 +1391,29 @@
       "year": 1995,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama", "Mystery"],
-      "keywords": ["crime", "detective", "sin"],
-      "directors": ["David Fincher"],
-      "actors": ["Morgan Freeman", "Brad Pitt", "Kevin Spacey"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "crime",
+        "detective",
+        "sin"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Morgan Freeman",
+        "Brad Pitt",
+        "Kevin Spacey"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 127,
-      "watchedDate": "2024-06-15T00:00:00",
       "tmdb_id": 807,
       "date": "2024-06-15T00:00:00"
     },
@@ -743,14 +1422,30 @@
       "year": 2001,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Drama"],
-      "keywords": ["fantasy", "journey", "friendship"],
-      "directors": ["Peter Jackson"],
-      "actors": ["Elijah Wood", "Ian McKellen", "Viggo Mortensen"],
-      "countries": ["New Zealand", "United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Drama"
+      ],
+      "keywords": [
+        "fantasy",
+        "journey",
+        "friendship"
+      ],
+      "directors": [
+        "Peter Jackson"
+      ],
+      "actors": [
+        "Elijah Wood",
+        "Ian McKellen",
+        "Viggo Mortensen"
+      ],
+      "countries": [
+        "New Zealand",
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 178,
-      "watchedDate": "2024-07-01T00:00:00",
       "tmdb_id": 120,
       "date": "2024-07-01T00:00:00"
     },
@@ -759,14 +1454,30 @@
       "year": 2010,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Science Fiction"],
-      "keywords": ["dreams", "reality", "mind"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Leonardo DiCaprio", "Marion Cotillard", "Tom Hardy"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "dreams",
+        "reality",
+        "mind"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Marion Cotillard",
+        "Tom Hardy"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 148,
-      "watchedDate": "2024-07-10T00:00:00",
       "tmdb_id": 27205,
       "date": "2024-07-10T00:00:00"
     },
@@ -775,14 +1486,29 @@
       "year": 1966,
       "rating": 5,
       "poster_url": null,
-      "genres": ["Western"],
-      "keywords": ["western", "treasure", "rivalry"],
-      "directors": ["Sergio Leone"],
-      "actors": ["Clint Eastwood", "Lee Van Cleef", "Eli Wallach"],
-      "countries": ["Italy", "Spain", "West Germany"],
+      "genres": [
+        "Western"
+      ],
+      "keywords": [
+        "western",
+        "treasure",
+        "rivalry"
+      ],
+      "directors": [
+        "Sergio Leone"
+      ],
+      "actors": [
+        "Clint Eastwood",
+        "Lee Van Cleef",
+        "Eli Wallach"
+      ],
+      "countries": [
+        "Italy",
+        "Spain",
+        "West Germany"
+      ],
       "original_language": "it",
       "runtime": 178,
-      "watchedDate": "2024-07-15T00:00:00",
       "tmdb_id": 429,
       "date": "2024-07-15T00:00:00"
     },
@@ -791,14 +1517,29 @@
       "year": 2019,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Comedy", "Drama"],
-      "keywords": ["hollywood", "1960s", "nostalgia"],
-      "directors": ["Quentin Tarantino"],
-      "actors": ["Leonardo DiCaprio", "Brad Pitt", "Margot Robbie"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Comedy",
+        "Drama"
+      ],
+      "keywords": [
+        "hollywood",
+        "1960s",
+        "nostalgia"
+      ],
+      "directors": [
+        "Quentin Tarantino"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Brad Pitt",
+        "Margot Robbie"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 161,
-      "watchedDate": "2024-08-01T00:00:00",
       "tmdb_id": 466272,
       "date": "2024-08-01T00:00:00"
     },
@@ -807,14 +1548,29 @@
       "year": 2019,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama", "Thriller"],
-      "keywords": ["mental illness", "society", "violence"],
-      "directors": ["Todd Phillips"],
-      "actors": ["Joaquin Phoenix", "Robert De Niro", "Zazie Beetz"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama",
+        "Thriller"
+      ],
+      "keywords": [
+        "mental illness",
+        "society",
+        "violence"
+      ],
+      "directors": [
+        "Todd Phillips"
+      ],
+      "actors": [
+        "Joaquin Phoenix",
+        "Robert De Niro",
+        "Zazie Beetz"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 122,
-      "watchedDate": "2024-08-10T00:00:00",
       "tmdb_id": 475557,
       "date": "2024-08-10T00:00:00"
     },
@@ -823,14 +1579,32 @@
       "year": 2017,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Drama", "History"],
-      "keywords": ["war", "survival", "world war 2"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Fionn Whitehead", "Tom Hardy", "Mark Rylance"],
-      "countries": ["United States", "United Kingdom", "France", "Netherlands"],
+      "genres": [
+        "Action",
+        "Drama",
+        "History"
+      ],
+      "keywords": [
+        "war",
+        "survival",
+        "world war 2"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Fionn Whitehead",
+        "Tom Hardy",
+        "Mark Rylance"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom",
+        "France",
+        "Netherlands"
+      ],
       "original_language": "en",
       "runtime": 106,
-      "watchedDate": "2024-08-15T00:00:00",
       "tmdb_id": 374720,
       "date": "2024-08-15T00:00:00"
     },
@@ -839,14 +1613,30 @@
       "year": 2000,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Drama"],
-      "keywords": ["ancient rome", "revenge", "honor"],
-      "directors": ["Ridley Scott"],
-      "actors": ["Russell Crowe", "Joaquin Phoenix", "Connie Nielsen"],
-      "countries": ["United States", "United Kingdom"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Drama"
+      ],
+      "keywords": [
+        "ancient rome",
+        "revenge",
+        "honor"
+      ],
+      "directors": [
+        "Ridley Scott"
+      ],
+      "actors": [
+        "Russell Crowe",
+        "Joaquin Phoenix",
+        "Connie Nielsen"
+      ],
+      "countries": [
+        "United States",
+        "United Kingdom"
+      ],
       "original_language": "en",
       "runtime": 155,
-      "watchedDate": "2024-09-01T00:00:00",
       "tmdb_id": 98,
       "date": "2024-09-01T00:00:00"
     },
@@ -855,14 +1645,29 @@
       "year": 2013,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Biography", "Comedy", "Crime"],
-      "keywords": ["money", "corruption", "excess"],
-      "directors": ["Martin Scorsese"],
-      "actors": ["Leonardo DiCaprio", "Jonah Hill", "Margot Robbie"],
-      "countries": ["United States"],
+      "genres": [
+        "Biography",
+        "Comedy",
+        "Crime"
+      ],
+      "keywords": [
+        "money",
+        "corruption",
+        "excess"
+      ],
+      "directors": [
+        "Martin Scorsese"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Jonah Hill",
+        "Margot Robbie"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 180,
-      "watchedDate": "2024-09-10T00:00:00",
       "tmdb_id": 106646,
       "date": "2024-09-10T00:00:00"
     },
@@ -871,14 +1676,28 @@
       "year": 2010,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["mystery", "island", "investigation"],
-      "directors": ["Martin Scorsese"],
-      "actors": ["Leonardo DiCaprio", "Mark Ruffalo", "Ben Kingsley"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "mystery",
+        "island",
+        "investigation"
+      ],
+      "directors": [
+        "Martin Scorsese"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Mark Ruffalo",
+        "Ben Kingsley"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 138,
-      "watchedDate": "2024-09-15T00:00:00",
       "tmdb_id": 11324,
       "date": "2024-09-15T00:00:00"
     },
@@ -887,14 +1706,30 @@
       "year": 2015,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Science Fiction"],
-      "keywords": ["post-apocalyptic", "survival", "action"],
-      "directors": ["George Miller"],
-      "actors": ["Tom Hardy", "Charlize Theron", "Nicholas Hoult"],
-      "countries": ["Australia", "United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "post-apocalyptic",
+        "survival",
+        "action"
+      ],
+      "directors": [
+        "George Miller"
+      ],
+      "actors": [
+        "Tom Hardy",
+        "Charlize Theron",
+        "Nicholas Hoult"
+      ],
+      "countries": [
+        "Australia",
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 120,
-      "watchedDate": "2024-10-01T00:00:00",
       "tmdb_id": 76341,
       "date": "2024-10-01T00:00:00"
     },
@@ -903,14 +1738,28 @@
       "year": 2011,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Crime", "Drama"],
-      "keywords": ["driver", "crime", "romance"],
-      "directors": ["Nicolas Winding Refn"],
-      "actors": ["Ryan Gosling", "Carey Mulligan", "Bryan Cranston"],
-      "countries": ["United States"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
+      "keywords": [
+        "driver",
+        "crime",
+        "romance"
+      ],
+      "directors": [
+        "Nicolas Winding Refn"
+      ],
+      "actors": [
+        "Ryan Gosling",
+        "Carey Mulligan",
+        "Bryan Cranston"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 100,
-      "watchedDate": "2024-10-10T00:00:00",
       "tmdb_id": 64690,
       "date": "2024-10-10T00:00:00"
     },
@@ -919,14 +1768,27 @@
       "year": 2008,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Drama"],
-      "keywords": ["veteran", "neighborhood", "redemption"],
-      "directors": ["Clint Eastwood"],
-      "actors": ["Clint Eastwood", "Bee Vang", "Ahney Her"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama"
+      ],
+      "keywords": [
+        "veteran",
+        "neighborhood",
+        "redemption"
+      ],
+      "directors": [
+        "Clint Eastwood"
+      ],
+      "actors": [
+        "Clint Eastwood",
+        "Bee Vang",
+        "Ahney Her"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 116,
-      "watchedDate": "2024-10-15T00:00:00",
       "tmdb_id": 13223,
       "date": "2024-10-15T00:00:00"
     },
@@ -935,14 +1797,28 @@
       "year": 2000,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["memory", "revenge", "non-linear"],
-      "directors": ["Christopher Nolan"],
-      "actors": ["Guy Pearce", "Carrie-Anne Moss", "Joe Pantoliano"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "memory",
+        "revenge",
+        "non-linear"
+      ],
+      "directors": [
+        "Christopher Nolan"
+      ],
+      "actors": [
+        "Guy Pearce",
+        "Carrie-Anne Moss",
+        "Joe Pantoliano"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 113,
-      "watchedDate": "2024-11-01T00:00:00",
       "tmdb_id": 77,
       "date": "2024-11-01T00:00:00"
     },
@@ -951,14 +1827,29 @@
       "year": 2003,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Drama", "Mystery"],
-      "keywords": ["revenge", "prison", "mystery"],
-      "directors": ["Park Chan-wook"],
-      "actors": ["Choi Min-sik", "Yoo Ji-tae", "Kang Hye-jeong"],
-      "countries": ["South Korea"],
+      "genres": [
+        "Action",
+        "Drama",
+        "Mystery"
+      ],
+      "keywords": [
+        "revenge",
+        "prison",
+        "mystery"
+      ],
+      "directors": [
+        "Park Chan-wook"
+      ],
+      "actors": [
+        "Choi Min-sik",
+        "Yoo Ji-tae",
+        "Kang Hye-jeong"
+      ],
+      "countries": [
+        "South Korea"
+      ],
       "original_language": "ko",
       "runtime": 120,
-      "watchedDate": "2024-11-10T00:00:00",
       "tmdb_id": 670,
       "date": "2024-11-10T00:00:00"
     },
@@ -967,14 +1858,28 @@
       "year": 2014,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Mystery", "Thriller"],
-      "keywords": ["disappearance", "mystery", "marriage"],
-      "directors": ["David Fincher"],
-      "actors": ["Ben Affleck", "Rosamund Pike", "Neil Patrick Harris"],
-      "countries": ["United States"],
+      "genres": [
+        "Mystery",
+        "Thriller"
+      ],
+      "keywords": [
+        "disappearance",
+        "mystery",
+        "marriage"
+      ],
+      "directors": [
+        "David Fincher"
+      ],
+      "actors": [
+        "Ben Affleck",
+        "Rosamund Pike",
+        "Neil Patrick Harris"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 149,
-      "watchedDate": "2024-11-15T00:00:00",
       "tmdb_id": 210577,
       "date": "2024-11-15T00:00:00"
     },
@@ -983,14 +1888,28 @@
       "year": 1991,
       "rating": 4.5,
       "poster_url": null,
-      "genres": ["Action", "Science Fiction"],
-      "keywords": ["cyborg", "future", "action"],
-      "directors": ["James Cameron"],
-      "actors": ["Arnold Schwarzenegger", "Linda Hamilton", "Edward Furlong"],
-      "countries": ["United States"],
+      "genres": [
+        "Action",
+        "Science Fiction"
+      ],
+      "keywords": [
+        "cyborg",
+        "future",
+        "action"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Arnold Schwarzenegger",
+        "Linda Hamilton",
+        "Edward Furlong"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 137,
-      "watchedDate": "2024-12-01T00:00:00",
       "tmdb_id": 280,
       "date": "2024-12-01T00:00:00"
     },
@@ -999,14 +1918,29 @@
       "year": 2009,
       "rating": 4,
       "poster_url": null,
-      "genres": ["Action", "Adventure", "Fantasy"],
-      "keywords": ["aliens", "nature", "adventure"],
-      "directors": ["James Cameron"],
-      "actors": ["Sam Worthington", "Zoe Saldana", "Sigourney Weaver"],
-      "countries": ["United States"],
+      "genres": [
+        "Action",
+        "Adventure",
+        "Fantasy"
+      ],
+      "keywords": [
+        "aliens",
+        "nature",
+        "adventure"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Sam Worthington",
+        "Zoe Saldana",
+        "Sigourney Weaver"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 162,
-      "watchedDate": "2024-12-10T00:00:00",
       "tmdb_id": 19995,
       "date": "2024-12-10T00:00:00"
     },
@@ -1015,18 +1949,53 @@
       "year": 1997,
       "rating": 4,
       "poster_url": null,
-      "genres": ["Drama", "Romance"],
-      "keywords": ["ship", "love", "tragedy"],
-      "directors": ["James Cameron"],
-      "actors": ["Leonardo DiCaprio", "Kate Winslet", "Billy Zane"],
-      "countries": ["United States"],
+      "genres": [
+        "Drama",
+        "Romance"
+      ],
+      "keywords": [
+        "ship",
+        "love",
+        "tragedy"
+      ],
+      "directors": [
+        "James Cameron"
+      ],
+      "actors": [
+        "Leonardo DiCaprio",
+        "Kate Winslet",
+        "Billy Zane"
+      ],
+      "countries": [
+        "United States"
+      ],
       "original_language": "en",
       "runtime": 194,
-      "watchedDate": "2024-12-15T00:00:00",
       "tmdb_id": 597,
       "date": "2024-12-15T00:00:00"
     }
   ],
-  "availableYears": [1941, 1966, 1972, 1979, 1991, 1994, 1995, 1997, 1999, 2000, 2001, 2003, 2008, 2009, 2010, 2011, 2013, 2014, 2015, 2017, 2019],
-  "hasDiary": true
+  "availableYears": [
+    1941,
+    1966,
+    1972,
+    1979,
+    1991,
+    1994,
+    1995,
+    1997,
+    1999,
+    2000,
+    2001,
+    2003,
+    2008,
+    2009,
+    2010,
+    2011,
+    2013,
+    2014,
+    2015,
+    2017,
+    2019
+  ]
 }

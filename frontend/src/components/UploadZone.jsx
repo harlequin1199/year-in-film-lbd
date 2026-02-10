@@ -9,25 +9,16 @@ function UploadZone({ onUpload, loading, selectedFileName = '', selectedFilmCoun
   const [selectError, setSelectError] = useState(null)
   const hasFile = Boolean(selectedFileName)
 
-  const detectFiles = (files) => {
-    if (!files || files.length === 0) return { ratings: null, diary: null }
-    const list = Array.from(files).filter((f) => f.name && f.name.toLowerCase().endsWith('.csv'))
-    if (list.length === 0) return { ratings: null, diary: null }
-    const diary = list.find((f) => f.name.toLowerCase().includes('diary'))
-    const ratings = list.find((f) => f.name.toLowerCase().includes('ratings')) || list.find((f) => !f.name.toLowerCase().includes('diary')) || list[0]
-    const diaryFile = diary && diary !== ratings ? diary : null
-    return { ratings, diary: diaryFile }
-  }
-
   const handleFiles = (files) => {
     setSelectError(null)
     if (!files || files.length === 0) return
-    const { ratings, diary } = detectFiles(files)
-    if (!ratings) {
+    const list = Array.from(files).filter((f) => f.name && f.name.toLowerCase().endsWith('.csv'))
+    const ratingsFile = list[0] || null
+    if (!ratingsFile) {
       setSelectError('Выберите файл с расширением .csv')
       return
     }
-    onUpload(ratings, diary)
+    onUpload(ratingsFile)
   }
 
   const handleDrop = (event) => {
@@ -65,18 +56,17 @@ function UploadZone({ onUpload, loading, selectedFileName = '', selectedFilmCoun
           ref={inputRef}
           type="file"
           accept={FILE_ACCEPT}
-          multiple
           onChange={handleInputChange}
           hidden
         />
         <div>
           <p className="upload-title">Загрузить ratings.csv</p>
           <p className="upload-subtitle">
-            Перетащите сюда или нажмите. Один файл — ratings; два файла — по имени определим diary.csv.
+            Перетащите сюда или нажмите, чтобы выбрать файл.
           </p>
         </div>
         <button className="btn" type="button" disabled={loading}>
-          {loading ? 'Анализирую…' : 'Выбрать файлы'}
+          {loading ? 'Анализирую…' : 'Выбрать файл'}
         </button>
         {hasFile && (
           <p className="upload-file-state">
@@ -88,7 +78,6 @@ function UploadZone({ onUpload, loading, selectedFileName = '', selectedFilmCoun
         )}
       </div>
       {selectError && <p className="upload-error">{selectError}</p>}
-      <p className="upload-hint">Добавить diary.csv (необязательно): выберите оба файла сразу.</p>
     </div>
   )
 }

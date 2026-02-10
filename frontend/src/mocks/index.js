@@ -6,8 +6,7 @@
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true' || import.meta.env.VITE_USE_MOCKS === true
 
 export const MOCK_OPTIONS = [
-  { id: 'mock_ratings_only', label: 'Только ratings (без diary)', file: 'mock_ratings_only.json', error: false },
-  { id: 'mock_diary_only', label: 'С diary (активность по месяцам)', file: 'mock_diary_only.json', error: false },
+  { id: 'mock_ratings_only', label: 'Только ratings', file: 'mock_ratings_only.json', error: false },
   { id: 'mock_multi_year', label: 'Много лет (до 10)', file: 'mock_multi_year.json', error: false },
   { id: 'mock_empty_sections', label: 'Пустые секции (нет жанров/режиссёров)', file: 'mock_empty_sections.json', error: false },
   { id: 'mock_huge_dataset', label: 'Большой набор (30+ фильмов)', file: 'mock_huge_dataset.json', error: false },
