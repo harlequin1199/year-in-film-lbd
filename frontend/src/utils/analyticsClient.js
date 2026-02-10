@@ -1,4 +1,4 @@
-import { formatYear } from './format.js'
+import { formatFilmsCount, formatNumber, formatRating, formatYear } from './format.js'
 import { getGenreNameRu } from './genresRu.js'
 import { getCountryNameRu } from './countriesRu.js'
 
@@ -355,49 +355,70 @@ export const computeAggregations = (films) => {
   if (genreOfTheYear) {
     addBadge(
       'Жанр года',
-      genreOfTheYear.genreIndex,
-      `Жанр: ${getGenreNameRu(genreOfTheYear.name)}`,
+      getGenreNameRu(genreOfTheYear.name),
+      `Индекс: ${formatNumber(Math.round(genreOfTheYear.genreIndex))}`,
       'star',
       'green',
     )
   }
   if (topGenresByAvg.length) {
+    const g = topGenresByAvg[0]
     addBadge(
       'Самый любимый жанр',
-      topGenresByAvg[0].avg_rating,
-      `Жанр: ${getGenreNameRu(topGenresByAvg[0].name)}`,
+      getGenreNameRu(g.name),
+      `Средняя оценка: ${formatRating(g.avg_rating)}`,
       'heart',
       'green',
-      true,
     )
   }
   if (topGenres.length) {
-    addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${getGenreNameRu(topGenres[0].name)}`, 'tag', 'green')
+    const g = topGenres[0]
+    addBadge(
+      'Самый частый жанр',
+      getGenreNameRu(g.name),
+      formatFilmsCount(g.count),
+      'tag',
+      'green',
+    )
   }
   if (countriesByCount.length) {
-    addBadge('Самая частая страна', countriesByCount[0].count, `Страна: ${getCountryNameRu(countriesByCount[0].name)}`, 'globe', 'blue')
+    const c = countriesByCount[0]
+    addBadge(
+      'Самая частая страна',
+      getCountryNameRu(c.name),
+      formatFilmsCount(c.count),
+      'globe',
+      'blue',
+    )
   }
   if (topCountriesByAvg.length) {
+    const c = topCountriesByAvg[0]
     addBadge(
       'Самая любимая страна',
-      topCountriesByAvg[0].avg_rating,
-      `Страна: ${getCountryNameRu(topCountriesByAvg[0].name)}`,
+      getCountryNameRu(c.name),
+      `Средняя оценка: ${formatRating(c.avg_rating)}`,
       'heart',
       'blue',
-      true,
     )
   }
   if (directorsByCount.length) {
-    addBadge('Самый частый режиссёр', directorsByCount[0].count, `Режиссёр: ${directorsByCount[0].name}`, 'trophy', 'purple')
+    const d = directorsByCount[0]
+    addBadge(
+      'Самый частый режиссёр',
+      d.name,
+      formatFilmsCount(d.count),
+      'trophy',
+      'purple',
+    )
   }
   if (topDirectorsByAvg.length) {
+    const d = topDirectorsByAvg[0]
     addBadge(
       'Самый любимый режиссёр',
-      topDirectorsByAvg[0].avg_rating,
-      `Режиссёр: ${topDirectorsByAvg[0].name}`,
+      d.name,
+      `Средняя оценка: ${formatRating(d.avg_rating)}`,
       'heart',
       'purple',
-      true,
     )
   }
   if (mostWatchedDecade) {
