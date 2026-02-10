@@ -1,3 +1,4 @@
+import { useRef, useEffect, useCallback } from 'react'
 import { formatNumber, formatRating } from '../utils/format.js'
 
 const ICONS = {
@@ -59,6 +60,59 @@ const ICONS = {
   ),
 }
 
+const BASE_FONT = 20
+const MIN_FONT = 14
+const STEP = 1
+
+function AutoFitValue({ text, title }) {
+  const ref = useRef(null)
+
+  const fit = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    // Временно запрещаем разрыв слов, чтобы замерить натуральную ширину
+    const origWrap = el.style.overflowWrap
+    const origBreak = el.style.wordBreak
+    const origWhite = el.style.whiteSpace
+    const origOverflow = el.style.overflow
+    const origMaxH = el.style.maxHeight
+
+    el.style.fontSize = `${BASE_FONT}px`
+    el.style.overflowWrap = 'normal'
+    el.style.wordBreak = 'keep-all'
+    el.style.whiteSpace = 'normal'
+    el.style.overflow = 'visible'
+    el.style.maxHeight = 'none'
+
+    let size = BASE_FONT
+    // Уменьшаем шрифт, пока текст не влезет без разрыва слов
+    while (size > MIN_FONT && el.scrollWidth > el.clientWidth) {
+      size -= STEP
+      el.style.fontSize = `${size}px`
+    }
+
+    // Возвращаем оригинальные стили
+    el.style.overflowWrap = origWrap
+    el.style.wordBreak = origBreak
+    el.style.whiteSpace = origWhite
+    el.style.overflow = origOverflow
+    el.style.maxHeight = origMaxH
+  }, [])
+
+  useEffect(() => {
+    fit()
+    const ro = new ResizeObserver(fit)
+    if (ref.current) ro.observe(ref.current.parentElement)
+    return () => ro.disconnect()
+  }, [text, fit])
+
+  return (
+    <p className="badge-value" ref={ref} title={title}>
+      {text}
+    </p>
+  )
+}
+
 function BadgesSection({ badges }) {
   const items = badges || []
 
@@ -69,24 +123,28 @@ function BadgesSection({ badges }) {
         <p>Прогресс по небольшим целям</p>
       </div>
       <div className="badge-grid">
-        {items.map((badge) => (
-          <div className={`badge-card tone-${badge.tone || 'gold'}`} key={badge.title}>
-            <div className="badge-icon-wrap" aria-hidden="true">
-              {ICONS[badge.iconKey] || ICONS.film}
+        {items.map((badge) => {
+          const displayValue = badge.isRating
+            ? formatRating(badge.value)
+            : typeof badge.value === 'string'
+              ? badge.value
+              : formatNumber(badge.value)
+          return (
+            <div className={`badge-card tone-${badge.tone || 'gold'}`} key={badge.title}>
+              <div className="badge-icon-wrap" aria-hidden="true">
+                {ICONS[badge.iconKey] || ICONS.film}
+              </div>
+              <div className="badge-content">
+                <p className="badge-title">{badge.title}</p>
+                <AutoFitValue
+                  text={displayValue}
+                  title={typeof badge.value === 'string' ? badge.value : undefined}
+                />
+                <p className="badge-subtitle">{badge.subtitle}</p>
+              </div>
             </div>
-            <div className="badge-content">
-              <p className="badge-title">{badge.title}</p>
-              <p className="badge-value">
-                {badge.isRating
-                  ? formatRating(badge.value)
-                  : typeof badge.value === 'string'
-                    ? badge.value
-                    : formatNumber(badge.value)}
-              </p>
-              <p className="badge-subtitle">{badge.subtitle}</p>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </section>
   )
