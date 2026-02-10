@@ -124,7 +124,7 @@ export default function GenresSection({
         <div className="genres-col">
           <div className="genres-col-header-row">
             <h4 className="genres-col-title">Самые любимые</h4>
-            <span className="genres-col-hint-inline">мин. 8 фильмов</span>
+            <span className="genres-col-hint-inline">мин. 5 фильмов</span>
           </div>
           <GenreList
             items={byAvg}

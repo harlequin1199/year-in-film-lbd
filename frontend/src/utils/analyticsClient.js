@@ -293,7 +293,7 @@ export const computeAggregations = (films) => {
   }
 
   const topGenresByAvg = buildRankedByAvg(genreMap, 5)
-  const topGenresByAvgMin8 = buildRankedByAvg(genreMap, 8)
+  const topGenresByAvgMin8 = buildRankedByAvg(genreMap, 5)
   const topCountriesByAvg = buildRankedByAvg(countryMap, 5)
   const topDirectorsByAvg = buildRankedByAvg(directorMap, 3)
   const topTagsByAvg = buildRankedByAvg(tagMap, 8)
@@ -372,18 +372,27 @@ export const computeAggregations = (films) => {
   addBadge('Средняя оценка', stats.avgRating, 'Средняя по всем фильмам', 'star', 'gold', true)
   addBadge('Пятёрки', fiveStarCount, 'Оценки 5★', 'star', 'purple')
   addBadge('Оценки 4.5–5★', stats.count45, 'Очень высокие оценки', 'star', 'purple')
-  if (topGenres.length) {
-    addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${getGenreNameRu(topGenres[0].name)}`, 'tag', 'green')
-  }
   if (genreOfTheYear) {
     addBadge(
-      'Самый любимый жанр',
-      genreOfTheYear.avg_rating,
+      'Жанр года',
+      genreOfTheYear.genreIndex,
       `Жанр: ${getGenreNameRu(genreOfTheYear.name)}`,
+      'star',
+      'green',
+    )
+  }
+  if (topGenresByAvg.length) {
+    addBadge(
+      'Самый любимый жанр',
+      topGenresByAvg[0].avg_rating,
+      `Жанр: ${getGenreNameRu(topGenresByAvg[0].name)}`,
       'heart',
       'green',
       true,
     )
+  }
+  if (topGenres.length) {
+    addBadge('Самый частый жанр', topGenres[0].count, `Жанр: ${getGenreNameRu(topGenres[0].name)}`, 'tag', 'green')
   }
   if (countriesByCount.length) {
     addBadge('Самая частая страна', countriesByCount[0].count, `Страна: ${getCountryNameRu(countriesByCount[0].name)}`, 'globe', 'blue')
