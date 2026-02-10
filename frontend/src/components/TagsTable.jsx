@@ -48,11 +48,11 @@ function TagsTable({ tags, emptyMessage }) {
               {expanded ? 'Свернуть' : 'Показать ещё'}
             </button>
           )}
-          <p className="table-footnote">
-            Индекс любви* = (количество фильмов на 4.5–5★) × (средняя оценка темы)
-          </p>
         </>
       )}
+      <p className="table-footnote">
+        Индекс любви* = (количество фильмов на 4.5–5★) × (средняя оценка темы)
+      </p>
     </section>
   )
 }

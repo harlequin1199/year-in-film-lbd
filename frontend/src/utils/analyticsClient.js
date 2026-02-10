@@ -49,6 +49,29 @@ const buildRankedByAvg = (map, minCount) => {
   return list
 }
 
+/** Жанры с minCount+ фильмов, отсортированные по индексу жанра (high_45 * avg_rating). */
+const buildRankedByGenreIndex = (map, minCount) => {
+  const list = []
+  map.forEach((stats, name) => {
+    if (stats.count < minCount) return
+    const avg = stats.count ? stats.sum / stats.count : 0
+    const genreIndex = stats.high_45 * avg
+    list.push({
+      name,
+      count: stats.count,
+      avg_rating: Number(avg.toFixed(2)),
+      high_45: stats.high_45,
+      share_45: stats.count ? Number((stats.high_45 / stats.count).toFixed(2)) : 0,
+      genreIndex: Number(genreIndex.toFixed(2)),
+    })
+  })
+  list.sort((a, b) => {
+    if (b.genreIndex !== a.genreIndex) return b.genreIndex - a.genreIndex
+    return b.count - a.count
+  })
+  return list
+}
+
 /**
  * Stage 1: CSV-only stats (no TMDb). Use right after parse for instant partial result.
  */
@@ -251,7 +274,7 @@ export const computeAggregations = (films) => {
   }
 
   const topGenresByAvg = buildRankedByAvg(genreMap, 5)
-  const topGenresByAvgMin8 = buildRankedByAvg(genreMap, 5)
+  const topGenresByAvgMin8 = buildRankedByGenreIndex(genreMap, 5)
   const topCountriesByAvg = buildRankedByAvg(countryMap, 5)
   const topDirectorsByAvg = buildRankedByAvg(directorMap, 3)
   const topTagsByAvg = buildRankedByAvg(tagMap, 8)
@@ -301,7 +324,7 @@ export const computeAggregations = (films) => {
   let genreOfTheYear = null
   const genreIndexCandidates = []
   genreMap.forEach((gStats, name) => {
-    if (gStats.count < 8) return
+    if (gStats.count < 5) return
     const avg = gStats.count ? gStats.sum / gStats.count : 0
     const index = gStats.high_45 * avg
     genreIndexCandidates.push({

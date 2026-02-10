@@ -4,7 +4,7 @@ import { getGenreNameRu } from '../utils/genresRu.js'
 import { getGenreIcon } from '../utils/genreIcons.js'
 import Stars from './Stars.jsx'
 
-function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
+function GenreList({ items, showAvg = false, showGenreIndex = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
   if (!items || items.length === 0) {
     return <p className="genres-list-empty">Нет данных</p>
   }
@@ -39,6 +39,12 @@ function GenreList({ items, showAvg = false, totalForPct, highlightedGenre, onHo
                     <Stars rating={g.avg_rating} />
                   </span>
                   <span className="genres-list-avg">({formatRating(g.avg_rating)})</span>
+                  {showGenreIndex && g.genreIndex != null && (
+                    <>
+                      {' · '}
+                      <span className="genres-list-index" title="Индекс жанра">Индекс: {formatNumber(g.genreIndex)}</span>
+                    </>
+                  )}
                 </>
               )}
             </span>
@@ -84,7 +90,7 @@ export default function GenresSection({
                 </span>{' '}
                 ({formatRating(genreOfTheYear.avg_rating)}) • 4.5–5★: {formatNumber(genreOfTheYear.high_45)}
               </div>
-              <div className="genres-year-index">Индекс жанра: {formatNumber(genreOfTheYear.genreIndex)}</div>
+              <div className="genres-year-index">Индекс жанра*: {formatNumber(genreOfTheYear.genreIndex)}</div>
             </div>
             <div className="genres-year-right">
               <div className="genres-year-icon">
@@ -124,17 +130,21 @@ export default function GenresSection({
         <div className="genres-col">
           <div className="genres-col-header-row">
             <h4 className="genres-col-title">Самые любимые</h4>
-            <span className="genres-col-hint-inline">мин. 5 фильмов</span>
+            <span className="genres-col-hint-inline">по индексу жанра, мин. 5 фильмов</span>
           </div>
           <GenreList
             items={byAvg}
             showAvg={true}
+            showGenreIndex={true}
             fewItems={fewAvg}
             highlightedGenre={highlightedGenre}
             onHoverGenre={setHighlightedGenre}
           />
         </div>
       </div>
+      <p className="table-footnote">
+        Индекс жанра* = (количество фильмов с оценкой 4.5–5★) × средняя оценка по жанру
+      </p>
     </section>
   )
 }
