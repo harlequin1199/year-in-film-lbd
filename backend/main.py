@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# CORS: FRONTEND_ORIGIN for production (e.g. Cloudflare Pages URL); else allow all
+# CORS: FRONTEND_ORIGIN for production (e.g. Vercel URL); else allow all
 _frontend_origin = (os.getenv("FRONTEND_ORIGIN") or "").strip()
 _cors_origins = ["http://localhost:5173", "http://localhost:3000"] if _frontend_origin else ["*"]
 if _frontend_origin:

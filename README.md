@@ -26,13 +26,13 @@ Upload your `ratings.csv` (and optionally `diary.csv`) and get an interactive da
 ┌────────────────────┐      ┌────────────────────┐
 │   Frontend (SPA)   │─────▸│  Backend API (REST) │
 │  React + Vite      │      │  FastAPI + SQLite   │
-│  Cloudflare Pages  │      │  Render (free tier) │
+│     Vercel          │      │  Render (free tier) │
 └────────────────────┘      └────────────────────┘
 ```
 
 | Service | Role | Hosting |
 |---|---|---|
-| **Frontend** | CSV parsing, analytics computation, UI | Cloudflare Pages |
+| **Frontend** | CSV parsing, analytics computation, UI | Vercel |
 | **Backend** | Batch TMDb search/details/credits/keywords with SQLite cache | Render |
 
 All heavy analytics run **client-side** — the backend is only used for TMDb API batch operations and caching.
@@ -89,22 +89,21 @@ Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `l
    | Variable | Required | Description |
    |---|---|---|
    | `TMDB_API_KEY` | Yes | TMDb API key |
-   | `FRONTEND_ORIGIN` | Recommended | Frontend URL for CORS (e.g. `https://your-project.pages.dev`) |
+   | `FRONTEND_ORIGIN` | Recommended | Frontend URL for CORS (e.g. `https://your-project.vercel.app`) |
 
 > Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
 
-### Frontend → Cloudflare Pages
+### Frontend → Vercel
 
-1. Create a project, connect the repo.
+1. Import the repo on [vercel.com](https://vercel.com/).
 2. **Root directory:** `frontend`
-3. **Build command:** `npm run build`
-4. **Output directory:** `dist`
-5. **Environment variable:**
+3. **Framework Preset:** Vite
+4. **Environment variable:**
    | Variable | Required | Description |
    |---|---|---|
    | `VITE_API_URL` | Yes | Backend URL (e.g. `https://your-api.onrender.com`) |
 
-SPA routing is handled by `public/_redirects`.
+Vercel handles SPA routing automatically for Vite projects.
 
 ## How It Works
 
