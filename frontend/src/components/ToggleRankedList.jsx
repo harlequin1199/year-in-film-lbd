@@ -21,6 +21,7 @@ function ToggleRankedList({
   const list = expanded ? fullList : fullList.slice(0, limit)
   const hasMore = fullList.length > limit
   const fewItems = fullList.length > 0 && fullList.length < 3
+  const showIndex = mode === 'avg' && fullList.length > 0 && fullList[0].loveScore != null
   const displayName = (item) => (translateName ? translateName(item.name) : item.name)
 
   return (
@@ -49,17 +50,18 @@ function ToggleRankedList({
       {fewItems && <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>}
       {list.length > 0 && !fewItems && (
         <div className="table">
-          <div className="table-head table-head--wide">
+          <div className={`table-head ${showIndex ? 'table-head--with-index' : 'table-head--wide'}`}>
             <span>Имя</span>
             <span>Счёт</span>
             <span>Средняя</span>
+            {showIndex && <span title="Love Score 0–100">Индекс любви</span>}
             <span>4.5–5★</span>
           </div>
           {list.map((item, index) => {
             const rank = index + 1
             const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
             return (
-              <div className={`table-row table-row--wide ${rankClass}`} key={`${item.name}-${index}`}>
+              <div className={`table-row ${showIndex ? 'table-row--with-index' : 'table-row--wide'} ${rankClass}`} key={`${item.name}-${index}`}>
                 <span className="tag-name">
                   {rank <= 3 && <span className="rank-badge">{rank}</span>}
                   {displayName(item)}
@@ -69,6 +71,9 @@ function ToggleRankedList({
                   {formatRating(item.avg_rating)}
                   <Stars rating={item.avg_rating} />
                 </span>
+                {showIndex && (
+                  <span>{item.loveScore != null ? formatNumber(Math.round(item.loveScore)) : '—'}</span>
+                )}
                 <span>{formatNumber(item.high_45)}</span>
               </div>
             )

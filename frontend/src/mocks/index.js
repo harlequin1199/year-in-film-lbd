@@ -13,6 +13,7 @@ export const MOCK_OPTIONS = [
   { id: 'mock_tmdb_error', label: 'Нет постеров / TMDb-данных', file: 'mock_tmdb_error.json', error: false },
   { id: 'mock_full_demo', label: 'Полный демо-отчёт (минимум 3 элемента в каждом списке)', file: 'mock_full_demo.json', error: false },
   { id: 'mock_favorite_genres', label: 'Самые любимые (тест списка по индексу жанра)', file: 'mock_favorite_genres.json', error: false },
+  { id: 'mock_favorite_index', label: 'Индекс: страны, режиссёры, актёры (тест колонки)', file: 'mock_favorite_index.json', error: false },
   { id: 'mock_badges_test', label: 'Тест бейджей (длинные имена, Южная Корея)', file: 'mock_badges_test.json', error: false },
   { id: 'mock_error', label: 'Ошибка TMDb (демо ошибки)', file: null, error: true },
 ]

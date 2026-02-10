@@ -1467,6 +1467,11 @@ h3, .card-header h3 {
   grid-template-columns: 2fr 1fr 1.5fr 1fr;
 }
 
+.table-head--with-index,
+.table-row--with-index {
+  grid-template-columns: 2fr 1fr 1.5fr 1fr 1fr;
+}
+
 .table-head {
   color: var(--text-muted);
   font-size: 11px;
@@ -2188,6 +2193,10 @@ h3, .card-header h3 {
   .table-head--wide,
   .table-row--wide {
     grid-template-columns: 1.6fr 1fr 1.4fr 1fr;
+  }
+  .table-head--with-index,
+  .table-row--with-index {
+    grid-template-columns: 1.6fr 1fr 1.2fr 1fr 1fr;
   }
   .tag-name {
     word-break: break-word;

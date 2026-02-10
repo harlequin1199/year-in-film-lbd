@@ -1,6 +1,12 @@
 import { formatFilmsCount, formatNumber, formatRating, formatYear } from './format.js'
 import { getGenreNameRu } from './genresRu.js'
 import { getCountryNameRu } from './countriesRu.js'
+import {
+  calculateUserBaselineRating,
+  buildEntityStats,
+  buildRankedByLoveScore,
+  ENTITY_CONFIGS,
+} from '../features/insights/loveScore.js'
 
 const parseDate = (value) => {
   if (!value) return null
@@ -44,29 +50,6 @@ const buildRankedByAvg = (map, minCount) => {
   })
   list.sort((a, b) => {
     if (b.avg_rating !== a.avg_rating) return b.avg_rating - a.avg_rating
-    return b.count - a.count
-  })
-  return list
-}
-
-/** Жанры с minCount+ фильмов, отсортированные по индексу жанра (high_45 * avg_rating). */
-const buildRankedByGenreIndex = (map, minCount) => {
-  const list = []
-  map.forEach((stats, name) => {
-    if (stats.count < minCount) return
-    const avg = stats.count ? stats.sum / stats.count : 0
-    const genreIndex = stats.high_45 * avg
-    list.push({
-      name,
-      count: stats.count,
-      avg_rating: Number(avg.toFixed(2)),
-      high_45: stats.high_45,
-      share_45: stats.count ? Number((stats.high_45 / stats.count).toFixed(2)) : 0,
-      genreIndex: Number(genreIndex.toFixed(2)),
-    })
-  })
-  list.sort((a, b) => {
-    if (b.genreIndex !== a.genreIndex) return b.genreIndex - a.genreIndex
     return b.count - a.count
   })
   return list
@@ -153,86 +136,45 @@ export const computeAggregations = (films) => {
     newestYear: years.length ? Math.max(...years) : null,
   }
 
-  const genreMap = new Map()
-  const tagMap = new Map()
-  const directorMap = new Map()
-  const actorMap = new Map()
-  const countryMap = new Map()
-  const languageMap = new Map()
+  const baseline = calculateUserBaselineRating(films)
+  const genreConfig = ENTITY_CONFIGS.genres
+  const themesConfig = ENTITY_CONFIGS.themes
+  const countriesConfig = ENTITY_CONFIGS.countries
+  const directorsConfig = ENTITY_CONFIGS.directors
+  const actorsConfig = ENTITY_CONFIGS.actors
 
+  const genreMap = buildEntityStats(films, (f) => f.genres || [], genreConfig, baseline)
+  const tagMap = buildEntityStats(films, (f) => f.keywords || [], themesConfig, baseline)
+  const directorMap = buildEntityStats(films, (f) => f.directors || [], directorsConfig, baseline)
+  const actorMap = buildEntityStats(films, (f) => f.actors || [], actorsConfig, baseline)
+  const countryMap = buildEntityStats(films, (f) => f.countries || [], countriesConfig, baseline)
+
+  const languageMap = new Map()
   const runtimeValues = []
   let totalRuntime = 0
-
   films.forEach((film) => {
     const rating = film.rating || 0
-
-    ;(film.genres || []).forEach((name) => {
-      const stats = genreMap.get(name) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      genreMap.set(name, stats)
-    })
-    ;(film.keywords || []).forEach((name) => {
-      const stats = tagMap.get(name) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      tagMap.set(name, stats)
-    })
-    ;(film.directors || []).forEach((name) => {
-      const stats = directorMap.get(name) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      directorMap.set(name, stats)
-    })
-    ;(film.actors || []).forEach((name) => {
-      const stats = actorMap.get(name) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      actorMap.set(name, stats)
-    })
-    ;(film.countries || []).forEach((name) => {
-      const stats = countryMap.get(name) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      countryMap.set(name, stats)
-    })
-
     if (film.original_language) {
-      const stats = languageMap.get(film.original_language) || { count: 0, sum: 0, high_45: 0 }
-      stats.count += 1
-      stats.sum += rating
-      if (rating >= 4.5) stats.high_45 += 1
-      languageMap.set(film.original_language, stats)
+      const s = languageMap.get(film.original_language) || { count: 0, sum: 0, high_45: 0 }
+      s.count += 1
+      s.sum += rating
+      if (rating >= 4.5) s.high_45 += 1
+      languageMap.set(film.original_language, s)
     }
-
     if (film.runtime) {
       runtimeValues.push(film.runtime)
       totalRuntime += film.runtime
     }
   })
 
+  const maxNGenres = genreMap.size ? Math.max(...Array.from(genreMap.values()).map((s) => s.count)) : 0
+  const maxNTags = tagMap.size ? Math.max(...Array.from(tagMap.values()).map((s) => s.count)) : 0
+  const maxNCountries = countryMap.size ? Math.max(...Array.from(countryMap.values()).map((s) => s.count)) : 0
+  const maxNDirectors = directorMap.size ? Math.max(...Array.from(directorMap.values()).map((s) => s.count)) : 0
+  const maxNActors = actorMap.size ? Math.max(...Array.from(actorMap.values()).map((s) => s.count)) : 0
+
   const topGenres = buildRankedByCount(genreMap)
-  const topTags = []
-  tagMap.forEach((stats, name) => {
-    const avg = stats.count ? stats.sum / stats.count : 0
-    const loveScore = Number((stats.high_45 * avg).toFixed(2))
-    topTags.push({
-      name,
-      count: stats.count,
-      avg_rating: Number(avg.toFixed(2)),
-      high_45: stats.high_45,
-      loveScore,
-    })
-  })
-  topTags.sort((a, b) => {
-    if (b.loveScore !== a.loveScore) return b.loveScore - a.loveScore
-    return b.count - a.count
-  })
+  const topTags = buildRankedByLoveScore(tagMap, baseline, maxNTags, themesConfig)
 
   const topRatedFilms = [...films]
     .sort((a, b) => {
@@ -253,11 +195,11 @@ export const computeAggregations = (films) => {
   }
 
   const countriesByCount = buildRankedByCount(countryMap)
-  const countriesByAvg = buildRankedByAvg(countryMap, 5)
+  const countriesByAvg = buildRankedByLoveScore(countryMap, baseline, maxNCountries, countriesConfig)
   const directorsByCount = buildRankedByCount(directorMap)
-  const directorsByAvg = buildRankedByAvg(directorMap, 3)
+  const directorsByAvg = buildRankedByLoveScore(directorMap, baseline, maxNDirectors, directorsConfig)
   const actorsByCount = buildRankedByCount(actorMap)
-  const actorsByAvg = buildRankedByAvg(actorMap, 3)
+  const actorsByAvg = buildRankedByLoveScore(actorMap, baseline, maxNActors, actorsConfig)
 
   const topLanguagesByCount = buildRankedByCount(languageMap).map((lang) => ({
     language: lang.name,
@@ -272,11 +214,11 @@ export const computeAggregations = (films) => {
     badges.push({ title, value, subtitle, iconKey, tone, isRating })
   }
 
-  const topGenresByAvg = buildRankedByAvg(genreMap, 5)
-  const topGenresByAvgMin8 = buildRankedByGenreIndex(genreMap, 5)
-  const topCountriesByAvg = buildRankedByAvg(countryMap, 5)
-  const topDirectorsByAvg = buildRankedByAvg(directorMap, 3)
-  const topTagsByAvg = buildRankedByAvg(tagMap, 8)
+  const topGenresByAvg = buildRankedByAvg(genreMap, genreConfig.minCount)
+  const topGenresByAvgMin8 = buildRankedByLoveScore(genreMap, baseline, maxNGenres, genreConfig)
+  const topCountriesByAvg = countriesByAvg
+  const topDirectorsByAvg = directorsByAvg
+  const topTagsByAvg = topTags
 
   const fiveStarCount = ratings.filter((r) => r === 5).length
   let longestFilm = null
@@ -319,34 +261,7 @@ export const computeAggregations = (films) => {
     }
   }
 
-  // Compute genreOfTheYear before badges so the badge can reference it
-  let genreOfTheYear = null
-  const genreIndexCandidates = []
-  genreMap.forEach((gStats, name) => {
-    if (gStats.count < 5) return
-    const avg = gStats.count ? gStats.sum / gStats.count : 0
-    const index = gStats.high_45 * avg
-    genreIndexCandidates.push({
-      name,
-      count: gStats.count,
-      avg_rating: Number(avg.toFixed(2)),
-      high_45: gStats.high_45,
-      genreIndex: Number(index.toFixed(2)),
-    })
-  })
-  if (genreIndexCandidates.length > 0) {
-    genreIndexCandidates.sort((a, b) => b.genreIndex - a.genreIndex)
-    genreOfTheYear = genreIndexCandidates[0]
-  } else if (topGenres.length > 0) {
-    const g = topGenres[0]
-    genreOfTheYear = {
-      name: g.name,
-      count: g.count,
-      avg_rating: g.avg_rating,
-      high_45: g.high_45,
-      genreIndex: Number((g.high_45 * g.avg_rating).toFixed(2)),
-    }
-  }
+  const genreOfTheYear = topGenresByAvgMin8.length > 0 ? topGenresByAvgMin8[0] : null
 
   addBadge('Фильмов за год', stats.totalFilms, 'Всего фильмов', 'film', 'gold')
   addBadge('Средняя оценка', stats.avgRating, 'Средняя по всем фильмам', 'star', 'gold', true)
@@ -356,7 +271,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Жанр года',
       getGenreNameRu(genreOfTheYear.name),
-      `Индекс: ${formatNumber(Math.round(genreOfTheYear.genreIndex))}`,
+      `Love Score: ${formatNumber(Math.round(genreOfTheYear.loveScore))}`,
       'star',
       'green',
     )
@@ -396,7 +311,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Самая любимая страна',
       getCountryNameRu(c.name),
-      `Средняя оценка: ${formatRating(c.avg_rating)}`,
+      `Love Score: ${formatNumber(Math.round(c.loveScore ?? 0))}`,
       'heart',
       'blue',
     )
@@ -416,7 +331,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Самый любимый режиссёр',
       d.name,
-      `Средняя оценка: ${formatRating(d.avg_rating)}`,
+      `Love Score: ${formatNumber(Math.round(d.loveScore ?? 0))}`,
       'heart',
       'purple',
     )
