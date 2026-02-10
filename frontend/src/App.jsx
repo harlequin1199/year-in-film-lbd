@@ -644,12 +644,13 @@ function App() {
             <Suspense fallback={null}>
               <LazyChartsSection
                 films={filteredFilms}
+                yearsByLoveScore={computed.yearsByLoveScore}
               />
             </Suspense>
           </section>
           <section className="grid">
             <Suspense fallback={null}>
-              <LazyFavoriteDecades films={filteredFilms} />
+              <LazyFavoriteDecades films={filteredFilms} decades={computed.decades} />
             </Suspense>
           </section>
           <section className="grid">

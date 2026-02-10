@@ -129,4 +129,6 @@ export const ENTITY_CONFIGS = {
   countries: { maxPerMovie: 2, k: 5, minCount: 5, maxRatingSpread: DEFAULT_MAX_RATING_SPREAD },
   directors: { maxPerMovie: 2, k: 3, minCount: 3, maxRatingSpread: DEFAULT_MAX_RATING_SPREAD },
   actors: { maxPerMovie: 5, k: 3, minCount: 3, maxRatingSpread: DEFAULT_MAX_RATING_SPREAD },
+  decades: { maxPerMovie: 1, k: 5, minCount: 12, maxRatingSpread: DEFAULT_MAX_RATING_SPREAD },
+  years: { maxPerMovie: 1, k: 5, minCount: 3, maxRatingSpread: DEFAULT_MAX_RATING_SPREAD },
 }

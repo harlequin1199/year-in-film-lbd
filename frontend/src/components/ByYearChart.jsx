@@ -10,9 +10,17 @@ const getBarWidth = (yearCount) => {
   return 2
 }
 
-function ByYearChart({ films }) {
+function ByYearChart({ films, yearsByLoveScore }) {
   const [mode, setMode] = useState('count')
   const [tooltip, setTooltip] = useState(null)
+
+  const loveScoreByYear = useMemo(() => {
+    const map = new Map()
+    ;(yearsByLoveScore || []).forEach((item) => {
+      map.set(Number(item.name), { loveScore: item.loveScore, count: item.count, avg_rating: item.avg_rating })
+    })
+    return map
+  }, [yearsByLoveScore])
 
   const data = useMemo(() => {
     if (!films || films.length === 0) return null
@@ -40,11 +48,17 @@ function ByYearChart({ films }) {
 
     const yearEntries = Array.from(yearMap.entries()).map(([year, stats]) => {
       const avgRating = stats.rated ? stats.sum / stats.rated : null
-      return { year, count: stats.count, avgRating }
+      const loveData = loveScoreByYear.get(year)
+      return {
+        year,
+        count: stats.count,
+        avgRating,
+        loveScore: loveData?.loveScore ?? null,
+      }
     })
 
     return { minYear, maxYear, yearEntries }
-  }, [films])
+  }, [films, loveScoreByYear])
 
   if (!data) return null
 
@@ -73,6 +87,10 @@ function ByYearChart({ films }) {
       const scaled = Math.sqrt(entry.count / maxCount) * BAR_HEIGHT
       return Math.max(2, scaled)
     }
+    if (mode === 'loveScore') {
+      if (entry.loveScore == null) return 0
+      return Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
+    }
     if (entry.count === 0 || entry.avgRating === null) return 0
     const scaled = Math.pow(entry.avgRating / 5, 1.2) * BAR_HEIGHT
     return Math.max(2, scaled)
@@ -84,6 +102,7 @@ function ByYearChart({ films }) {
         count: formatNumber(tooltip.entry.count),
         avg:
           tooltip.entry.avgRating !== null ? formatRating(tooltip.entry.avgRating) : '—',
+        loveScore: tooltip.entry.loveScore != null ? formatNumber(Math.round(tooltip.entry.loveScore)) : null,
       }
     : null
 
@@ -109,6 +128,13 @@ function ByYearChart({ films }) {
           >
             ОЦЕНКИ
           </button>
+          <button
+            type="button"
+            className={`byyear-tab ${mode === 'loveScore' ? 'active' : ''}`}
+            onClick={() => setMode('loveScore')}
+          >
+            LOVE SCORE
+          </button>
         </div>
       </div>
       <div className="byyear-chart">
@@ -131,6 +157,11 @@ function ByYearChart({ films }) {
               <stop offset="50%" stopColor="#0f8d7f" />
               <stop offset="100%" stopColor="#14a8c6" />
             </linearGradient>
+            <linearGradient id="byyear-lovescore" x1="0" y1="0" x2={chartWidth} y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#e84393" />
+              <stop offset="50%" stopColor="#a855f7" />
+              <stop offset="100%" stopColor="#6366f1" />
+            </linearGradient>
           </defs>
           <line x1="0" y1={BAR_HEIGHT} x2={chartWidth} y2={BAR_HEIGHT} stroke="#1f2430" strokeWidth="1" />
           {yearEntries.map((entry, index) => {
@@ -145,7 +176,13 @@ function ByYearChart({ films }) {
                 width={barWidth}
                 height={height}
                 rx="1.5"
-                fill={mode === 'count' ? 'url(#byyear-count)' : 'url(#byyear-rating)'}
+                fill={
+                  mode === 'count'
+                    ? 'url(#byyear-count)'
+                    : mode === 'loveScore'
+                      ? 'url(#byyear-lovescore)'
+                      : 'url(#byyear-rating)'
+                }
                 onMouseMove={(event) => handleMove(event, entry)}
                 onMouseLeave={() => setTooltip(null)}
               />
@@ -161,6 +198,9 @@ function ByYearChart({ films }) {
             <div className="byyear-tooltip-title">{tooltipContent.title}</div>
             <div>Фильмов: {tooltipContent.count}</div>
             <div>Средняя: {tooltipContent.avg}</div>
+            {tooltipContent.loveScore != null && (
+              <div>Love Score: {tooltipContent.loveScore}</div>
+            )}
           </div>
         )}
       </div>

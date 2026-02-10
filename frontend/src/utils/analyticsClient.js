@@ -122,6 +122,7 @@ export function getComputedFromStage1(stage1) {
     topActorsByAvgRating: [],
     badges: [],
     decades: [],
+    yearsByLoveScore: [],
   }
 }
 
@@ -233,31 +234,28 @@ export const computeAggregations = (films) => {
     }
   })
 
-  const decadeMap = new Map()
-  films.forEach((film) => {
-    if (!film.year) return
+  const decadesConfig = ENTITY_CONFIGS.decades
+  const yearsConfig = ENTITY_CONFIGS.years
+  const decadeExtractor = (film) => {
+    if (!film.year) return []
     const decade = Math.floor(film.year / 10) * 10
-    const stats = decadeMap.get(decade) || { count: 0, sum: 0, rated: 0 }
-    stats.count += 1
-    if (film.rating !== null && film.rating !== undefined) {
-      stats.sum += film.rating
-      stats.rated += 1
-    }
-    decadeMap.set(decade, stats)
-  })
+    return [String(decade)]
+  }
+  const yearExtractor = (film) => (film.year ? [String(film.year)] : [])
+  const decadeMap = buildEntityStats(films, decadeExtractor, decadesConfig, baseline)
+  const yearMap = buildEntityStats(films, yearExtractor, yearsConfig, baseline)
+  const maxNDecades = decadeMap.size ? Math.max(...Array.from(decadeMap.values()).map((s) => s.count)) : 0
+  const maxNYears = yearMap.size ? Math.max(...Array.from(yearMap.values()).map((s) => s.count)) : 0
+  const decadesByLoveScore = buildRankedByLoveScore(decadeMap, baseline, maxNDecades, decadesConfig)
+  const yearsByLoveScore = buildRankedByLoveScore(yearMap, baseline, maxNYears, yearsConfig)
 
   let mostWatchedDecade = null
   let mostLovedDecade = null
   if (decadeMap.size) {
-    mostWatchedDecade = [...decadeMap.entries()].sort((a, b) => b[1].count - a[1].count)[0][0]
-    const loved = [...decadeMap.entries()].filter(([, stats]) => stats.count >= 5 && stats.rated)
-    if (loved.length) {
-      mostLovedDecade = loved.sort((a, b) => {
-        const aAvg = a[1].sum / a[1].rated
-        const bAvg = b[1].sum / b[1].rated
-        if (bAvg !== aAvg) return bAvg - aAvg
-        return b[1].count - a[1].count
-      })[0][0]
+    const byCount = [...decadeMap.entries()].sort((a, b) => b[1].count - a[1].count)[0]
+    mostWatchedDecade = byCount ? Number(byCount[0]) : null
+    if (decadesByLoveScore.length > 0) {
+      mostLovedDecade = Number(decadesByLoveScore[0].name)
     }
   }
 
@@ -339,10 +337,15 @@ export const computeAggregations = (films) => {
   if (mostWatchedDecade) {
     addBadge('Самое частое десятилетие', `${mostWatchedDecade}-е`, 'Чаще всего', 'calendar', 'gold')
   }
-  if (mostLovedDecade) {
-    const stats = decadeMap.get(mostLovedDecade)
-    const avg = stats.rated ? stats.sum / stats.rated : 0
-    addBadge('Самое любимое десятилетие', Number(avg.toFixed(2)), `${mostLovedDecade}-е`, 'heart', 'gold', true)
+  if (mostLovedDecade != null && decadesByLoveScore.length > 0) {
+    const first = decadesByLoveScore[0]
+    addBadge(
+      'Самое любимое десятилетие',
+      `${mostLovedDecade}-е`,
+      `Love Score: ${formatNumber(Math.round(first.loveScore ?? 0))}`,
+      'heart',
+      'gold',
+    )
   }
   addBadge('Самый ранний год', stats.oldestYear ? String(stats.oldestYear) : null, 'Год старейшего фильма', 'calendar', 'green')
   addBadge('Самый новый год', stats.newestYear ? String(stats.newestYear) : null, 'Год новейшего фильма', 'calendar', 'green')
@@ -365,15 +368,13 @@ export const computeAggregations = (films) => {
 
   const trimmedBadges = badges.length > 12 ? badges.slice(0, 12) : badges
 
-  const decades = [...decadeMap.entries()]
-    .map(([decade, data]) => ({
-      decade,
-      count: data.count,
-      avgRating: data.rated ? Number((data.sum / data.rated).toFixed(2)) : 0,
-    }))
-    .filter((entry) => entry.count > 12)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
+  const decades = decadesByLoveScore.map((item) => ({
+    decade: Number(item.name),
+    count: item.count,
+    avgRating: item.avg_rating,
+    loveScore: item.loveScore,
+    ratingLift: item.ratingLift,
+  }))
 
   const hiddenGems = computeHiddenGems(films)
   const overrated = computeOverrated(films)
@@ -399,6 +400,7 @@ export const computeAggregations = (films) => {
     topActorsByAvgRating: actorsByAvg.slice(0, TOP_LIST_MAX),
     badges: trimmedBadges,
     decades,
+    yearsByLoveScore,
   }
 }
 
