@@ -139,7 +139,6 @@ export function getComputedFromStage1(stage1) {
     topActorsByAvgRating: [],
     badges: [],
     decades: [],
-    summarySentence: '',
   }
 }
 
@@ -442,15 +441,6 @@ export const computeAggregations = (films) => {
 
   const hiddenGems = computeHiddenGems(films)
   const overrated = computeOverrated(films)
-  const summarySentence = generateSummarySentence({
-    stats,
-    topGenres,
-    decades,
-    topCountriesByCount: countriesByCount,
-    topLanguagesByCount,
-    hiddenGems,
-    filmsCount: films.length,
-  })
 
   return {
     stats,
@@ -473,40 +463,7 @@ export const computeAggregations = (films) => {
     topActorsByAvgRating: actorsByAvg.slice(0, TOP_LIST_MAX),
     badges: trimmedBadges,
     decades,
-    summarySentence,
   }
-}
-
-/**
- * Итоговое предложение в духе Letterboxd: жанр, десятилетие, рейтинг, страна/язык, скрытые жемчужины.
- */
-export function generateSummarySentence(computed) {
-  if (!computed) return ''
-  const { stats, topGenres, decades, topCountriesByCount, topLanguagesByCount, hiddenGems, filmsCount } = computed
-  const genre = topGenres?.[0]?.name
-  const genreRu = genre ? getGenreNameRu(genre) : ''
-  const decade = decades?.[0]?.decade
-  const avg = stats?.avgRating
-  const country = topCountriesByCount?.[0]?.name
-  const countryRu = country ? getCountryNameRu(country) : ''
-  const lang = topLanguagesByCount?.[0]?.name
-  const gemsRatio = filmsCount > 0 && hiddenGems?.length > 0 ? hiddenGems.length / filmsCount : 0
-
-  let main = ''
-  if (genre && decade != null) {
-    main = `в этом году ты чаще всего выбирал ${genreRu.toLowerCase()} ${decade}-х`
-  } else if (genre) {
-    main = `твой главный жанр года — ${genreRu.toLowerCase()}`
-  } else {
-    main = 'твой год в кино собран и посчитан'
-  }
-  let tail = ' — и явно любишь, когда атмосфера важнее сюжета.'
-  if (country && (lang === undefined || lang === 'en')) {
-    tail = ` — и география года явно за ${countryRu}.`
-  } else if (gemsRatio > 0.08) {
-    tail = ' — и ты умеешь находить скрытые жемчужины.'
-  }
-  return `Итог: ${main}${tail}`
 }
 
 /**

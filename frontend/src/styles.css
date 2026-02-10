@@ -333,16 +333,6 @@ h3, .card-header h3 {
   justify-content: flex-end;
 }
 
-.summary-sentence {
-  margin: 0 0 var(--space-lg);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--accent-soft);
-  border-radius: var(--radius-md);
-  border-left: 4px solid var(--accent);
-  font-style: italic;
-  color: var(--text-primary);
-}
-
 .text-muted {
   color: var(--text-muted);
   font-size: 14px;
@@ -1193,6 +1183,33 @@ h3, .card-header h3 {
   flex-shrink: 0;
 }
 
+.genres-list--aligned .genres-list-meta {
+  display: grid;
+  grid-template-columns: minmax(4ch, auto) minmax(10ch, auto) minmax(13ch, auto);
+  gap: 0 var(--space-sm);
+  align-items: center;
+  justify-content: end;
+}
+
+.genres-list--aligned .genres-list-count {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.genres-list--aligned .genres-list-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.genres-list-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .genres-list-stars {
   display: inline-flex;
   align-items: center;
@@ -1206,6 +1223,11 @@ h3, .card-header h3 {
 .genres-list-index {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.genres-list--aligned .genres-list-index {
+  text-align: right;
+  white-space: nowrap;
 }
 
 .genres-list-empty {

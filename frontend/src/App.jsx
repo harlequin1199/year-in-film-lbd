@@ -619,11 +619,6 @@ function App() {
 
       {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
         <main className="dashboard">
-          {computed.summarySentence && (
-            <p className="summary-sentence" aria-live="polite">
-              {computed.summarySentence}
-            </p>
-          )}
           <StatsCards stats={computed.stats} />
           <FilmsGrid films={computed.topRatedFilms} posterSetIds={posterSetIdsTop12} />
           <section className="grid">

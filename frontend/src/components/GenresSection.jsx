@@ -12,8 +12,9 @@ function GenreList({ items, showAvg = false, showGenreIndex = false, totalForPct
     return <p className="genres-list-empty section-empty-few">Слишком мало записей для рейтинга.</p>
   }
   const showPct = totalForPct != null && totalForPct > 0
+  const aligned = showAvg
   return (
-    <ul className="genres-list">
+    <ul className={`genres-list ${aligned ? 'genres-list--aligned' : ''}`}>
       {items.map((g, index) => {
         const rank = index + 1
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
@@ -30,20 +31,20 @@ function GenreList({ items, showAvg = false, showGenreIndex = false, totalForPct
               {getGenreNameRu(g.name)}
             </span>
             <span className="genres-list-meta">
-              {formatNumber(g.count)}
-              {showPct && ` (${pct}%)`}
+              <span className="genres-list-count">
+                {formatNumber(g.count)}
+                {showPct && ` (${pct}%)`}
+              </span>
               {showAvg && (
                 <>
-                  {' · '}
-                  <span className="genres-list-stars">
-                    <Stars rating={g.avg_rating} />
+                  <span className="genres-list-rating">
+                    <span className="genres-list-stars">
+                      <Stars rating={g.avg_rating} />
+                    </span>
+                    <span className="genres-list-avg">({formatRating(g.avg_rating)})</span>
                   </span>
-                  <span className="genres-list-avg">({formatRating(g.avg_rating)})</span>
                   {showGenreIndex && g.genreIndex != null && (
-                    <>
-                      {' · '}
-                      <span className="genres-list-index" title="Индекс жанра">Индекс: {formatNumber(g.genreIndex)}</span>
-                    </>
+                    <span className="genres-list-index" title="Индекс жанра">Индекс: {formatNumber(Math.round(g.genreIndex))}</span>
                   )}
                 </>
               )}
@@ -90,7 +91,7 @@ export default function GenresSection({
                 </span>{' '}
                 ({formatRating(genreOfTheYear.avg_rating)}) • 4.5–5★: {formatNumber(genreOfTheYear.high_45)}
               </div>
-              <div className="genres-year-index">Индекс жанра*: {formatNumber(genreOfTheYear.genreIndex)}</div>
+              <div className="genres-year-index">Индекс жанра*: {formatNumber(Math.round(genreOfTheYear.genreIndex))}</div>
             </div>
             <div className="genres-year-right">
               <div className="genres-year-icon">
