@@ -64,6 +64,8 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 1440px) {
@@ -549,13 +551,23 @@ h3, .card-header h3 {
   border-radius: var(--radius-xl);
   margin-top: var(--space-xl);
   background: var(--bg-card);
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: max-height 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease, padding-top 0.3s ease, padding-bottom 0.3s ease;
+  max-height: 500px;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .empty-state-loading {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: none;
 }
 
 .empty-state h2 {
@@ -823,6 +835,8 @@ h3, .card-header h3 {
 
 .app-footer.app-footer-with-content {
   border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-2xl);
 }
 
 .app-footer-content {
@@ -854,7 +868,7 @@ h3, .card-header h3 {
   min-width: 0;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1440px) {
   .app-footer-love-score-content {
     flex-direction: column;
   }
@@ -903,7 +917,7 @@ h3, .card-header h3 {
   margin: 0;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1440px) {
   .app-footer-love-score-content {
     flex-direction: column;
     gap: var(--space-lg);

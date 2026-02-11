@@ -848,7 +848,7 @@ function App() {
       )}
 
       {!analysis && (
-        <section className={`empty-state ${progress ? 'empty-state-loading' : ''}`}>
+        <section className={`empty-state ${loading && progress ? 'empty-state-loading' : ''}`}>
           <h2>Начните с ratings.csv</h2>
           <p>
             Экспортируйте свои оценки из Letterboxd и перетащите файл выше,
