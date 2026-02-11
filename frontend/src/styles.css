@@ -1015,13 +1015,18 @@ h3, .card-header h3 {
 }
 
 .tmdb-attribution {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-md);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 14px;
   text-decoration: none;
   transition: color 0.2s ease;
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-subtle);
+  width: 100%;
 }
 
 .tmdb-attribution:hover {
@@ -1031,6 +1036,7 @@ h3, .card-header h3 {
 .tmdb-logo {
   display: inline-flex;
   color: #93a0b5;
+  flex-shrink: 0;
 }
 
 .tmdb-logo svg {
