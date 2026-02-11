@@ -24,9 +24,9 @@ Upload your `ratings.csv` (and optionally `diary.csv`) and get an interactive da
 
 ```
 ┌────────────────────┐      ┌────────────────────┐
-│   Frontend (SPA)   │─────▸│  Backend API (REST) │
-│  React + Vite      │      │  FastAPI + SQLite   │
-│     Vercel          │      │  Render (free tier) │
+│   Frontend (SPA)   │─────▸│  Backend API (REST)│
+│   React + Vite     │      │  FastAPI + SQLite  │
+│   Vercel           │      │  Render            │
 └────────────────────┘      └────────────────────┘
 ```
 
