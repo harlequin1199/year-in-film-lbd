@@ -99,13 +99,13 @@ export default function GenresSection({
             <span>Жанр</span>
             <span>Счёт</span>
             <span>Средняя</span>
+            <span>4.5–5★</span>
             {showIndex && (
               <span title="Love Score 0–100" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 Love Score
                 <LoveScoreInfo variant="icon-only" />
               </span>
             )}
-            <span>4.5–5★</span>
           </div>
           {fullList.map((g, index) => {
             const rank = index + 1
@@ -132,10 +132,10 @@ export default function GenresSection({
                   {formatRating(g.avg_rating)}
                   <Stars rating={g.avg_rating} />
                 </span>
+                <span>{formatNumber(g.high_45)}</span>
                 {showIndex && (
                   <span>{g.loveScore != null ? formatNumber(Math.round(g.loveScore)) : '—'}</span>
                 )}
-                <span>{formatNumber(g.high_45)}</span>
               </div>
             )
           })}

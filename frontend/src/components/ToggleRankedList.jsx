@@ -55,13 +55,13 @@ function ToggleRankedList({
             <span>Имя</span>
             <span>Счёт</span>
             <span>Средняя</span>
+            <span>4.5–5★</span>
             {showIndex && (
               <span title="Love Score 0–100" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 Love Score
                 <LoveScoreInfo variant="icon-only" />
               </span>
             )}
-            <span>4.5–5★</span>
           </div>
           {list.map((item, index) => {
             const rank = index + 1
@@ -77,10 +77,10 @@ function ToggleRankedList({
                   {formatRating(item.avg_rating)}
                   <Stars rating={item.avg_rating} />
                 </span>
+                <span>{formatNumber(item.high_45)}</span>
                 {showIndex && (
                   <span>{item.loveScore != null ? formatNumber(Math.round(item.loveScore)) : '—'}</span>
                 )}
-                <span>{formatNumber(item.high_45)}</span>
               </div>
             )
           })}
