@@ -692,8 +692,8 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
     if (!id) return
     const cred = creditsMap.get(id)
     if (cred) {
-      f.directors = cred.directors || []
-      f.actors = (cred.actors || []).slice(0, 10)
+      f.directors = (cred.directors || []).slice(0, 10)
+      f.actors = (cred.actors || []).slice(0, 20)
     }
     const kw = keywordsMap.get(id)
     if (kw) f.keywords = (kw.keywords || []).slice(0, 20)

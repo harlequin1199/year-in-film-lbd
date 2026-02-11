@@ -138,8 +138,8 @@ async def _get_movie_credits(
                     continue
                 response.raise_for_status()
                 data = response.json()
-                directors = [c.get("name") for c in data.get("crew", []) if c.get("job") == "Director" and c.get("name")]
-                actors = [c.get("name") for c in data.get("cast", [])[:10] if c.get("name")]
+                directors = [c.get("name") for c in data.get("crew", []) if c.get("job") == "Director" and c.get("name")][:10]
+                actors = [c.get("name") for c in data.get("cast", [])[:20] if c.get("name")]
                 credits_data = {"directors": directors, "actors": actors}
                 
                 try:
