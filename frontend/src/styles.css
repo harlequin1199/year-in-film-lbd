@@ -1531,6 +1531,12 @@ h3, .card-header h3 {
   color: #ffffff;
 }
 
+@media (max-width: 600px) {
+  .rank-badge {
+    display: none;
+  }
+}
+
 .tag-name {
   font-weight: 600;
   word-break: break-word;
@@ -1925,22 +1931,67 @@ h3, .card-header h3 {
   transition: width 0.3s ease;
 }
 
+.badge-card.tone-gold {
+  border-color: rgba(247, 200, 67, 0.4);
+}
+
+.badge-card.tone-gold:hover {
+  border-color: rgba(247, 200, 67, 0.6);
+}
+
 .badge-card.tone-gold .badge-icon-wrap {
   color: #f7c843;
+}
+
+.badge-card.tone-purple {
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.badge-card.tone-purple:hover {
+  border-color: rgba(167, 139, 250, 0.6);
 }
 
 .badge-card.tone-purple .badge-icon-wrap {
   color: #a78bfa;
 }
 
+.badge-card.tone-green {
+  border-color: rgba(45, 212, 191, 0.4);
+}
+
+.badge-card.tone-green:hover {
+  border-color: rgba(45, 212, 191, 0.6);
+}
+
 .badge-card.tone-green .badge-icon-wrap {
   color: #2dd4bf;
+}
+
+.badge-card.tone-blue {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.badge-card.tone-blue:hover {
+  border-color: rgba(56, 189, 248, 0.6);
 }
 
 .badge-card.tone-blue .badge-icon-wrap {
   color: #38bdf8;
 }
 
+@media (max-width: 600px) {
+  .badge-icon-wrap {
+    display: none;
+  }
+  
+  .badge-card {
+    grid-template-columns: 1fr;
+  }
+  
+  .badge-content {
+    grid-column: 1;
+  }
+}
 
 .byyear-chart {
   margin-top: 20px;
