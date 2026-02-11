@@ -68,14 +68,12 @@ function UploadZone({ onUpload, loading, selectedFileName = '', selectedFilmCoun
         <button className="btn" type="button" disabled={loading}>
           {loading ? 'Анализирую…' : 'Выбрать файл'}
         </button>
-        {hasFile && (
-          <p className="upload-file-state">
-            Выбран файл: <strong>{selectedFileName}</strong>
-            {selectedFilmCount > 0 && (
-              <> ({selectedFilmCount} {selectedFilmCount === 1 ? 'фильм' : selectedFilmCount < 5 ? 'фильма' : 'фильмов'})</>
-            )}
-          </p>
-        )}
+        <p className={`upload-file-state ${hasFile ? '' : 'upload-file-state-hidden'}`}>
+          Выбран файл: <strong>{selectedFileName}</strong>
+          {selectedFilmCount > 0 && (
+            <> ({selectedFilmCount} {selectedFilmCount === 1 ? 'фильм' : selectedFilmCount < 5 ? 'фильма' : 'фильмов'})</>
+          )}
+        </p>
       </div>
       {selectError && <p className="upload-error">{selectError}</p>}
     </div>

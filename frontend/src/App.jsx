@@ -851,7 +851,15 @@ function App() {
         <section className={`empty-state ${loading && progress ? 'empty-state-loading' : ''}`}>
           <h2>Начните с ratings.csv</h2>
           <p>
-            Экспортируйте свои оценки из Letterboxd и перетащите файл выше,
+            <a
+              href="https://letterboxd.com/data/export/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--accent)', textDecoration: 'none' }}
+            >
+              Экспортируйте
+            </a>{' '}
+            свои оценки из Letterboxd и перетащите файл выше,
             чтобы получить ваш киногод.
           </p>
         </section>
