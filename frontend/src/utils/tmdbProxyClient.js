@@ -2,6 +2,17 @@ import * as cache from './indexedDbCache.js'
 import { fetchWithRetry } from './fetchWithRetry.js'
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+
+/**
+ * Generate proxy URL for TMDB images
+ */
+function getTmdbImageUrl(poster_path, size = 'w500') {
+  if (!poster_path || !API_BASE) return null
+  // Remove leading slash if present
+  const path = poster_path.startsWith('/') ? poster_path.slice(1) : poster_path
+  return `${API_BASE}/tmdb/image/${size}/${path}`
+}
+
 const DEFAULT_CONCURRENCY = 4
 const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
@@ -500,8 +511,8 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
     if (!tmdbId) return emptyFilm(row)
     const movie = movieMap.get(tmdbId)
     const poster_path = movie?.poster_path ?? null
-    const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
-    const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
+    const poster_url = getTmdbImageUrl(poster_path, 'w500')
+    const poster_url_w342 = getTmdbImageUrl(poster_path, 'w342')
     const va = movie?.vote_average ?? null
     const vc = movie?.vote_count ?? 0
     return {
@@ -877,8 +888,8 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
     }
     const movie = movieMap.get(tmdbId)
     const poster_path = movie?.poster_path ?? null
-    const poster_url = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : null
-    const poster_url_w342 = poster_path ? `https://image.tmdb.org/t/p/w342${poster_path}` : null
+    const poster_url = getTmdbImageUrl(poster_path, 'w500')
+    const poster_url_w342 = getTmdbImageUrl(poster_path, 'w342')
     const va = movie?.vote_average ?? null
     const vc = movie?.vote_count ?? 0
     return {

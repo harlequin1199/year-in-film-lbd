@@ -6,8 +6,10 @@ from typing import Dict, Optional, Any, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
+import httpx
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent / ".env"
@@ -57,6 +59,55 @@ def _shutdown():
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/tmdb/image/{size}/{path:path}")
+async def tmdb_image_proxy(size: str, path: str):
+    """
+    Proxy endpoint for TMDB images.
+    Proxies requests to https://image.tmdb.org/t/p/{size}/{path}
+    """
+    try:
+        # Validate size parameter (common TMDB image sizes)
+        valid_sizes = ['w45', 'w92', 'w154', 'w185', 'w300', 'w342', 'w500', 'w780', 'original']
+        if size not in valid_sizes:
+            raise HTTPException(status_code=400, detail=f"Invalid size. Valid sizes: {', '.join(valid_sizes)}")
+        
+        # Construct TMDB image URL
+        tmdb_image_url = f"https://image.tmdb.org/t/p/{size}/{path}"
+        
+        # Use httpx to fetch the image with streaming
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(tmdb_image_url, follow_redirects=True)
+                response.raise_for_status()
+                
+                # Determine content type from response headers or default to image/jpeg
+                content_type = response.headers.get("content-type", "image/jpeg")
+                
+                # Stream the image data
+                async def generate():
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+                
+                return StreamingResponse(
+                    generate(),
+                    media_type=content_type,
+                    headers={
+                        "Cache-Control": "public, max-age=31536000",  # Cache for 1 year
+                    }
+                )
+            except httpx.HTTPStatusError as e:
+                logger.warning(f"Failed to fetch TMDB image {tmdb_image_url}: {e.response.status_code}")
+                raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch image from TMDB")
+            except httpx.RequestError as e:
+                logger.error(f"Error requesting TMDB image {tmdb_image_url}: {e}")
+                raise HTTPException(status_code=502, detail="Failed to connect to TMDB image server")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error in image proxy: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 class BatchSearchItem(BaseModel):
