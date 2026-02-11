@@ -740,9 +740,78 @@ h3, .card-header h3 {
   max-width: 800px;
 }
 
+.app-footer-love-score p {
+  margin: 0 0 12px 0;
+}
+
+.app-footer-love-score p:last-child {
+  margin-bottom: 0;
+}
+
 .app-footer-love-score strong {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.love-score-examples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+@media (max-width: 600px) {
+  .love-score-examples {
+    grid-template-columns: 1fr;
+  }
+}
+
+.love-score-example {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid rgba(45, 212, 191, 0.5);
+}
+
+.love-score-example-low {
+  border-left-color: rgba(239, 68, 68, 0.5);
+}
+
+.love-score-example-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.love-score-example-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.love-score-example-item:last-child {
+  margin-bottom: 0;
+}
+
+.love-score-example-result {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-weight: 600;
+}
+
+.love-score-example-label {
+  color: var(--text-secondary);
+}
+
+.love-score-example-value {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 /* Love Score Info Component */

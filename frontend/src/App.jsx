@@ -712,7 +712,50 @@ function App() {
       <footer className="app-footer">
         <div className="app-footer-content">
           <div id="love-score" className="app-footer-love-score">
-            <strong>Love Score</strong> — единый показатель для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов. Учитывает не только среднюю оценку, но и частоту просмотра, а также уверенность в данных. Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа, тем выше Love Score (0–100).
+            <p>
+              <strong>Love Score</strong> — единый показатель (0–100) для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов.
+            </p>
+            <p>
+              Формула учитывает три фактора: <strong>оценку выше вашей средней</strong> (65% веса), <strong>частоту просмотра</strong> (35% веса) и <strong>уверенность в данных</strong> (зависит от количества просмотров).
+            </p>
+            <p>
+              <strong>Примеры:</strong>
+            </p>
+            <div className="love-score-examples">
+              <div className="love-score-example">
+                <div className="love-score-example-title">Мало фильмов, но высокий LS</div>
+                <div className="love-score-example-item">
+                  <span className="love-score-example-label">Ваша средняя:</span>
+                  <span className="love-score-example-value">3.5★</span>
+                </div>
+                <div className="love-score-example-item">
+                  <span className="love-score-example-label">Жанр «Драма»:</span>
+                  <span className="love-score-example-value">4.5★ (15 фильмов)</span>
+                </div>
+                <div className="love-score-example-item love-score-example-result">
+                  <span className="love-score-example-label">Love Score:</span>
+                  <span className="love-score-example-value">≈ 45</span>
+                </div>
+              </div>
+              <div className="love-score-example love-score-example-low">
+                <div className="love-score-example-title">Много фильмов, но низкий LS</div>
+                <div className="love-score-example-item">
+                  <span className="love-score-example-label">Ваша средняя:</span>
+                  <span className="love-score-example-value">3.5★</span>
+                </div>
+                <div className="love-score-example-item">
+                  <span className="love-score-example-label">Жанр «Комедия»:</span>
+                  <span className="love-score-example-value">3.0★ (45 фильмов)</span>
+                </div>
+                <div className="love-score-example-item love-score-example-result">
+                  <span className="love-score-example-label">Love Score:</span>
+                  <span className="love-score-example-value">≈ 20</span>
+                </div>
+              </div>
+            </div>
+            <p>
+              Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа, тем выше Love Score.
+            </p>
           </div>
           <a
             href="https://www.themoviedb.org/"
