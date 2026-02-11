@@ -821,7 +821,7 @@ h3, .card-header h3 {
   padding-top: var(--space-lg);
 }
 
-.app-footer-with-content {
+.app-footer.app-footer-with-content {
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -845,18 +845,27 @@ h3, .card-header h3 {
 }
 
 .app-footer-love-score-text {
-  flex: 1;
+  flex: 1 1 50%;
   min-width: 0;
 }
 
 .app-footer-love-score-examples-wrapper {
-  flex: 0 0 480px;
+  flex: 1 1 50%;
   min-width: 0;
 }
 
 @media (max-width: 1000px) {
+  .app-footer-love-score-content {
+    flex-direction: column;
+  }
+  
+  .app-footer-love-score-text {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  
   .app-footer-love-score-examples-wrapper {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     width: 100%;
   }
 }
