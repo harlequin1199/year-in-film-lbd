@@ -711,7 +711,8 @@ function App() {
 
       <footer className="app-footer">
         <div className="app-footer-content">
-          <div id="love-score" className="app-footer-love-score">
+          {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
+            <div id="love-score" className="app-footer-love-score">
             <p>
               <strong>Love Score</strong> — единый показатель (0–100) для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов.
             </p>
@@ -757,6 +758,7 @@ function App() {
               Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа, тем выше Love Score.
             </p>
           </div>
+          )}
           <a
             href="https://www.themoviedb.org/"
             target="_blank"
