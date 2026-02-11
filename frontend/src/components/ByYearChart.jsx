@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { formatNumber, formatRating, formatYear } from '../utils/format.js'
+import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 const BAR_HEIGHT = 220
 
@@ -135,6 +136,7 @@ function ByYearChart({ films, yearsByLoveScore }) {
           >
             LOVE SCORE
           </button>
+          <LoveScoreInfo variant="icon-only" className="byyear-love-score-info" />
         </div>
       </div>
       <div className="byyear-chart">

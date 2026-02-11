@@ -704,21 +704,26 @@ function App() {
       )}
 
       <footer className="app-footer">
-        <a
-          href="https://www.themoviedb.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="tmdb-attribution"
-          aria-label="TMDb"
-        >
-          <span className="tmdb-logo" aria-hidden="true">
-            <svg width="32" height="16" viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="0" y="0" width="32" height="16" rx="4" fill="currentColor" opacity="0.2" />
-              <text x="16" y="11" textAnchor="middle" fill="currentColor" fontSize="8" fontWeight="700" fontFamily="system-ui, sans-serif">tm</text>
-            </svg>
-          </span>
-          <span className="tmdb-text">Данные о фильмах предоставлены TMDb.</span>
-        </a>
+        <div className="app-footer-content">
+          <div id="love-score" className="app-footer-love-score">
+            <strong>Love Score</strong> — единый показатель для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов. Учитывает не только среднюю оценку, но и частоту просмотра, а также уверенность в данных. Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа, тем выше Love Score (0–100).
+          </div>
+          <a
+            href="https://www.themoviedb.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tmdb-attribution"
+            aria-label="TMDb"
+          >
+            <span className="tmdb-logo" aria-hidden="true">
+              <svg width="32" height="16" viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="0" width="32" height="16" rx="4" fill="currentColor" opacity="0.2" />
+                <text x="16" y="11" textAnchor="middle" fill="currentColor" fontSize="8" fontWeight="700" fontFamily="system-ui, sans-serif">tm</text>
+              </svg>
+            </span>
+            <span className="tmdb-text">Данные о фильмах предоставлены TMDb.</span>
+          </a>
+        </div>
       </footer>
     </div>
   )

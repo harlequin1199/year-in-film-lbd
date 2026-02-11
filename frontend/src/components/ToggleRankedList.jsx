@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Stars from './Stars.jsx'
 import { formatNumber, formatRating } from '../utils/format.js'
+import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 function ToggleRankedList({
   title,
@@ -54,7 +55,12 @@ function ToggleRankedList({
             <span>Имя</span>
             <span>Счёт</span>
             <span>Средняя</span>
-            {showIndex && <span title="Love Score 0–100">Индекс любви</span>}
+            {showIndex && (
+              <span title="Love Score 0–100" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Love Score
+                <LoveScoreInfo variant="icon-only" />
+              </span>
+            )}
             <span>4.5–5★</span>
           </div>
           {list.map((item, index) => {

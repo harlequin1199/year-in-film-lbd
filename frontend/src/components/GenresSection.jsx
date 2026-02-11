@@ -3,6 +3,7 @@ import { formatNumber, formatRating } from '../utils/format.js'
 import { getGenreNameRu } from '../utils/genresRu.js'
 import { getGenreIcon } from '../utils/genreIcons.js'
 import Stars from './Stars.jsx'
+import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 function GenreList({ items, showAvg = false, showLoveScore = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
   if (!items || items.length === 0) {
@@ -44,7 +45,7 @@ function GenreList({ items, showAvg = false, showLoveScore = false, totalForPct,
                     <span className="genres-list-avg">({formatRating(g.avg_rating)})</span>
                   </span>
                   {showLoveScore && g.loveScore != null && (
-                    <span className="genres-list-index" title="Love Score 0–100">Индекс любви: {formatNumber(Math.round(g.loveScore))}</span>
+                    <span className="genres-list-index" title="Love Score 0–100">Love Score: {formatNumber(Math.round(g.loveScore))}</span>
                   )}
                 </>
               )}
@@ -91,7 +92,10 @@ export default function GenresSection({
                 </span>{' '}
                 ({formatRating(genreOfTheYear.avg_rating)}) • 4.5–5★: {formatNumber(genreOfTheYear.high_45)}
               </div>
-              <div className="genres-year-index">Love Score: {formatNumber(Math.round(genreOfTheYear.loveScore))}</div>
+              <div className="genres-year-index">
+                Love Score: {formatNumber(Math.round(genreOfTheYear.loveScore))}
+                <LoveScoreInfo variant="icon-only" />
+              </div>
             </div>
             <div className="genres-year-right">
               <div className="genres-year-icon">
@@ -131,7 +135,10 @@ export default function GenresSection({
         <div className="genres-col">
           <div className="genres-col-header-row">
             <h4 className="genres-col-title">Самые любимые</h4>
-            <span className="genres-col-hint-inline">по Love Score, мин. 5 фильмов</span>
+            <span className="genres-col-hint-inline">
+              по Love Score, мин. 5 фильмов
+              <LoveScoreInfo variant="inline" />
+            </span>
           </div>
           <GenreList
             items={byAvg}
@@ -143,9 +150,6 @@ export default function GenresSection({
           />
         </div>
       </div>
-      <p className="table-footnote">
-        Love Score: уверенность × (0.65 × рейтинг выше baseline + 0.35 × частота), 0–100
-      </p>
     </section>
   )
 }

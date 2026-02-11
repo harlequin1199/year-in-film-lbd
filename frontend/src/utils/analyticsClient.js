@@ -274,16 +274,6 @@ export const computeAggregations = (films) => {
       'green',
     )
   }
-  if (topGenresByAvg.length) {
-    const g = topGenresByAvg[0]
-    addBadge(
-      'Самый любимый жанр',
-      getGenreNameRu(g.name),
-      `Средняя оценка: ${formatRating(g.avg_rating)}`,
-      'heart',
-      'green',
-    )
-  }
   if (topGenres.length) {
     const g = topGenres[0]
     addBadge(
@@ -340,7 +330,7 @@ export const computeAggregations = (films) => {
   if (mostLovedDecade != null && decadesByLoveScore.length > 0) {
     const first = decadesByLoveScore[0]
     addBadge(
-      'Самое любимое десятилетие',
+      'Любимое десятилетие',
       `${mostLovedDecade}-е`,
       `Love Score: ${formatNumber(Math.round(first.loveScore ?? 0))}`,
       'heart',

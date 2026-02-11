@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Stars from './Stars.jsx'
 import { formatNumber, formatRating } from '../utils/format.js'
+import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 const LIMIT = 10
 
@@ -29,7 +30,10 @@ function TagsTable({ tags, emptyMessage }) {
               <span>Тема</span>
               <span>Счёт</span>
               <span>Средняя</span>
-              <span>Индекс любви*</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Love Score
+                <LoveScoreInfo variant="icon-only" />
+              </span>
             </div>
             {list.map((tag) => (
               <div className="table-row" key={tag.name}>
@@ -50,9 +54,6 @@ function TagsTable({ tags, emptyMessage }) {
           )}
         </>
       )}
-      <p className="table-footnote">
-        Индекс любви* = (количество фильмов на 4.5–5★) × (средняя оценка темы)
-      </p>
     </section>
   )
 }
