@@ -847,8 +847,8 @@ function App() {
         </div>
       )}
 
-      {!analysis && !loading && (
-        <section className="empty-state">
+      {!analysis && (
+        <section className={`empty-state ${progress ? 'empty-state-loading' : ''}`}>
           <h2>Начните с ratings.csv</h2>
           <p>
             Экспортируйте свои оценки из Letterboxd и перетащите файл выше,
@@ -949,12 +949,13 @@ function App() {
         </section>
       )}
 
-      <footer className="app-footer">
+      <footer className={`app-footer ${!loading && analysis && computed && computed.stats.totalFilms > 0 ? 'app-footer-with-content' : ''}`}>
         <div className="app-footer-content">
           {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
             <div id="love-score" className="app-footer-love-score">
+            <h2 className="app-footer-love-score-title">Love Score</h2>
             <p>
-              <strong>Love Score</strong> — единый показатель (0–100) для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов.
+              Единый показатель (0–100) для определения самых любимых жанров, тем, стран, режиссёров, актёров и периодов.
             </p>
             <p>
               Формула учитывает три фактора: <strong>оценку выше вашей средней</strong> (65% веса), <strong>частоту просмотра</strong> (35% веса) и <strong>уверенность в данных</strong> (зависит от количества просмотров).
