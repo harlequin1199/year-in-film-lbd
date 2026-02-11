@@ -5,70 +5,24 @@ import { getGenreIcon } from '../utils/genreIcons.js'
 import Stars from './Stars.jsx'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
-function GenreList({ items, showAvg = false, showLoveScore = false, totalForPct, highlightedGenre, onHoverGenre, fewItems }) {
-  if (!items || items.length === 0) {
-    return <p className="genres-list-empty">Нет данных</p>
-  }
-  if (fewItems) {
-    return <p className="genres-list-empty section-empty-few">Слишком мало записей для рейтинга.</p>
-  }
-  const showPct = totalForPct != null && totalForPct > 0
-  const aligned = showAvg
-  return (
-    <ul className={`genres-list ${aligned ? 'genres-list--aligned' : ''}`}>
-      {items.map((g, index) => {
-        const rank = index + 1
-        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
-        const pct = showPct ? ((g.count / totalForPct) * 100).toFixed(1) : null
-        return (
-          <li
-            key={g.name}
-            className={`genres-list-item ${rankClass} ${highlightedGenre === g.name ? 'genres-list-item-highlight' : ''}`}
-            onMouseEnter={() => onHoverGenre?.(g.name)}
-            onMouseLeave={() => onHoverGenre?.(null)}
-          >
-            <span className="genres-list-name">
-              {rank <= 3 && <span className="genres-rank-badge">{rank}</span>}
-              {getGenreNameRu(g.name)}
-            </span>
-            <span className="genres-list-meta">
-              <span className="genres-list-count">
-                {formatNumber(g.count)}
-                {showPct && ` (${pct}%)`}
-              </span>
-              {showAvg && (
-                <>
-                  <span className="genres-list-rating">
-                    <span className="genres-list-stars">
-                      <Stars rating={g.avg_rating} />
-                    </span>
-                    <span className="genres-list-avg">({formatRating(g.avg_rating)})</span>
-                  </span>
-                  {showLoveScore && g.loveScore != null && (
-                    <span className="genres-list-index" title="Love Score 0–100">Love Score: {formatNumber(Math.round(g.loveScore))}</span>
-                  )}
-                </>
-              )}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
 export default function GenresSection({
   topGenres,
   topGenresByAvgMin8,
   genreOfTheYear,
 }) {
   const [highlightedGenre, setHighlightedGenre] = useState(null)
+  const [mode, setMode] = useState('count')
+  
   const topGenresList = topGenres || []
   const byCount = topGenresList
   const byAvg = topGenresByAvgMin8 || []
   const totalGenreCount = topGenresList.reduce((acc, g) => acc + g.count, 0)
-  const fewCount = byCount.length > 0 && byCount.length < 3
-  const fewAvg = byAvg.length > 0 && byAvg.length < 3
+  
+  const items = mode === 'count' ? byCount : byAvg
+  const fullList = items || []
+  const fewItems = fullList.length > 0 && fullList.length < 3
+  const showIndex = mode === 'avg' && fullList.length > 0 && fullList[0].loveScore != null
+  const showPct = mode === 'count' && totalGenreCount > 0
 
   const genreIcon = genreOfTheYear ? getGenreIcon(genreOfTheYear.name) : null
 
@@ -119,37 +73,74 @@ export default function GenresSection({
         </div>
       )}
 
-      <div className="genres-columns">
-        <div className="genres-col">
-          <h4 className="genres-col-title">Чаще всего</h4>
-          <GenreList
-            items={byCount}
-            showAvg={false}
-            fewItems={fewCount}
-            totalForPct={totalGenreCount}
-            highlightedGenre={highlightedGenre}
-            onHoverGenre={setHighlightedGenre}
-          />
-        </div>
-        <div className="genres-col genres-col-divider" aria-hidden="true" />
-        <div className="genres-col">
-          <div className="genres-col-header-row">
-            <h4 className="genres-col-title">Самые любимые</h4>
-            <span className="genres-col-hint-inline">
-              по Love Score, мин. 5 фильмов
-              <LoveScoreInfo variant="inline" />
-            </span>
-          </div>
-          <GenreList
-            items={byAvg}
-            showAvg={true}
-            showLoveScore={true}
-            fewItems={fewAvg}
-            highlightedGenre={highlightedGenre}
-            onHoverGenre={setHighlightedGenre}
-          />
-        </div>
+      <div className="toggle-group">
+        <button
+          type="button"
+          className={`toggle-button ${mode === 'count' ? 'active' : ''}`}
+          onClick={() => setMode('count')}
+        >
+          Чаще всего
+        </button>
+        <button
+          type="button"
+          className={`toggle-button ${mode === 'avg' ? 'active' : ''}`}
+          onClick={() => setMode('avg')}
+        >
+          Самые любимые
+        </button>
       </div>
+
+      {fullList.length === 0 && <div className="empty-inline">Нет данных</div>}
+      {fewItems && <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>}
+      
+      {fullList.length > 0 && !fewItems && (
+        <div className="table">
+          <div className={`table-head ${showIndex ? 'table-head--with-index' : 'table-head--wide'}`}>
+            <span>Жанр</span>
+            <span>Счёт</span>
+            <span>Средняя</span>
+            {showIndex && (
+              <span title="Love Score 0–100" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Love Score
+                <LoveScoreInfo variant="icon-only" />
+              </span>
+            )}
+            <span>4.5–5★</span>
+          </div>
+          {fullList.map((g, index) => {
+            const rank = index + 1
+            const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
+            const pct = showPct ? ((g.count / totalGenreCount) * 100).toFixed(1) : null
+            const isHighlighted = highlightedGenre === g.name
+            
+            return (
+              <div
+                key={g.name}
+                className={`table-row ${showIndex ? 'table-row--with-index' : 'table-row--wide'} ${rankClass} ${isHighlighted ? 'genres-list-item-highlight' : ''}`}
+                onMouseEnter={() => setHighlightedGenre(g.name)}
+                onMouseLeave={() => setHighlightedGenre(null)}
+              >
+                <span className="tag-name">
+                  {rank <= 3 && <span className="rank-badge">{rank}</span>}
+                  {getGenreNameRu(g.name)}
+                </span>
+                <span>
+                  {formatNumber(g.count)}
+                  {showPct && pct && ` (${pct}%)`}
+                </span>
+                <span className="rating-cell">
+                  {formatRating(g.avg_rating)}
+                  <Stars rating={g.avg_rating} />
+                </span>
+                {showIndex && (
+                  <span>{g.loveScore != null ? formatNumber(Math.round(g.loveScore)) : '—'}</span>
+                )}
+                <span>{formatNumber(g.high_45)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

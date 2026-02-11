@@ -10,7 +10,7 @@ function TagsTable({ tags, emptyMessage }) {
   const full = tags || []
   const list = expanded ? full : full.slice(0, LIMIT)
   const hasMore = full.length > LIMIT
-  const showEmpty = full.length === 0 && emptyMessage
+  const showEmpty = full.length === 0
   const fewItems = full.length > 0 && full.length < 3
 
   return (
@@ -20,9 +20,9 @@ function TagsTable({ tags, emptyMessage }) {
         <p>Ключевые слова, которые вам особенно понравились</p>
       </div>
       {showEmpty ? (
-        <p className="text-muted">{emptyMessage}</p>
+        <div className="empty-inline">{emptyMessage || 'Нет данных по любимым темам.'}</div>
       ) : fewItems ? (
-        <p className="text-muted section-empty-few">Слишком мало записей для рейтинга.</p>
+        <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>
       ) : (
         <>
           <div className="table">

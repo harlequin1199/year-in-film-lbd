@@ -1223,160 +1223,6 @@ h3, .card-header h3 {
   border-radius: var(--radius-sm);
 }
 
-.genres-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.genres-list-item {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-  font-size: 14px;
-  padding: var(--space-sm) var(--space-md);
-  margin: 0 calc(-1 * var(--space-md));
-  min-height: 40px;
-  box-sizing: border-box;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s ease;
-  position: relative;
-}
-
-/* Облегчённое выделение топ-3 для жанров */
-.genres-list-item.rank-1 {
-  border-left: 2px solid #f7c843;
-  padding-left: calc(var(--space-md) + 2px);
-  margin-left: calc(-1 * var(--space-md) - 2px);
-}
-
-.genres-list-item.rank-2 {
-  border-left: 2px solid #c0c0c0;
-  padding-left: calc(var(--space-md) + 2px);
-  margin-left: calc(-1 * var(--space-md) - 2px);
-}
-
-.genres-list-item.rank-3 {
-  border-left: 2px solid #cd7f32;
-  padding-left: calc(var(--space-md) + 2px);
-  margin-left: calc(-1 * var(--space-md) - 2px);
-}
-
-/* При наведении выделение топ-3 сохраняется, но не перекрывает highlight */
-.genres-list-item.rank-1:not(.genres-list-item-highlight) {
-  background: rgba(247, 200, 67, 0.04);
-}
-
-.genres-list-item.rank-2:not(.genres-list-item-highlight) {
-  background: rgba(192, 192, 192, 0.03);
-}
-
-.genres-list-item.rank-3:not(.genres-list-item-highlight) {
-  background: rgba(205, 127, 50, 0.03);
-}
-
-.genres-list-name {
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
-.genres-rank-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 10px;
-  margin-right: 8px;
-  flex-shrink: 0;
-}
-
-.genres-list-item.rank-1 .genres-rank-badge {
-  background: #f7c843;
-  color: #1b1302;
-}
-
-.genres-list-item.rank-2 .genres-rank-badge {
-  background: #c0c0c0;
-  color: #1a1a1a;
-}
-
-.genres-list-item.rank-3 .genres-rank-badge {
-  background: #cd7f32;
-  color: #ffffff;
-}
-
-.genres-list-meta {
-  color: var(--text-secondary);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.genres-list--aligned .genres-list-meta {
-  display: grid;
-  grid-template-columns: minmax(4ch, auto) minmax(10ch, auto) minmax(13ch, auto);
-  gap: 0 var(--space-sm);
-  align-items: center;
-  justify-content: end;
-}
-
-.genres-list--aligned .genres-list-count {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.genres-list--aligned .genres-list-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  justify-content: flex-end;
-  white-space: nowrap;
-}
-
-.genres-list-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.genres-list-stars {
-  display: inline-flex;
-  align-items: center;
-  vertical-align: middle;
-}
-
-.genres-list-avg {
-  margin-left: 2px;
-}
-
-.genres-list-index {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.genres-list--aligned .genres-list-index {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.genres-list-empty {
-  color: #93a0b5;
-  font-size: 14px;
-  margin: 0;
-}
-
 /* Hidden Gems (Letterboxd-like) */
 .hidden-gems-section-header {
   display: flex;
@@ -2375,6 +2221,20 @@ h3, .card-header h3 {
   }
   .rating-cell {
     flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .rating-cell .stars {
+    display: none;
+  }
+  
+  .rating-cell::after {
+    content: '★';
+    color: #f7c843;
+    font-size: 16px;
+    line-height: 1;
   }
   .decade-row {
     grid-template-columns: 1fr;
