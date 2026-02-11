@@ -6,10 +6,11 @@ from typing import Dict, Optional, Any, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
+import json
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent / ".env"
@@ -233,6 +234,70 @@ async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[s
     except Exception as e:
         logger.exception("Error in batch keywords endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# Cache for demo report to avoid loading from disk on every request
+_demo_report_cache: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/demo-report")
+async def get_demo_report():
+    """
+    Get the pre-generated demo report (1000 films).
+    Returns JSON with filmsLite, filmsLiteAll, and availableYears.
+    """
+    global _demo_report_cache
+    
+    try:
+        if _demo_report_cache is None:
+            demo_file = Path(__file__).resolve().parent / "demo_report_1000.json"
+            if not demo_file.exists():
+                raise HTTPException(
+                    status_code=404,
+                    detail="Demo report file not found. Please generate demo_report_1000.json first."
+                )
+            
+            with open(demo_file, "r", encoding="utf-8") as f:
+                _demo_report_cache = json.load(f)
+            
+            # Log memory usage estimate
+            import sys
+            cache_size_mb = sys.getsizeof(json.dumps(_demo_report_cache)) / (1024 * 1024)
+            logger.info(f"Demo report loaded into cache. Estimated size: {cache_size_mb:.2f} MB")
+        
+        return _demo_report_cache
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error loading demo report: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to load demo report: {str(e)}")
+
+
+@app.get("/api/demo-csv")
+async def get_demo_csv():
+    """
+    Get the demo CSV file (1000 films).
+    Returns CSV file that can be processed through the full analysis pipeline.
+    """
+    try:
+        csv_file = Path(__file__).resolve().parent / "demo_ratings_1000.csv"
+        if not csv_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="Demo CSV file not found. Please generate demo_ratings_1000.csv first."
+            )
+        
+        return FileResponse(
+            csv_file,
+            media_type="text/csv",
+            filename="demo_ratings_1000.csv",
+            headers={"Content-Disposition": "attachment; filename=demo_ratings_1000.csv"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error loading demo CSV: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to load demo CSV: {str(e)}")
 
 
 if __name__ == "__main__":

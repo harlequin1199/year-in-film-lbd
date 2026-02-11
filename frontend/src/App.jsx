@@ -56,10 +56,12 @@ function App() {
   const [resumeState, setResumeState] = useState(null)
   const [showResumeModal, setShowResumeModal] = useState(false)
   const [lastReportAvailable, setLastReportAvailable] = useState(false)
+  const [showDemoDropdown, setShowDemoDropdown] = useState(false)
 
   const abortControllerRef = useRef(null)
   const progressRef = useRef(null)
   const persistIntervalRef = useRef(null)
+  const demoDropdownRef = useRef(null)
 
   useEffect(() => {
     getResumeState().then((s) => {
@@ -71,6 +73,29 @@ function App() {
   useEffect(() => {
     if (resumeState && !loading) setShowResumeModal(true)
   }, [resumeState, loading])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (demoDropdownRef.current && !demoDropdownRef.current.contains(event.target)) {
+        setShowDemoDropdown(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && showDemoDropdown) {
+        setShowDemoDropdown(false)
+      }
+    }
+
+    if (showDemoDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleEscape)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleEscape)
+      }
+    }
+  }, [showDemoDropdown])
 
   const extractYears = (films) => [...new Set(films.map((f) => {
     const d = f.date
@@ -454,12 +479,180 @@ function App() {
     }
   }
 
+  const handleLoadDemoCSV = async () => {
+    setError('')
+    setLoading(true)
+    setAnalysis(null)
+    setSimplifiedMode(false)
+    abortControllerRef.current = new AbortController()
+    
+    try {
+      const envApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+      const API_BASE = envApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '')
+      if (!API_BASE) {
+        throw new Error('VITE_API_URL не задан')
+      }
+
+      // Загружаем CSV файл с бекенда
+      const response = await fetch(`${API_BASE}/api/demo-csv`)
+      if (!response.ok) {
+        throw new Error(`Ошибка загрузки CSV: ${response.statusText}`)
+      }
+
+      const blob = await response.blob()
+      const csvFile = new File([blob], 'demo_ratings_1000.csv', { type: 'text/csv' })
+
+      // Используем существующую функцию обработки CSV
+      await runAnalysis(csvFile, false)
+    } catch (err) {
+      setAnalysis(null)
+      setLoading(false)
+      setProgress(null)
+      if (err?.name !== 'AbortError') {
+        setError(err.message || 'Не удалось загрузить демо CSV')
+      }
+    } finally {
+      abortControllerRef.current = null
+    }
+  }
+
+  const handleLoadDemoReport = async () => {
+    setError('')
+    setLoading(true)
+    setAnalysis(null)
+    setSimplifiedMode(false)
+    abortControllerRef.current = new AbortController()
+    
+    try {
+      const envApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+      const API_BASE = envApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '')
+      if (!API_BASE) {
+        throw new Error('VITE_API_URL не задан')
+      }
+
+      // Загружаем готовый JSON отчёт
+      const response = await fetch(`${API_BASE}/api/demo-report`)
+      if (!response.ok) {
+        throw new Error(`Ошибка загрузки отчёта: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      
+      if (abortControllerRef.current?.signal.aborted) {
+        setLoading(false)
+        setProgress(null)
+        return
+      }
+
+      // Получаем количество фильмов для симуляции прогресса
+      const filmsCount = data?.filmsLite?.length || data?.filmsLiteAll?.length || 0
+
+      // Симуляция прогресса загрузки готового отчёта
+      const simulateProgress = async () => {
+        const stages = [
+          { stage: 'parsing', message: 'Загрузка демо-отчёта', percent: 30, delay: 300 },
+          { stage: 'tmdb_search', message: 'Подготовка данных', percent: 60, delay: 400 },
+          { stage: 'finalizing', message: 'Финализация отчёта', percent: 100, delay: 300 },
+        ]
+        
+        for (const stageInfo of stages) {
+          if (abortControllerRef.current?.signal.aborted) return
+          const done = Math.round((stageInfo.percent / 100) * filmsCount)
+          setProgress({
+            stage: stageInfo.stage,
+            message: stageInfo.message,
+            total: filmsCount,
+            done: done,
+            percent: stageInfo.percent,
+          })
+          await new Promise(resolve => setTimeout(resolve, stageInfo.delay))
+        }
+      }
+      
+      await simulateProgress()
+      
+      if (abortControllerRef.current?.signal.aborted) {
+        setLoading(false)
+        setProgress(null)
+        return
+      }
+
+      setProgress({ stage: 'finalizing', message: 'Готово', total: filmsCount, done: filmsCount, percent: 100 })
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      setAnalysis(data)
+      setLastUploadedFileName('демо-отчёт (готовый)')
+      await setLastReport(data)
+      setLastReportAvailable(true)
+      setLoading(false)
+      setProgress(null)
+    } catch (err) {
+      setAnalysis(null)
+      setLoading(false)
+      setProgress(null)
+      if (err?.name !== 'AbortError') {
+        setError(err.message || 'Не удалось загрузить готовый демо-отчёт')
+      }
+    } finally {
+      abortControllerRef.current = null
+    }
+  }
+
+
   const simplifiedEmpty = analysis?.simplifiedMode
 
   return (
     <div className="app" id="dashboard-root">
       <header className="hero">
-        <div>
+        <div style={{ position: 'relative' }}>
+          {isMobile() && (
+            <div 
+              ref={demoDropdownRef}
+              style={{ 
+                position: 'absolute', 
+                top: 0, 
+                right: 0, 
+                zIndex: 10
+              }}
+            >
+              <button
+                type="button"
+                className="demo-button"
+                onClick={() => setShowDemoDropdown(!showDemoDropdown)}
+                disabled={loading}
+                aria-expanded={showDemoDropdown}
+                aria-haspopup="true"
+              >
+                Демо
+              </button>
+              {showDemoDropdown && (
+                <div className="demo-dropdown-menu">
+                  <button
+                    type="button"
+                    className="demo-dropdown-item"
+                    onClick={() => {
+                      handleLoadDemoCSV()
+                      setShowDemoDropdown(false)
+                    }}
+                    disabled={loading}
+                  >
+                    Загрузить демо-отчёт
+                  </button>
+                  <button
+                    type="button"
+                    className="demo-dropdown-item"
+                    onClick={() => {
+                      handleLoadDemoReport()
+                      setShowDemoDropdown(false)
+                    }}
+                    disabled={loading}
+                  >
+                    Загрузить готовый демо-отчёт
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <p className="eyebrow">Letterboxd · Итоги года</p>
           <h1>Твой год в кино</h1>
           {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
@@ -483,6 +676,53 @@ function App() {
           )}
         </div>
         <div className="hero-actions">
+          {!isMobile() && (
+            <div 
+              ref={demoDropdownRef}
+              style={{ 
+                position: 'relative',
+                alignSelf: 'flex-end',
+                marginBottom: '12px'
+              }}
+            >
+              <button
+                type="button"
+                className="demo-button"
+                onClick={() => setShowDemoDropdown(!showDemoDropdown)}
+                disabled={loading}
+                aria-expanded={showDemoDropdown}
+                aria-haspopup="true"
+              >
+                Демо
+              </button>
+              {showDemoDropdown && (
+                <div className="demo-dropdown-menu">
+                  <button
+                    type="button"
+                    className="demo-dropdown-item"
+                    onClick={() => {
+                      handleLoadDemoCSV()
+                      setShowDemoDropdown(false)
+                    }}
+                    disabled={loading}
+                  >
+                    Загрузить демо-отчёт
+                  </button>
+                  <button
+                    type="button"
+                    className="demo-dropdown-item"
+                    onClick={() => {
+                      handleLoadDemoReport()
+                      setShowDemoDropdown(false)
+                    }}
+                    disabled={loading}
+                  >
+                    Загрузить готовый демо-отчёт
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <UploadZone
             onUpload={handleUpload}
             loading={loading}
