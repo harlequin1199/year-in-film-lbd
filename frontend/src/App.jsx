@@ -635,12 +635,16 @@ function App() {
               genreOfTheYear={computed.genreOfTheYear}
             />
           </section>
-          <section className="grid grid--two-cols">
+          <section className="grid">
             <TagsTable
               tags={computed.topTags}
               emptyMessage={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : undefined}
             />
+          </section>
+          <section className="grid">
             <ListsProgressSection films={filteredFilms} />
+          </section>
+          <section className="grid">
             <Suspense fallback={null}>
               <LazyChartsSection
                 films={filteredFilms}
@@ -672,6 +676,8 @@ function App() {
               sectionKey="countries"
               translateName={getCountryNameRu}
             />
+          </section>
+          <section className="grid">
             <ToggleRankedList
               title="Режиссёры"
               subtitle="Те, кого ты смотришь чаще всего"

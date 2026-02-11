@@ -584,6 +584,11 @@ h3, .card-header h3 {
   grid-column: 1 / -1;
 }
 
+.chart-by-year-row {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 .card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -2096,6 +2101,8 @@ h3, .card-header h3 {
   display: grid;
   gap: 12px;
   position: relative;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .byyear-header {
@@ -2103,11 +2110,17 @@ h3, .card-header h3 {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .byyear-tabs {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .byyear-tab {
@@ -2120,6 +2133,8 @@ h3, .card-header h3 {
   border-radius: 999px;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .byyear-tab:hover {
@@ -2136,6 +2151,8 @@ h3, .card-header h3 {
 .byyear-svg {
   width: 100%;
   display: block;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .byyear-tooltip {
@@ -2294,6 +2311,12 @@ h3, .card-header h3 {
   }
 }
 
+@media (max-width: 1024px) {
+  .lists-progress-ring-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
 @media (max-width: 720px) {
   .app {
     padding: var(--space-lg) var(--space-md) 64px;
@@ -2316,7 +2339,20 @@ h3, .card-header h3 {
     align-items: flex-start;
   }
   .lists-progress-ring-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .byyear-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .byyear-tabs {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .byyear-tab {
+    font-size: 11px;
+    padding: 6px 12px;
   }
   .lists-progress-ring {
     width: 90px;
@@ -2405,6 +2441,13 @@ h3, .card-header h3 {
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
+  .lists-progress-ring-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .byyear-tab {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -2437,19 +2480,23 @@ h3, .card-header h3 {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .lists-progress-ring-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  /* Каждая «строка» из 2 элементов состоит из 3 подрядов: диаграмма, заголовок, описание */
+  grid-template-columns: repeat(3, 1fr);
+  /* Каждая «строка» из 3 элементов состоит из 3 подрядов: диаграмма, заголовок, описание */
   grid-auto-rows: auto auto auto;
   align-content: space-evenly;
   justify-items: center;
   margin-top: 12px;
   row-gap: 0;
   column-gap: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .lists-progress-ring-item {
@@ -2464,6 +2511,8 @@ h3, .card-header h3 {
   max-width: 180px;
   margin: 0 auto;
   padding-bottom: 22px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .lists-progress-ring {
