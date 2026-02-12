@@ -24,6 +24,7 @@ import {
 import { enrichFilmsPhase1Only, runStagedAnalysis } from './utils/tmdbProxyClient.js'
 import { clearCache, clearResumeState, getResumeState, getLastReport, setLastReport, setResumeState as persistResumeState } from './utils/indexedDbCache.js'
 import { getCountryNameRu } from './utils/countriesRu.js'
+import { getLetterboxdCountryUrl, getLetterboxdDirectorUrl, getLetterboxdActorUrl } from './utils/letterboxdUrl.js'
 import { USE_MOCKS, MOCK_OPTIONS, loadMock } from './mocks/index.js'
 
 const LazyChartsSection = lazy(() => import('./components/LazyChartsSection.jsx'))
@@ -951,6 +952,7 @@ function App() {
               emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по странам.'}
               sectionKey="countries"
               translateName={getCountryNameRu}
+              getLetterboxdUrl={getLetterboxdCountryUrl}
             />
           </section>
           <section className="grid">
@@ -961,6 +963,7 @@ function App() {
               byAvg={simplifiedEmpty ? [] : computed.topDirectorsByAvgRating}
               emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по режиссёрам.'}
               sectionKey="directors"
+              getLetterboxdUrl={getLetterboxdDirectorUrl}
             />
           </section>
           <section className="grid">
@@ -971,6 +974,7 @@ function App() {
               byAvg={simplifiedEmpty ? [] : computed.topActorsByAvgRating}
               emptyText={simplifiedEmpty ? 'Недоступно в упрощённом режиме на телефоне.' : 'Нет данных по актёрам.'}
               sectionKey="actors"
+              getLetterboxdUrl={getLetterboxdActorUrl}
             />
           </section>
           <section className="grid">

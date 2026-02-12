@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Stars from './Stars.jsx'
 import { formatNumber, formatRating } from '../utils/format.js'
 import { getLanguageRu } from '../utils/languageRu.js'
+import { getLetterboxdLanguageUrl } from '../utils/letterboxdUrl.js'
 
 const LIMIT = 10
 
@@ -27,7 +28,14 @@ function LanguagesSection({ totalLanguagesCount, topLanguagesByCount }) {
         <div className="pill-row">
           {pills.map((lang) => (
             <span className="pill" key={lang.language}>
-              {getLanguageRu(lang.language)}
+              <a 
+                href={getLetterboxdLanguageUrl(lang.language)} 
+                target="_blank" 
+                rel="noreferrer"
+                style={{ color: 'inherit', textDecoration: 'none' }}
+              >
+                {getLanguageRu(lang.language)}
+              </a>
             </span>
           ))}
         </div>
@@ -45,7 +53,16 @@ function LanguagesSection({ totalLanguagesCount, topLanguagesByCount }) {
             </div>
             {list.map((lang) => (
               <div className="table-row" key={lang.language}>
-                <span className="tag-name">{getLanguageRu(lang.language)}</span>
+                <span className="tag-name">
+                  <a 
+                    href={getLetterboxdLanguageUrl(lang.language)} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                  >
+                    {getLanguageRu(lang.language)}
+                  </a>
+                </span>
                 <span>{formatNumber(lang.count)}</span>
                 <span className="rating-cell">
                   {formatRating(lang.avg_rating)}

@@ -1,5 +1,6 @@
 import Stars from './Stars.jsx'
 import { formatRating, formatYear, formatLoveScore } from '../utils/format.js'
+import { getLetterboxdDecadeUrl } from '../utils/letterboxdUrl.js'
 
 function FavoriteDecades({ films, decades }) {
   if (!films) return null
@@ -34,7 +35,14 @@ function FavoriteDecades({ films, decades }) {
             <div className={`decade-row ${rankClass}`} key={decade.decade}>
               <div className="decade-info">
                 <span className="decade-title">
-                  {formatYear(decade.decade)}-е
+                  <a 
+                    href={getLetterboxdDecadeUrl(decade.decade)} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                  >
+                    {formatYear(decade.decade)}-е
+                  </a>
                 </span>
                 <div className="decade-rating">
                   <span>★ Средняя {formatRating(decade.avgRating)}</span>

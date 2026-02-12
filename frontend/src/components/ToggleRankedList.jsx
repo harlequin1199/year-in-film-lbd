@@ -13,6 +13,7 @@ function ToggleRankedList({
   avgLabel = 'Самые любимые',
   sectionKey,
   translateName,
+  getLetterboxdUrl,
 }) {
   const [mode, setMode] = useState('count')
   const [expanded, setExpanded] = useState(false)
@@ -70,7 +71,18 @@ function ToggleRankedList({
               <div className={`table-row ${showIndex ? 'table-row--with-index' : 'table-row--wide'} ${rankClass}`} key={`${item.name}-${index}`}>
                 <span className="tag-name">
                   {rank <= 3 && <span className="rank-badge">{rank}</span>}
-                  {displayName(item)}
+                  {getLetterboxdUrl ? (
+                    <a 
+                      href={getLetterboxdUrl(item.name)} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                    >
+                      {displayName(item)}
+                    </a>
+                  ) : (
+                    displayName(item)
+                  )}
                 </span>
                 <span>{formatNumber(item.count)}</span>
                 <span className="rating-cell">

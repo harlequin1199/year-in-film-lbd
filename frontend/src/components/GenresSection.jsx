@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatNumber, formatRating, formatLoveScore } from '../utils/format.js'
 import { getGenreNameRu } from '../utils/genresRu.js'
 import { getGenreIcon } from '../utils/genreIcons.js'
+import { getLetterboxdGenreUrl } from '../utils/letterboxdUrl.js'
 import Stars from './Stars.jsx'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
@@ -38,7 +39,16 @@ export default function GenresSection({
           <div className="genres-year-content">
             <div className="genres-year-left">
               <div className="genres-year-label">Жанр года</div>
-              <div className="genres-year-name">{getGenreNameRu(genreOfTheYear.name)}</div>
+              <div className="genres-year-name">
+                <a 
+                  href={getLetterboxdGenreUrl(genreOfTheYear.name)} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                  {getGenreNameRu(genreOfTheYear.name)}
+                </a>
+              </div>
               <div className="genres-year-subtitle">
                 Фильмов: {formatNumber(genreOfTheYear.count)} • Средняя:{' '}
                 <span className="genres-year-stars">
@@ -122,7 +132,14 @@ export default function GenresSection({
               >
                 <span className="tag-name">
                   {rank <= 3 && <span className="rank-badge">{rank}</span>}
-                  {getGenreNameRu(g.name)}
+                  <a 
+                    href={getLetterboxdGenreUrl(g.name)} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                  >
+                    {getGenreNameRu(g.name)}
+                  </a>
                 </span>
                 <span>
                   {formatNumber(g.count)}
