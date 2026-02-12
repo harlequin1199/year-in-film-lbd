@@ -13,7 +13,7 @@ function RankedList({ title, subtitle, items, nameLabel }) {
       <div className="table">
         <div className="table-head table-head--wide">
           <span>{nameLabel}</span>
-          <span>Счёт</span>
+          <span>Фильмов</span>
           <span>Средняя</span>
           <span>4.5–5★</span>
         </div>

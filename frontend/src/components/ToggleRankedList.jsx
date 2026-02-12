@@ -53,7 +53,7 @@ function ToggleRankedList({
         <div className="table">
           <div className={`table-head ${showIndex ? 'table-head--with-index' : 'table-head--wide'}`}>
             <span>Имя</span>
-            <span>Счёт</span>
+            <span>Фильмов</span>
             <span>Средняя</span>
             <span>4.5–5★</span>
             {showIndex && (

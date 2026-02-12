@@ -28,7 +28,7 @@ function TagsTable({ tags, emptyMessage }) {
           <div className="table">
             <div className="table-head">
               <span>Тема</span>
-              <span>Счёт</span>
+              <span>Фильмов</span>
               <span>Средняя</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 Love Score

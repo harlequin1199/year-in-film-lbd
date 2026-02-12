@@ -999,7 +999,10 @@ function App() {
                     Формула учитывает три фактора: <strong>оценку выше вашей средней</strong> (65% веса), <strong>частоту просмотра</strong> (35% веса) и <strong>уверенность в данных</strong> (зависит от количества просмотров).
                   </p>
                   <p>
-                    Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа, тем выше Love Score.
+                    Частота просмотра учитывает не только абсолютное количество, но и относительную частоту: для <strong>жанров</strong> и <strong>стран</strong> сравнивается с глобальной частотой в базе TMDb (чтобы учесть, что некоторые жанры и страны реже встречаются), для <strong>периодов времени</strong> — с глобальной частотой фильмов в TMDb по годам/десятилетиям (чтобы учесть разную доступность фильмов разных эпох).
+                  </p>
+                  <p>
+                    Чем выше оценка относительно вашей средней и чем чаще вы смотрите контент этого типа (с учётом его редкости), тем выше Love Score.
                   </p>
                 </div>
                 <div className="app-footer-love-score-examples-wrapper">
@@ -1015,7 +1018,11 @@ function App() {
                       </div>
                       <div className="love-score-example-item">
                         <span className="love-score-example-label">Жанр «Драма»:</span>
-                        <span className="love-score-example-value">4.5★ (15 фильмов)</span>
+                        <span className="love-score-example-value">4.5★</span>
+                      </div>
+                      <div className="love-score-example-item">
+                        <span className="love-score-example-label">Количество фильмов:</span>
+                        <span className="love-score-example-value">15</span>
                       </div>
                       <div className="love-score-example-item love-score-example-result">
                         <span className="love-score-example-label">Love Score:</span>
@@ -1030,7 +1037,11 @@ function App() {
                       </div>
                       <div className="love-score-example-item">
                         <span className="love-score-example-label">Жанр «Комедия»:</span>
-                        <span className="love-score-example-value">3.0★ (45 фильмов)</span>
+                        <span className="love-score-example-value">3.0★</span>
+                      </div>
+                      <div className="love-score-example-item">
+                        <span className="love-score-example-label">Количество фильмов:</span>
+                        <span className="love-score-example-value">45</span>
                       </div>
                       <div className="love-score-example-item love-score-example-result">
                         <span className="love-score-example-label">Love Score:</span>

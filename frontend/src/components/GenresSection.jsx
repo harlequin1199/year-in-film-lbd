@@ -97,7 +97,7 @@ export default function GenresSection({
         <div className="table">
           <div className={`table-head ${showIndex ? 'table-head--with-index' : 'table-head--wide'}`}>
             <span>Жанр</span>
-            <span>Счёт</span>
+            <span>Фильмов</span>
             <span>Средняя</span>
             <span>4.5–5★</span>
             {showIndex && (

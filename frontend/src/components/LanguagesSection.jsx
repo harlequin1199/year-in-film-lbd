@@ -39,7 +39,7 @@ function LanguagesSection({ totalLanguagesCount, topLanguagesByCount }) {
           <div className="table">
             <div className="table-head">
               <span>Язык</span>
-              <span>Счёт</span>
+              <span>Фильмов</span>
               <span>Средняя</span>
               <span>4.5–5★</span>
             </div>
