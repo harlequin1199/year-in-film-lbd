@@ -395,7 +395,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
         onProgress: ({ done }) => {
           searchDone = done
           if (onProgress) {
-            const calculatedPercent = 8 + Math.min(67, Math.round((searchDone / uniqueKeys.length) * 67))
+            const calculatedPercent = 8 + Math.min(52, Math.round((searchDone / uniqueKeys.length) * 52))
             onProgress({
               stage: 'tmdb_search',
               message: `Поиск фильмов в TMDb: ${searchDone} / ${uniqueKeys.length}`,
@@ -498,7 +498,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
         onProgress: ({ done }) => {
           fullDone = done
           if (onProgress) {
-            const calculatedPercent = 75 + Math.min(20, Math.round((fullDone / uniqueIds.length) * 20))
+            const calculatedPercent = 60 + Math.min(35, Math.round((fullDone / uniqueIds.length) * 35))
             onProgress({
               stage: 'tmdb_details',
               message: `Загрузка данных TMDb: ${fullDone} / ${uniqueIds.length}`,
@@ -662,7 +662,7 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
               message: `Поиск фильмов в TMDb: ${searchDone} / ${searchTotal}`,
               done: searchDone,
               total: searchTotal,
-              percent: 8 + Math.min(67, Math.round((searchDone / searchTotal) * 67)),
+              percent: 8 + Math.min(52, Math.round((searchDone / searchTotal) * 52)),
             })
           }
         },
@@ -698,7 +698,7 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
             message: `Загрузка данных TMDb: ${movieDone} / ${movieTotal}`,
             done: movieDone,
             total: movieTotal,
-            percent: 75 + Math.min(15, Math.round((movieDone / movieTotal) * 15)),
+            percent: 60 + Math.min(35, Math.round((movieDone / movieTotal) * 35)),
           })
         }
       },

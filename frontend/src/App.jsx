@@ -447,7 +447,7 @@ function App() {
         const stages = [
           { stage: 'parsing', message: 'Чтение CSV', percent: 4, delay: 300 },
           { stage: 'stage1', message: 'Базовая статистика', percent: 8, delay: 400 },
-          { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', percent: 75, delay: 600 },
+          { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', percent: 60, delay: 600 },
           { stage: 'tmdb_details', message: 'Загрузка данных TMDb', percent: 95, delay: 800 },
           { stage: 'finalizing', message: 'Финализация отчёта', percent: 100, delay: 300 },
         ]
