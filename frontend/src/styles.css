@@ -2265,6 +2265,7 @@ h3, .card-header h3 {
   position: relative;
   overflow-x: hidden;
   max-width: 100%;
+  padding-top: 20px;
 }
 
 .byyear-header {
@@ -2383,10 +2384,31 @@ h3, .card-header h3 {
 }
 
 .byyear-axis {
+  position: relative;
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #93a0b5;
+  margin-top: 8px;
+}
+
+.byyear-decade-labels-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: none;
+}
+
+.byyear-decade-label-top {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #6b7a95;
+  opacity: 0.6;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .decade-list {

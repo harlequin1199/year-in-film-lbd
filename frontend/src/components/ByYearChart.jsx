@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { formatNumber, formatRating, formatYear, formatLoveScore } from '../utils/format.js'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
@@ -14,6 +14,20 @@ const getBarWidth = (yearCount) => {
 function ByYearChart({ films, yearsByLoveScore }) {
   const [mode, setMode] = useState('count')
   const [tooltip, setTooltip] = useState(null)
+  const [containerWidth, setContainerWidth] = useState(null)
+  const chartContainerRef = useRef(null)
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (chartContainerRef.current) {
+        setContainerWidth(chartContainerRef.current.offsetWidth)
+      }
+    }
+    
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
 
   const loveScoreByYear = useMemo(() => {
     const map = new Map()
@@ -69,6 +83,27 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const barWidth = getBarWidth(yearCount)
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
+
+  // Calculate decade boundaries
+  const decadeBoundaries = useMemo(() => {
+    const minDecade = Math.floor(minYear / 10) * 10
+    const maxDecade = Math.floor(maxYear / 10) * 10
+    const boundaries = []
+    for (let decade = minDecade; decade <= maxDecade; decade += 10) {
+      // Use the first year of the decade that falls within our range, or the decade start if it's before minYear
+      const yearForDecade = Math.max(decade, minYear)
+      if (yearForDecade <= maxYear) {
+        const yearIndex = yearForDecade - minYear
+        // Allow yearIndex to be equal to yearCount for the last decade boundary
+        if (yearIndex >= 0 && yearIndex <= yearCount) {
+          // Clamp x to chartWidth to ensure it's within bounds
+          const x = Math.min(yearIndex * (barWidth + gap), chartWidth)
+          boundaries.push({ decade, x })
+        }
+      }
+    }
+    return boundaries
+  }, [minYear, maxYear, yearCount, barWidth, gap, chartWidth])
 
   const handleMove = (event, entry) => {
     const tooltipWidth = 220
@@ -139,7 +174,81 @@ function ByYearChart({ films, yearsByLoveScore }) {
           <LoveScoreInfo variant="icon-only" className="byyear-love-score-info" />
         </div>
       </div>
-      <div className="byyear-chart">
+      <div className="byyear-chart" ref={(el) => {
+        if (el && containerWidth !== el.offsetWidth) {
+          setContainerWidth(el.offsetWidth)
+        }
+        chartContainerRef.current = el
+      }}>
+        {/* Decade labels at the top - positioned between divider lines */}
+        {decadeBoundaries.length > 1 && (() => {
+          // Get actual container width for better distance calculation
+          const actualWidth = containerWidth || chartWidth
+          
+          // Calculate minimum distance in pixels (approximately 45px for a 4-digit label with spacing)
+          const minDistancePx = 45
+          const minDistancePercent = actualWidth > 0 ? (minDistancePx / actualWidth) * 100 : 8
+          const edgeMarginPx = 25
+          const edgeMarginPercent = actualWidth > 0 ? (edgeMarginPx / actualWidth) * 100 : 3
+          
+          const visibleLabels = []
+          
+          decadeBoundaries.forEach((boundary, index) => {
+            // For each decade boundary, show label between it and the next one
+            // For the last boundary, show label between it and the end of chart
+            const nextBoundary = index < decadeBoundaries.length - 1 
+              ? decadeBoundaries[index + 1] 
+              : { x: chartWidth }
+            
+            // Calculate center position between two decade boundaries
+            const centerX = (boundary.x + nextBoundary.x) / 2
+            const percent = (centerX / chartWidth) * 100
+            
+            // Check if label is too close to edges
+            if (percent < edgeMarginPercent || percent > 100 - edgeMarginPercent) {
+              return
+            }
+            
+            // Check distance from previous label (in pixels)
+            const prevLabel = visibleLabels.length > 0 ? visibleLabels[visibleLabels.length - 1] : null
+            if (prevLabel) {
+              const distancePx = Math.abs(percent - prevLabel.percent) * actualWidth / 100
+              if (distancePx < minDistancePx) {
+                return
+              }
+            }
+            
+            // Check distance to next label (if exists)
+            const nextBoundaryIndex = index + 1
+            if (nextBoundaryIndex < decadeBoundaries.length) {
+              const nextNextBoundary = nextBoundaryIndex < decadeBoundaries.length - 1
+                ? decadeBoundaries[nextBoundaryIndex + 1]
+                : { x: chartWidth }
+              const nextCenterX = (decadeBoundaries[nextBoundaryIndex].x + nextNextBoundary.x) / 2
+              const nextPercent = (nextCenterX / chartWidth) * 100
+              const nextDistancePx = Math.abs(nextPercent - percent) * actualWidth / 100
+              if (nextDistancePx < minDistancePx) {
+                return
+              }
+            }
+            
+            visibleLabels.push({ decade: boundary.decade, percent })
+          })
+          
+          return visibleLabels.length > 0 ? (
+            <div className="byyear-decade-labels-top">
+              {visibleLabels.map(({ decade, percent }) => (
+                <span
+                  key={`decade-top-${decade}`}
+                  className="byyear-decade-label-top"
+                  style={{ left: `${percent}%` }}
+                >
+                  {decade}
+                </span>
+              ))}
+            </div>
+          ) : null
+        })()}
         <svg
           className="byyear-svg"
           width="100%"
@@ -165,7 +274,49 @@ function ByYearChart({ films, yearsByLoveScore }) {
               <stop offset="100%" stopColor="#6366f1" />
             </linearGradient>
           </defs>
-          <line x1="0" y1={BAR_HEIGHT} x2={chartWidth} y2={BAR_HEIGHT} stroke="#1f2430" strokeWidth="1" />
+          {/* Decade background rectangles */}
+          {decadeBoundaries.map((boundary, index) => {
+            const nextBoundary = index < decadeBoundaries.length - 1 
+              ? decadeBoundaries[index + 1] 
+              : { x: chartWidth }
+            const x1 = boundary.x
+            const x2 = nextBoundary.x
+            const width = x2 - x1
+            
+            // Alternate between two subtle background colors
+            const bgColor = index % 2 === 0 ? 'rgba(42, 50, 66, 0.15)' : 'rgba(42, 50, 66, 0.08)'
+            
+            return (
+              <rect
+                key={`decade-bg-${boundary.decade}`}
+                x={x1}
+                y={0}
+                width={width}
+                height={BAR_HEIGHT}
+                fill={bgColor}
+              />
+            )
+          })}
+          <line x1="0" y1={BAR_HEIGHT} x2={chartWidth} y2={BAR_HEIGHT} stroke="#1f2430" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          {/* Decade divider lines */}
+          {decadeBoundaries.map(({ decade, x }) => {
+            // Always show divider lines for all decades (including boundaries)
+            // Use vector-effect="non-scaling-stroke" to prevent line width from scaling
+            return (
+              <line
+                key={`decade-${decade}`}
+                x1={x}
+                y1={0}
+                x2={x}
+                y2={BAR_HEIGHT}
+                stroke="#2a3242"
+                strokeWidth="1"
+                strokeDasharray="2 2"
+                opacity="0.5"
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          })}
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
