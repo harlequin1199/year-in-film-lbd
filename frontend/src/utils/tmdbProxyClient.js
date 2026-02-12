@@ -20,6 +20,7 @@ const HIGH_LOAD_CONCURRENCY = 2
 const HIGH_LOAD_THRESHOLD = 5000
 const MAX_IN_FLIGHT = 200
 
+
 /**
  * Adaptive batch processing parameters based on data volume.
  * Optimized for smooth progress and maximum backend utilization (TMDb ~25 req/s).
@@ -256,11 +257,6 @@ function processBatchesParallel(items, batchSize, parallelBatches, processor, op
 }
 
 const CONCURRENCY_SEARCH = 3
-const CONCURRENCY_MOVIE = 3
-const CONCURRENCY_CREDITS = 1
-const CONCURRENCY_KEYWORDS = 1
-const CREDITS_CAP = 9999 // No practical limit - load credits for all films
-const KEYWORDS_CAP = 9999 // No practical limit - load keywords for all films
 
 function emptyFilm(row) {
   return {
@@ -293,7 +289,7 @@ async function searchBatch(items, opts = {}) {
 }
 
 /**
- * Progressive staged analysis: Stage 2 (search) -> Stage 3 (movie) -> Stage 4 (credits/keywords capped).
+ * Progressive staged analysis: Stage 2 (search) -> Stage 3 (movie with credits and keywords).
  * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
  */
 export async function runStagedAnalysis(rows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
@@ -309,6 +305,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
   const resolvedTmdbIds = new Array(rows.length).fill(null)
   const keyToTmdbId = new Map()
 
+  // Stage 2: Search
   {
     let searchDone = 0
     const searchItems = uniqueKeys.map((k) => {
@@ -422,18 +419,22 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
 
   const uniqueIds = [...new Set(resolvedTmdbIds.filter(Boolean))]
   const movieMap = new Map()
+  const creditsMap = new Map()
+  const keywordsMap = new Map()
 
+  // Stage 3: Load full metadata (movies + credits + keywords) using unified endpoint
   if (uniqueIds.length > 0) {
-    let movieDone = 0
+    let fullDone = 0
     const batchProcessor = async (chunk) => {
       try {
         const data = await fetchJsonPost(
-          `${API_BASE}/tmdb/movies/batch`,
+          `${API_BASE}/tmdb/movies/full/batch`,
           { tmdb_ids: chunk },
           fetchOpts
         )
         
         const cachePromises = []
+        
         data.results?.forEach((result) => {
           if (result.movie) {
             const movie = {
@@ -454,124 +455,6 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
               })
             )
           }
-        })
-        
-        await Promise.allSettled(cachePromises)
-        if (cachePromises.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, 10))
-        }
-        
-        return data.results || []
-      } catch (err) {
-        if (err?.name === 'AbortError') throw err
-        const movieTasks = chunk.map((id) => async () => {
-          try {
-            const movie = await getMovieMinimal(id, fetchOpts)
-            movieMap.set(id, movie)
-            return movie
-          } catch {
-            return null
-          }
-        })
-        await runQueue(movieTasks, CONCURRENCY_MOVIE, { signal })
-        return chunk.map(() => ({ movie: null }))
-      }
-    }
-    
-    const movieParams = getBatchParams(uniqueIds.length)
-    await processBatchesParallel(
-      uniqueIds,
-      movieParams.batchSize,
-      movieParams.parallelBatches,
-      batchProcessor,
-      {
-        signal,
-        onProgress: ({ done }) => {
-          movieDone = done
-          if (onProgress) {
-            const calculatedPercent = 75 + Math.min(15, Math.round((movieDone / uniqueIds.length) * 15))
-            onProgress({
-              stage: 'tmdb_details',
-              message: `Загрузка данных TMDb: ${movieDone} / ${uniqueIds.length}`,
-              done: movieDone,
-              total: uniqueIds.length,
-              percent: calculatedPercent,
-            })
-          }
-        },
-      }
-    )
-  }
-
-  const films = rows.map((row, i) => {
-    const tmdbId = resolvedTmdbIds[i]
-    if (!tmdbId) return emptyFilm(row)
-    const movie = movieMap.get(tmdbId)
-    const poster_path = movie?.poster_path ?? null
-    const poster_url = getTmdbImageUrl(poster_path, 'w500')
-    const poster_url_w342 = getTmdbImageUrl(poster_path, 'w342')
-    const va = movie?.vote_average ?? null
-    const vc = movie?.vote_count ?? 0
-    return {
-      ...row,
-      tmdb_id: tmdbId,
-      poster_path,
-      poster_url,
-      poster_url_w342,
-      tmdb_vote_average: va,
-      tmdb_vote_count: vc,
-      tmdb_stars: tmdbRating5(va),
-      genres: movie?.genres || [],
-      keywords: [],
-      directors: [],
-      actors: [],
-      countries: movie?.production_countries || [],
-      runtime: movie?.runtime ?? null,
-      original_language: movie?.original_language ?? null,
-    }
-  })
-
-  if (onPartialResult) onPartialResult({ stage: 3, films })
-
-  const byRating = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
-  const gemScore = (f) => {
-    const u = f.rating ?? 0
-    const t = f.tmdb_stars
-    const vc = f.tmdb_vote_count ?? 0
-    if (u < 3.5 || vc < 200 || t == null) return -999
-    return u - t
-  }
-  const overScore = (f) => {
-    const t = f.tmdb_stars
-    const u = f.rating ?? 0
-    if (t == null) return -999
-    return t - u
-  }
-  
-  // Load credits for ALL films with tmdb_id - no restrictions
-  const idsForCredits = new Set()
-  films.forEach((f) => {
-    if (f.tmdb_id) idsForCredits.add(f.tmdb_id)
-  })
-  const idList = Array.from(idsForCredits).slice(0, CREDITS_CAP)
-  
-  const creditsMap = new Map()
-  const keywordsMap = new Map()
-  const creditsToFetch = idList.slice(0, CREDITS_CAP)
-  const keywordsToFetch = idList.slice(0, KEYWORDS_CAP)
-
-  if (creditsToFetch.length > 0) {
-    let creditsDone = 0
-    const batchProcessor = async (chunk) => {
-      try {
-        const data = await fetchJsonPost(
-          `${API_BASE}/tmdb/movies/credits/batch`,
-          { tmdb_ids: chunk },
-          fetchOpts
-        )
-        
-        const cachePromises = []
-        data.results?.forEach((result) => {
           if (result.credits) {
             creditsMap.set(result.tmdb_id, result.credits)
             cachePromises.push(
@@ -580,69 +463,11 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
               })
             )
           }
-        })
-        
-        await Promise.allSettled(cachePromises)
-        if (cachePromises.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, 10))
-        }
-        
-        return data.results || []
-      } catch (err) {
-        if (err?.name === 'AbortError') throw err
-        const creditTasks = chunk.map((id) => async () => {
-          try {
-            return await getCredits(id, fetchOpts)
-          } catch {
-            return null
-          }
-        })
-        const results = await runQueue(creditTasks, CONCURRENCY_CREDITS, { signal })
-        chunk.forEach((id, i) => { if (results[i]) creditsMap.set(id, results[i]) })
-        return results.map((credits, i) => ({ tmdb_id: chunk[i], credits }))
-      }
-    }
-    
-    const creditsParams = getBatchParams(creditsToFetch.length)
-    await processBatchesParallel(
-      creditsToFetch,
-      creditsParams.batchSize,
-      creditsParams.parallelBatches,
-      batchProcessor,
-      {
-        signal,
-        onProgress: ({ done }) => {
-          creditsDone = done
-          if (onProgress) {
-            onProgress({
-              stage: 'credits_keywords',
-              message: 'Загрузка актёров и режиссёров (опционально)',
-              done: creditsDone,
-              total: creditsToFetch.length,
-              percent: 90 + Math.min(2.5, Math.round((creditsDone / creditsToFetch.length) * 2.5)),
-            })
-          }
-        },
-      }
-    )
-  }
-
-  if (keywordsToFetch.length > 0) {
-    let keywordsDone = 0
-    const batchProcessor = async (chunk) => {
-      try {
-        const data = await fetchJsonPost(
-          `${API_BASE}/tmdb/movies/keywords/batch`,
-          { tmdb_ids: chunk },
-          fetchOpts
-        )
-        
-        const cachePromises = []
-        data.results?.forEach((result) => {
           if (result.keywords) {
-            keywordsMap.set(result.tmdb_id, { keywords: result.keywords })
+            const keywords = Array.isArray(result.keywords) ? result.keywords : []
+            keywordsMap.set(result.tmdb_id, { keywords })
             cachePromises.push(
-              cache.setKeywords(result.tmdb_id, result.keywords).catch((err) => {
+              cache.setKeywords(result.tmdb_id, keywords).catch((err) => {
                 console.warn('Failed to cache keywords:', err)
               })
             )
@@ -657,36 +482,29 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
         return data.results || []
       } catch (err) {
         if (err?.name === 'AbortError') throw err
-        const keywordTasks = chunk.map((id) => async () => {
-          try {
-            return await getKeywords(id, fetchOpts)
-          } catch {
-            return null
-          }
-        })
-        const results = await runQueue(keywordTasks, CONCURRENCY_KEYWORDS, { signal })
-        chunk.forEach((id, i) => { if (results[i]) keywordsMap.set(id, results[i]) })
-        return results.map((keywords, i) => ({ tmdb_id: chunk[i], keywords: keywords?.keywords || [] }))
+        // Fallback: return empty results for failed batch
+        return chunk.map((id) => ({ tmdb_id: id, movie: null, credits: null, keywords: null }))
       }
     }
     
-    const keywordsParams = getBatchParams(keywordsToFetch.length)
+    const fullParams = getBatchParams(uniqueIds.length)
     await processBatchesParallel(
-      keywordsToFetch,
-      keywordsParams.batchSize,
-      keywordsParams.parallelBatches,
+      uniqueIds,
+      fullParams.batchSize,
+      fullParams.parallelBatches,
       batchProcessor,
       {
         signal,
         onProgress: ({ done }) => {
-          keywordsDone = done
+          fullDone = done
           if (onProgress) {
+            const calculatedPercent = 75 + Math.min(20, Math.round((fullDone / uniqueIds.length) * 20))
             onProgress({
-              stage: 'credits_keywords',
-              message: 'Загрузка актёров и режиссёров (опционально)',
-              done: keywordsDone,
-              total: keywordsToFetch.length,
-              percent: 92.5 + Math.min(2.5, Math.round((keywordsDone / keywordsToFetch.length) * 2.5)),
+              stage: 'tmdb_details',
+              message: `Загрузка данных TMDb: ${fullDone} / ${uniqueIds.length}`,
+              done: fullDone,
+              total: uniqueIds.length,
+              percent: calculatedPercent,
             })
           }
         },
@@ -694,21 +512,48 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
     )
   }
 
-  films.forEach((f) => {
-    const id = f.tmdb_id
-    if (!id) return
-    const cred = creditsMap.get(id)
-    if (cred) {
-      f.directors = cred.directors || []
-      f.actors = (cred.actors || []).slice(0, 20)
+  // Build films array with all metadata
+  const films = rows.map((row, i) => {
+    const tmdbId = resolvedTmdbIds[i]
+    if (!tmdbId) return emptyFilm(row)
+    const movie = movieMap.get(tmdbId)
+    const credits = creditsMap.get(tmdbId)
+    const keywordsData = keywordsMap.get(tmdbId)
+    const keywords = keywordsData?.keywords || []
+    
+    const poster_path = movie?.poster_path ?? null
+    const poster_url = getTmdbImageUrl(poster_path, 'w500')
+    const poster_url_w342 = getTmdbImageUrl(poster_path, 'w342')
+    const va = movie?.vote_average ?? null
+    const vc = movie?.vote_count ?? 0
+    
+    const directors = credits?.directors || []
+    const actors = credits?.actors || []
+    
+    return {
+      ...row,
+      tmdb_id: tmdbId,
+      poster_path,
+      poster_url,
+      poster_url_w342,
+      tmdb_vote_average: va,
+      tmdb_vote_count: vc,
+      tmdb_stars: tmdbRating5(va),
+      genres: movie?.genres || [],
+      keywords,
+      directors,
+      actors,
+      countries: movie?.production_countries || [],
+      runtime: movie?.runtime ?? null,
+      original_language: movie?.original_language ?? null,
     }
-    const kw = keywordsMap.get(id)
-    if (kw) f.keywords = (kw.keywords || []).slice(0, 20)
   })
 
+  if (onPartialResult) onPartialResult({ stage: 3, films })
+  
   const warnings = []
-  if (idList.length >= CREDITS_CAP) warnings.push('Большой файл: загрузка актёров/режиссёров ограничена для стабильности.')
   if (onPartialResult) onPartialResult({ stage: 4, films, warnings })
+  
   return films
 }
 

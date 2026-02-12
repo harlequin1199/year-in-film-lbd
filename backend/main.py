@@ -39,6 +39,19 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _startup():
+    import asyncio
+    import platform
+    
+    # Use ProactorEventLoop on Windows to avoid select() file descriptor limit
+    if platform.system() == 'Windows':
+        try:
+            loop = asyncio.get_event_loop()
+            if not isinstance(loop, asyncio.ProactorEventLoop):
+                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+                logger.info("Switched to ProactorEventLoop for Windows compatibility")
+        except Exception as e:
+            logger.warning(f"Could not set ProactorEventLoop: {e}")
+    
     api_key = (os.getenv("TMDB_API_KEY") or "").strip()
     if not api_key:
         logger.warning(
@@ -237,6 +250,31 @@ async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[s
         return {"results": results}
     except Exception as e:
         logger.exception("Error in batch keywords endpoint: %s", e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/tmdb/movies/full/batch")
+async def tmdb_full_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, List[Dict[str, Any]]]:
+    """Batch full metadata endpoint (movie details + credits + keywords)."""
+    try:
+        logger.info("Batch full metadata request received: %s items", len(request.tmdb_ids))
+        api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+        if not api_key:
+            raise HTTPException(status_code=500, detail="TMDB_API_KEY is not set")
+        
+        if not request.tmdb_ids:
+            return {"results": []}
+        
+        if len(request.tmdb_ids) > 500:
+            raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
+        
+        import tmdb_batch_movies
+        results = await tmdb_batch_movies.full_batch(request.tmdb_ids, api_key)
+        logger.info("Batch full metadata completed: %s results", len(results))
+        
+        return {"results": results}
+    except Exception as e:
+        logger.exception("Error in batch full metadata endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 

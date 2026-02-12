@@ -313,12 +313,16 @@ async def search_batch(
     
     semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
     
+    # Reduce keepalive connections on Windows to avoid file descriptor limit
+    import platform
+    max_keepalive = 5 if platform.system() == 'Windows' else 10
+    
     # Use shorter timeouts for local development to avoid hanging
     timeout_config = httpx.Timeout(10.0, connect=5.0)  # 10s total, 5s connect
     async with httpx.AsyncClient(
         base_url=TMDB_BASE_URL,
         timeout=timeout_config,
-        limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=30.0),
+        limits=httpx.Limits(max_keepalive_connections=max_keepalive, keepalive_expiry=30.0, max_connections=100),
         trust_env=False,
     ) as client:
         tasks = [

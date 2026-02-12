@@ -97,12 +97,15 @@ function App() {
     }
   }, [showDemoDropdown])
 
-  const extractYears = (films) => [...new Set(films.map((f) => {
-    const d = f.date
-    if (!d) return null
-    const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
-    return y ? parseInt(y, 10) : null
-  }).filter(Boolean))].sort((a, b) => a - b)
+  const extractYears = (films) => {
+    if (!films || !Array.isArray(films) || films.length === 0) return []
+    return [...new Set(films.map((f) => {
+      const d = f.date
+      if (!d) return null
+      const y = typeof d === 'string' ? d.slice(0, 4) : d.getFullYear?.()
+      return y ? parseInt(y, 10) : null
+    }).filter(Boolean))].sort((a, b) => a - b)
+  }
 
   const runAnalysisFromRows = async (parsedRows, simplified = false, signal = null, fileName = '') => {
     try {
@@ -158,6 +161,10 @@ function App() {
           }
         },
       })
+
+      if (!films || !Array.isArray(films)) {
+        throw new Error(`runStagedAnalysis вернул неверный результат: ${typeof films}`)
+      }
 
       setProgress({ stage: 'finalizing', message: 'Финализация отчёта', total: films.length, done: films.length, percent: 95 })
       const availableYearsFromFilms = extractYears(films)
@@ -359,6 +366,7 @@ function App() {
   }, [analysis])
 
   const filmsAll = analysis?.filmsLiteAll || analysis?.filmsLite || []
+  
   const filteredFilms = useMemo(() => {
     if (!analysis) return []
     if (selectedYears.length === 0) return filmsAll
@@ -381,9 +389,12 @@ function App() {
   const summaryText = formatYearRange(selectedYears, availableYears)
   const yearsLabel = getYearRangeLabel(selectedYears.length ? selectedYears : availableYears)
   const yearsHeader = (() => {
-    if (!availableYears.length) return 'Все годы'
+    if (!availableYears || !Array.isArray(availableYears) || !availableYears.length) return 'Все годы'
     if (selectedYears.length === 0) {
-      return `${availableYears[0]}–${availableYears[availableYears.length - 1]}`
+      const firstYear = availableYears[0]
+      const lastYear = availableYears[availableYears.length - 1]
+      if (firstYear == null || lastYear == null) return 'Все годы'
+      return `${firstYear}–${lastYear}`
     }
     const sorted = [...selectedYears].sort((a, b) => a - b)
     if (sorted.length === 1) return `${sorted[0]}`
@@ -437,8 +448,7 @@ function App() {
           { stage: 'parsing', message: 'Чтение CSV', percent: 4, delay: 300 },
           { stage: 'stage1', message: 'Базовая статистика', percent: 8, delay: 400 },
           { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', percent: 75, delay: 600 },
-          { stage: 'tmdb_details', message: 'Загрузка данных TMDb', percent: 90, delay: 800 },
-          { stage: 'credits_keywords', message: 'Загрузка актёров и режиссёров', percent: 95, delay: 500 },
+          { stage: 'tmdb_details', message: 'Загрузка данных TMDb', percent: 95, delay: 800 },
           { stage: 'finalizing', message: 'Финализация отчёта', percent: 100, delay: 300 },
         ]
         
@@ -543,6 +553,27 @@ function App() {
 
       // Получаем количество фильмов для симуляции прогресса
       const filmsCount = data?.filmsLite?.length || data?.filmsLiteAll?.length || 0
+      
+      // Нормализуем данные: убеждаемся, что все необходимые поля присутствуют
+      const filmsLite = Array.isArray(data?.filmsLite) ? data.filmsLite : (Array.isArray(data?.filmsLiteAll) ? data.filmsLiteAll : [])
+      const filmsLiteAll = Array.isArray(data?.filmsLiteAll) ? data.filmsLiteAll : (Array.isArray(data?.filmsLite) ? data.filmsLite : [])
+      
+      // Вычисляем availableYears из фильмов, если он отсутствует в данных
+      let availableYears = Array.isArray(data?.availableYears) ? data.availableYears : []
+      if (availableYears.length === 0 && (filmsLite.length > 0 || filmsLiteAll.length > 0)) {
+        const filmsForYears = filmsLiteAll.length > 0 ? filmsLiteAll : filmsLite
+        availableYears = extractYears(filmsForYears)
+      }
+      
+      const normalizedData = {
+        filmsLite,
+        filmsLiteAll,
+        availableYears,
+        simplifiedMode: data?.simplifiedMode || false,
+        fileName: data?.fileName || 'демо-отчёт (готовый)',
+        warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+        ...(data?.stage1 ? { stage1: data.stage1 } : {}),
+      }
 
       // Симуляция прогресса загрузки готового отчёта
       const simulateProgress = async () => {
@@ -574,12 +605,12 @@ function App() {
         return
       }
 
-      setProgress({ stage: 'finalizing', message: 'Готово', total: filmsCount, done: filmsCount, percent: 100 })
+      const finalFilmsCount = normalizedData.filmsLite?.length || normalizedData.filmsLiteAll?.length || 0
+      setProgress({ stage: 'finalizing', message: 'Готово', total: finalFilmsCount, done: finalFilmsCount, percent: 100 })
       await new Promise(resolve => setTimeout(resolve, 200))
-      
-      setAnalysis(data)
+      setAnalysis(normalizedData)
       setLastUploadedFileName('демо-отчёт (готовый)')
-      await setLastReport(data)
+      await setLastReport(normalizedData)
       setLastReportAvailable(true)
       setLoading(false)
       setProgress(null)

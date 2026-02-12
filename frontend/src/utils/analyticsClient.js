@@ -130,6 +130,32 @@ export function getComputedFromStage1(stage1) {
 }
 
 export const computeAggregations = (films) => {
+  if (!films || !Array.isArray(films)) {
+    return {
+      stats: { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+      ratingDistribution: [],
+      topRatedFilms: [],
+      topGenres: [],
+      topTags: [],
+      topGenresByAvgMin8: [],
+      genreOfTheYear: null,
+      hiddenGems: [],
+      overrated: [],
+      topCountriesByCount: [],
+      topCountriesByAvgRating: [],
+      topDirectorsByCount: [],
+      topDirectorsByAvgRating: [],
+      topActorsByCount: [],
+      topActorsByAvgRating: [],
+      topLanguagesByCount: [],
+      totalLanguagesCount: 0,
+      decades: [],
+      yearsByLoveScore: [],
+      watchTime: { totalRuntimeMinutes: 0, totalRuntimeHours: 0, totalRuntimeDays: 0, avgRuntimeMinutes: 0 },
+      badges: [],
+    }
+  }
+  
   const ratings = films.map((film) => film.rating).filter((r) => r !== null && r !== undefined)
   const years = films.map((film) => film.year).filter(Boolean)
   const stats = {
@@ -485,6 +511,10 @@ export const computeOverrated = (films) => {
 }
 
 export const filterFilmsByYears = (films, years) => {
+  if (!films || !Array.isArray(films)) {
+    return []
+  }
+  
   if (!years || years.length === 0) return films
   const yearSet = new Set(years)
   return films.filter((film) => {
@@ -502,9 +532,12 @@ export const getYearRangeLabel = (years) => {
 }
 
 export const formatYearRange = (years, availableYears) => {
-  if (!availableYears || availableYears.length === 0) return 'Период: все годы'
-  const range = `${availableYears[0]}–${availableYears[availableYears.length - 1]}`
-  if (!years || years.length === 0) return `Период: все годы (${range})`
+  if (!availableYears || !Array.isArray(availableYears) || availableYears.length === 0) return 'Период: все годы'
+  const firstYear = availableYears[0]
+  const lastYear = availableYears[availableYears.length - 1]
+  if (firstYear == null || lastYear == null) return 'Период: все годы'
+  const range = `${firstYear}–${lastYear}`
+  if (!years || !Array.isArray(years) || years.length === 0) return `Период: все годы (${range})`
   const sorted = [...years].sort((a, b) => a - b)
   if (sorted.length === 1) return `Период: ${formatYear(sorted[0])}`
   return `Период: ${sorted.map((year) => formatYear(year)).join(' + ')} (суммарно)`

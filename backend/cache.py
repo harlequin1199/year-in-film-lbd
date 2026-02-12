@@ -18,13 +18,16 @@ import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_DIR, "cache.db")
 TTL_DAYS = 30
+
+# Disable cache if DISABLE_CACHE environment variable is set
+DISABLE_CACHE = os.getenv("DISABLE_CACHE", "").lower() in ("1", "true", "yes")
 
 # Writer: one thread, one connection, processes this queue 
 # item = ("search", title, year, tmdb_id) | ("movie", tmdb_id, payload) | ("credits", tmdb_id, payload) | ("keywords", tmdb_id, keywords)
@@ -264,6 +267,8 @@ def stop_writer() -> None:
 # --- Public API: reads use thread-local conn; writes enqueue ---
 
 def get_search(title: str, year: Optional[int]) -> Optional[int]:
+    if DISABLE_CACHE:
+        return None
     year_val = year if year is not None else 0
     title_n = title.strip().lower()
     conn = _get_read_conn()
@@ -285,6 +290,8 @@ def set_search(title: str, year: Optional[int], tmdb_id: Optional[int]) -> None:
 
 
 def get_movie(tmdb_id: int) -> Optional[Any]:
+    if DISABLE_CACHE:
+        return None
     conn = _get_read_conn()
     row = conn.execute(
         "SELECT payload_json, updated_at FROM movie_cache WHERE tmdb_id = ?",
@@ -303,6 +310,8 @@ def set_movie(tmdb_id: int, payload: Any) -> None:
 
 
 def get_credits(tmdb_id: int) -> Optional[Any]:
+    if DISABLE_CACHE:
+        return None
     conn = _get_read_conn()
     row = conn.execute(
         "SELECT payload_json, updated_at FROM credits_cache WHERE tmdb_id = ?",
@@ -321,6 +330,8 @@ def set_credits(tmdb_id: int, payload: Any) -> None:
 
 
 def get_keywords(tmdb_id: int) -> Optional[List[str]]:
+    if DISABLE_CACHE:
+        return None
     conn = _get_read_conn()
     row = conn.execute(
         "SELECT keywords_json, updated_at FROM keywords_cache WHERE tmdb_id = ?",
@@ -336,6 +347,72 @@ def get_keywords(tmdb_id: int) -> Optional[List[str]]:
 def set_keywords(tmdb_id: int, keywords: List[str]) -> None:
     keywords_json = json.dumps(keywords)
     _WRITE_QUEUE.put(("keywords", tmdb_id, keywords_json))
+
+
+def get_movie_batch(tmdb_ids: List[int]) -> Dict[int, Optional[Any]]:
+    """Batch get movies from cache. Returns {tmdb_id: movie_data or None}."""
+    if DISABLE_CACHE:
+        return {tmdb_id: None for tmdb_id in tmdb_ids}
+    if not tmdb_ids:
+        return {}
+    conn = _get_read_conn()
+    placeholders = ",".join("?" * len(tmdb_ids))
+    rows = conn.execute(
+        f"SELECT tmdb_id, payload_json, updated_at FROM movie_cache WHERE tmdb_id IN ({placeholders})",
+        tuple(tmdb_ids),
+    ).fetchall()
+    result = {}
+    for row in rows:
+        if not _is_expired(row["updated_at"]):
+            result[row["tmdb_id"]] = json.loads(row["payload_json"])
+    for tmdb_id in tmdb_ids:
+        if tmdb_id not in result:
+            result[tmdb_id] = None
+    return result
+
+
+def get_credits_batch(tmdb_ids: List[int]) -> Dict[int, Optional[Any]]:
+    """Batch get credits from cache. Returns {tmdb_id: credits_data or None}."""
+    if DISABLE_CACHE:
+        return {tmdb_id: None for tmdb_id in tmdb_ids}
+    if not tmdb_ids:
+        return {}
+    conn = _get_read_conn()
+    placeholders = ",".join("?" * len(tmdb_ids))
+    rows = conn.execute(
+        f"SELECT tmdb_id, payload_json, updated_at FROM credits_cache WHERE tmdb_id IN ({placeholders})",
+        tuple(tmdb_ids),
+    ).fetchall()
+    result = {}
+    for row in rows:
+        if not _is_expired(row["updated_at"]):
+            result[row["tmdb_id"]] = json.loads(row["payload_json"])
+    for tmdb_id in tmdb_ids:
+        if tmdb_id not in result:
+            result[tmdb_id] = None
+    return result
+
+
+def get_keywords_batch(tmdb_ids: List[int]) -> Dict[int, Optional[List[str]]]:
+    """Batch get keywords from cache. Returns {tmdb_id: keywords_list or None}."""
+    if DISABLE_CACHE:
+        return {tmdb_id: None for tmdb_id in tmdb_ids}
+    if not tmdb_ids:
+        return {}
+    conn = _get_read_conn()
+    placeholders = ",".join("?" * len(tmdb_ids))
+    rows = conn.execute(
+        f"SELECT tmdb_id, keywords_json, updated_at FROM keywords_cache WHERE tmdb_id IN ({placeholders})",
+        tuple(tmdb_ids),
+    ).fetchall()
+    result = {}
+    for row in rows:
+        if not _is_expired(row["updated_at"]):
+            result[row["tmdb_id"]] = json.loads(row["keywords_json"])
+    for tmdb_id in tmdb_ids:
+        if tmdb_id not in result:
+            result[tmdb_id] = None
+    return result
 
 
 # --- Legacy CacheConnection: keep for compatibility but route to module API ---
