@@ -74,18 +74,61 @@ export function buildEntityStats(movies, extractor, config, baseline) {
  * @param {{ count: number, avgRating: number, ratingLift?: number }} stats
  * @param {number} baseline
  * @param {number} maxN — макс. count среди сущностей (после maxPerMovie)
- * @param {{ k: number, maxRatingSpread?: number }} config
+ * @param {{ k: number, maxRatingSpread?: number, useRelativeFrequency?: boolean, avgCountPerEntity?: number, totalFilms?: number, useGlobalFrequency?: boolean, globalFrequencyMap?: Map<string, number> }} config
+ * @param {string} entityName — название сущности (для поиска в globalFrequencyMap)
  * @returns {number} 0..100
  */
-export function calculateLoveScore(stats, baseline, maxN, config) {
+export function calculateLoveScore(stats, baseline, maxN, config, entityName = null) {
   const n = stats.count
   const k = config.k ?? 5
   const spread = config.maxRatingSpread ?? DEFAULT_MAX_RATING_SPREAD
   const lift = stats.ratingLift ?? (stats.avgRating - baseline)
   const ratingNorm = Math.max(-1, Math.min(1, lift / spread))
   const ratingComponent = (ratingNorm + 1) / 2
+  
+  // Frequency component: absolute frequency normalized by maxN
   const maxN1 = Math.max(1, maxN)
-  const frequencyComponent = Math.log(1 + n) / Math.log(1 + maxN1)
+  const absoluteFrequencyComponent = Math.log(1 + n) / Math.log(1 + maxN1)
+  
+  // Relative frequency component: how much this entity stands out relative to average
+  // Used for time periods (decades, years) to account for different availability
+  // OR for genres to account for global frequency differences
+  let relativeFrequencyComponent = absoluteFrequencyComponent
+  
+  // Global frequency: compare user's frequency to global frequency (for genres)
+  if (config.useGlobalFrequency && config.globalFrequencyMap && config.totalFilms && entityName) {
+    const globalFreqPercent = config.globalFrequencyMap.get(entityName)
+    if (globalFreqPercent != null && globalFreqPercent > 0) {
+      const userFrequency = (n / config.totalFilms) * 100 // User's frequency in %
+      const globalFrequency = globalFreqPercent // Global frequency in %
+      // Calculate relative ratio: how many times above/below global frequency
+      const relativeRatio = userFrequency / globalFrequency
+      // Normalize relative ratio using logarithmic scale to prevent extreme values
+      // Ratio of 1.0 = matches global frequency, >1.0 = above global, <1.0 = below global
+      // Use log scale: log(1 + ratio) / log(3) gives us 0..1 range for ratio 0..2
+      const relativeNorm = Math.min(2, Math.max(0.5, relativeRatio))
+      relativeFrequencyComponent = Math.log(1 + relativeNorm) / Math.log(3)
+    }
+  }
+  // Relative frequency from user's collection (for time periods)
+  else if (config.useRelativeFrequency && config.avgCountPerEntity && config.totalFilms) {
+    const avgCount = config.avgCountPerEntity
+    if (avgCount > 0) {
+      // Calculate relative ratio: how many times above/below average
+      const relativeRatio = n / avgCount
+      // Normalize relative ratio using logarithmic scale to prevent extreme values
+      // Ratio of 1.0 = average, >1.0 = above average, <1.0 = below average
+      // Use log scale: log(1 + ratio) / log(3) gives us 0..1 range for ratio 0..2
+      const relativeNorm = Math.min(2, Math.max(0.5, relativeRatio))
+      relativeFrequencyComponent = Math.log(1 + relativeNorm) / Math.log(3)
+    }
+  }
+  
+  // Combine absolute and relative frequency (weighted average)
+  // For time periods and genres, give more weight to relative frequency to account for availability differences
+  const frequencyWeight = (config.useRelativeFrequency || config.useGlobalFrequency) ? 0.6 : 1.0
+  const frequencyComponent = frequencyWeight * relativeFrequencyComponent + (1 - frequencyWeight) * absoluteFrequencyComponent
+  
   const confidence = n / (n + k)
   const score = confidence * (0.65 * ratingComponent + 0.35 * frequencyComponent)
   return Number((Math.max(0, Math.min(1, score)) * 100).toFixed(2))
@@ -96,15 +139,26 @@ export function calculateLoveScore(stats, baseline, maxN, config) {
  * @param {Map<string, object>} entityMap — результат buildEntityStats
  * @param {number} baseline
  * @param {number} maxN
- * @param {{ k: number, minCount: number, maxRatingSpread?: number }} config
+ * @param {{ k: number, minCount: number, maxRatingSpread?: number, useRelativeFrequency?: boolean, totalFilms?: number, useGlobalFrequency?: boolean, globalFrequencyMap?: Map<string, number> }} config
  * @returns {Array<{ name: string, count: number, avg_rating: number, high_45: number, share_45: number, loveScore: number, ratingLift: number }>}
  */
 export function buildRankedByLoveScore(entityMap, baseline, maxN, config) {
   const minCount = config.minCount ?? 0
   const list = []
+  
+  // Calculate average count per entity for relative frequency (if enabled)
+  let avgCountPerEntity = null
+  if (config.useRelativeFrequency && config.totalFilms && entityMap.size > 0) {
+    const totalCount = Array.from(entityMap.values()).reduce((sum, stats) => sum + stats.count, 0)
+    avgCountPerEntity = totalCount / entityMap.size
+  }
+  
   entityMap.forEach((stats, name) => {
     if (stats.count < minCount) return
-    const loveScore = calculateLoveScore(stats, baseline, maxN, config)
+    const loveScore = calculateLoveScore(stats, baseline, maxN, {
+      ...config,
+      avgCountPerEntity,
+    }, name)
     const share_45 = stats.count ? Number((stats.high_45 / stats.count).toFixed(2)) : 0
     list.push({
       name,

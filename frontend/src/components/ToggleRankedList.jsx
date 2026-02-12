@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Stars from './Stars.jsx'
-import { formatNumber, formatRating } from '../utils/format.js'
+import { formatNumber, formatRating, formatLoveScore } from '../utils/format.js'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 function ToggleRankedList({
@@ -79,7 +79,7 @@ function ToggleRankedList({
                 </span>
                 <span>{formatNumber(item.high_45)}</span>
                 {showIndex && (
-                  <span>{item.loveScore != null ? formatNumber(Math.round(item.loveScore)) : '—'}</span>
+                  <span>{item.loveScore != null ? formatLoveScore(item.loveScore) : '—'}</span>
                 )}
               </div>
             )

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Stars from './Stars.jsx'
-import { formatNumber, formatRating } from '../utils/format.js'
+import { formatNumber, formatRating, formatLoveScore } from '../utils/format.js'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 const LIMIT = 10
@@ -43,7 +43,7 @@ function TagsTable({ tags, emptyMessage }) {
                   {formatRating(tag.avg_rating)}
                   <Stars rating={tag.avg_rating} />
                 </span>
-                <span>{formatNumber(tag.loveScore)}</span>
+                <span>{formatLoveScore(tag.loveScore)}</span>
               </div>
             ))}
           </div>

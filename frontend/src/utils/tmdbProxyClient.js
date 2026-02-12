@@ -1,7 +1,9 @@
 import * as cache from './indexedDbCache.js'
 import { fetchWithRetry } from './fetchWithRetry.js'
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+// Для локальной разработки используем localhost:8000 если VITE_API_URL не задан
+const envApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+const API_BASE = envApiUrl || 'http://localhost:8000'
 
 /**
  * Generate proxy URL for TMDB images
@@ -61,7 +63,6 @@ export async function searchMovie(title, year, opts = {}) {
   const cached = await cache.getSearch(title, year)
   if (cached !== undefined) return cached
   
-  if (!API_BASE) throw new Error('VITE_API_URL must be set')
   const data = await fetchJsonPost(
     `${API_BASE}/tmdb/search/batch`,
     { items: [{ title, year }] },
@@ -258,8 +259,8 @@ const CONCURRENCY_SEARCH = 3
 const CONCURRENCY_MOVIE = 3
 const CONCURRENCY_CREDITS = 1
 const CONCURRENCY_KEYWORDS = 1
-const CREDITS_CAP = 400
-const KEYWORDS_CAP = 400
+const CREDITS_CAP = 9999 // No practical limit - load credits for all films
+const KEYWORDS_CAP = 9999 // No practical limit - load keywords for all films
 
 function emptyFilm(row) {
   return {
@@ -282,9 +283,6 @@ function emptyFilm(row) {
 }
 
 async function searchBatch(items, opts = {}) {
-  if (!API_BASE) {
-    throw new Error('VITE_API_URL не задан')
-  }
   const { signal, onRetryMessage } = opts
   const data = await fetchJsonPost(
     `${API_BASE}/tmdb/search/batch`,
@@ -299,7 +297,6 @@ async function searchBatch(items, opts = {}) {
  * Stage 1 is computed by caller from rows. onPartialResult(partial) called after each stage for progressive UI.
  */
 export async function runStagedAnalysis(rows, { onProgress, onPartialResult, signal, onRetryMessage } = {}) {
-  if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const fetchOpts = { signal, onRetryMessage }
 
   const keyToIndexes = new Map()
@@ -550,15 +547,14 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
     if (t == null) return -999
     return t - u
   }
+  
+  // Load credits for ALL films with tmdb_id - no restrictions
   const idsForCredits = new Set()
-  byRating.slice(0, 250).forEach((f) => f.tmdb_id && idsForCredits.add(f.tmdb_id))
-  films.slice().sort((a, b) => gemScore(b) - gemScore(a)).slice(0, 150).forEach((f) => {
-    if (gemScore(f) >= 1.5 && f.tmdb_id) idsForCredits.add(f.tmdb_id)
-  })
-  films.slice().sort((a, b) => overScore(b) - overScore(a)).slice(0, 150).forEach((f) => {
+  films.forEach((f) => {
     if (f.tmdb_id) idsForCredits.add(f.tmdb_id)
   })
   const idList = Array.from(idsForCredits).slice(0, CREDITS_CAP)
+  
   const creditsMap = new Map()
   const keywordsMap = new Map()
   const creditsToFetch = idList.slice(0, CREDITS_CAP)
@@ -703,7 +699,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
     if (!id) return
     const cred = creditsMap.get(id)
     if (cred) {
-      f.directors = (cred.directors || []).slice(0, 10)
+      f.directors = cred.directors || []
       f.actors = (cred.actors || []).slice(0, 20)
     }
     const kw = keywordsMap.get(id)
@@ -718,7 +714,6 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
 
 export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
   const { signal, onRetryMessage } = opts
-  if (!API_BASE) throw new Error('VITE_API_URL должен быть задан')
   const total = rows.length
   const concurrency = total > HIGH_LOAD_THRESHOLD ? HIGH_LOAD_CONCURRENCY : DEFAULT_CONCURRENCY
   const batchSize = Math.min(MAX_IN_FLIGHT, Math.max(concurrency * 2, 50))

@@ -1,5 +1,5 @@
 import Stars from './Stars.jsx'
-import { formatRating, formatYear } from '../utils/format.js'
+import { formatRating, formatYear, formatLoveScore } from '../utils/format.js'
 
 function FavoriteDecades({ films, decades }) {
   if (!films) return null
@@ -26,15 +26,22 @@ function FavoriteDecades({ films, decades }) {
         </div>
       )}
       <div className="decade-list">
-        {decadesList.map((decade) => {
+        {decadesList.map((decade, index) => {
+          const rank = index + 1
+          const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
           const posters = getPostersForDecade(decade.decade)
           return (
-            <div className="decade-row" key={decade.decade}>
+            <div className={`decade-row ${rankClass}`} key={decade.decade}>
               <div className="decade-info">
-                <span className="decade-title">{formatYear(decade.decade)}-е</span>
+                <span className="decade-title">
+                  {formatYear(decade.decade)}-е
+                </span>
                 <div className="decade-rating">
                   <span>★ Средняя {formatRating(decade.avgRating)}</span>
                   <Stars rating={decade.avgRating} />
+                  {decade.loveScore != null && (
+                    <span className="decade-love-score">Love Score: {formatLoveScore(decade.loveScore)}</span>
+                  )}
                 </div>
               </div>
               <div className="decade-posters">

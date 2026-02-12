@@ -41,13 +41,15 @@ app.add_middleware(
 def _startup():
     api_key = (os.getenv("TMDB_API_KEY") or "").strip()
     if not api_key:
-        raise RuntimeError(
-            "TMDB_API_KEY is not set. Set it in the environment (e.g. Render dashboard or backend/.env)."
+        logger.warning(
+            "TMDB_API_KEY is not set. TMDB endpoints will not work, but demo report endpoint is available."
         )
+    else:
+        logger.info("Backend started; TMDB_API_KEY is set.")
     import cache
     cache.init_cache_db()
     cache.start_writer()
-    logger.info("Backend started; TMDB_API_KEY is set.")
+    logger.info("Backend started successfully.")
 
 
 @app.on_event("shutdown")
@@ -156,6 +158,8 @@ async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str
         logger.info("Batch search completed: %s results", len(results))
         
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error in batch search endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

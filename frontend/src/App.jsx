@@ -276,7 +276,8 @@ function App() {
 
   const handleUpload = async (ratingsFile) => {
     if (!ratingsFile) return
-    if (USE_MOCKS) {
+    // Allow file uploads in dev mode even if USE_MOCKS is enabled
+    if (USE_MOCKS && !import.meta.env.DEV) {
       setError('В режиме демо используйте блок «Демо-отчёт» ниже.')
       return
     }
@@ -488,10 +489,8 @@ function App() {
     
     try {
       const envApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
-      const API_BASE = envApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '')
-      if (!API_BASE) {
-        throw new Error('VITE_API_URL не задан')
-      }
+      // Для локальной разработки используем localhost:8000 если VITE_API_URL не задан
+      const API_BASE = envApiUrl || 'http://localhost:8000'
 
       // Загружаем CSV файл с бекенда
       const response = await fetch(`${API_BASE}/api/demo-csv`)
@@ -525,10 +524,8 @@ function App() {
     
     try {
       const envApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
-      const API_BASE = envApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '')
-      if (!API_BASE) {
-        throw new Error('VITE_API_URL не задан')
-      }
+      // Для локальной разработки используем localhost:8000 если VITE_API_URL не задан
+      const API_BASE = envApiUrl || 'http://localhost:8000'
 
       // Загружаем готовый JSON отчёт
       const response = await fetch(`${API_BASE}/api/demo-report`)

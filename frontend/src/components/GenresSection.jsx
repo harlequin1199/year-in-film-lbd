@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatNumber, formatRating } from '../utils/format.js'
+import { formatNumber, formatRating, formatLoveScore } from '../utils/format.js'
 import { getGenreNameRu } from '../utils/genresRu.js'
 import { getGenreIcon } from '../utils/genreIcons.js'
 import Stars from './Stars.jsx'
@@ -47,7 +47,7 @@ export default function GenresSection({
                 ({formatRating(genreOfTheYear.avg_rating)}) • 4.5–5★: {formatNumber(genreOfTheYear.high_45)}
               </div>
               <div className="genres-year-index">
-                Love Score: {formatNumber(Math.round(genreOfTheYear.loveScore))}
+                Love Score: {formatLoveScore(genreOfTheYear.loveScore)}
                 <LoveScoreInfo variant="icon-only" />
               </div>
             </div>
@@ -134,7 +134,7 @@ export default function GenresSection({
                 </span>
                 <span>{formatNumber(g.high_45)}</span>
                 {showIndex && (
-                  <span>{g.loveScore != null ? formatNumber(Math.round(g.loveScore)) : '—'}</span>
+                  <span>{g.loveScore != null ? formatLoveScore(g.loveScore) : '—'}</span>
                 )}
               </div>
             )

@@ -1,6 +1,9 @@
-import { formatFilmsCount, formatNumber, formatRating, formatYear } from './format.js'
+import { formatFilmsCount, formatNumber, formatRating, formatYear, formatLoveScore } from './format.js'
 import { getGenreNameRu } from './genresRu.js'
 import { getCountryNameRu } from './countriesRu.js'
+import { createGenreGlobalFrequencyMap } from './genreGlobalFrequency.js'
+import { createYearGlobalFrequencyMap, createDecadeGlobalFrequencyMap } from './yearGlobalFrequency.js'
+import { createCountryGlobalFrequencyMap } from './countryGlobalFrequency.js'
 import {
   calculateUserBaselineRating,
   buildEntityStats,
@@ -146,6 +149,7 @@ export const computeAggregations = (films) => {
 
   const genreMap = buildEntityStats(films, (f) => f.genres || [], genreConfig, baseline)
   const tagMap = buildEntityStats(films, (f) => f.keywords || [], themesConfig, baseline)
+  
   const directorMap = buildEntityStats(films, (f) => f.directors || [], directorsConfig, baseline)
   const actorMap = buildEntityStats(films, (f) => f.actors || [], actorsConfig, baseline)
   const countryMap = buildEntityStats(films, (f) => f.countries || [], countriesConfig, baseline)
@@ -196,7 +200,14 @@ export const computeAggregations = (films) => {
   }
 
   const countriesByCount = buildRankedByCount(countryMap)
-  const countriesByAvg = buildRankedByLoveScore(countryMap, baseline, maxNCountries, countriesConfig)
+  // Use global frequency for countries to account for rarity (e.g., Jamaica vs United States)
+  const countryGlobalFrequencyMap = createCountryGlobalFrequencyMap()
+  const countriesByAvg = buildRankedByLoveScore(countryMap, baseline, maxNCountries, {
+    ...countriesConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: countryGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
   const directorsByCount = buildRankedByCount(directorMap)
   const directorsByAvg = buildRankedByLoveScore(directorMap, baseline, maxNDirectors, directorsConfig)
   const actorsByCount = buildRankedByCount(actorMap)
@@ -216,7 +227,14 @@ export const computeAggregations = (films) => {
   }
 
   const topGenresByAvg = buildRankedByAvg(genreMap, genreConfig.minCount)
-  const topGenresByAvgMin8 = buildRankedByLoveScore(genreMap, baseline, maxNGenres, genreConfig)
+  // Use global frequency for genres to account for rarity (e.g., Western vs Drama)
+  const genreGlobalFrequencyMap = createGenreGlobalFrequencyMap()
+  const topGenresByAvgMin8 = buildRankedByLoveScore(genreMap, baseline, maxNGenres, {
+    ...genreConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: genreGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
   const topCountriesByAvg = countriesByAvg
   const topDirectorsByAvg = directorsByAvg
   const topTagsByAvg = topTags
@@ -246,8 +264,22 @@ export const computeAggregations = (films) => {
   const yearMap = buildEntityStats(films, yearExtractor, yearsConfig, baseline)
   const maxNDecades = decadeMap.size ? Math.max(...Array.from(decadeMap.values()).map((s) => s.count)) : 0
   const maxNYears = yearMap.size ? Math.max(...Array.from(yearMap.values()).map((s) => s.count)) : 0
-  const decadesByLoveScore = buildRankedByLoveScore(decadeMap, baseline, maxNDecades, decadesConfig)
-  const yearsByLoveScore = buildRankedByLoveScore(yearMap, baseline, maxNYears, yearsConfig)
+  // Use global frequency for decades to account for different availability across decades (e.g., 1900s vs 2020s)
+  const decadeGlobalFrequencyMap = createDecadeGlobalFrequencyMap()
+  const decadesByLoveScore = buildRankedByLoveScore(decadeMap, baseline, maxNDecades, {
+    ...decadesConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: decadeGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
+  // Use global frequency for years to account for different availability across years (e.g., 1900s vs 2020s)
+  const yearGlobalFrequencyMap = createYearGlobalFrequencyMap()
+  const yearsByLoveScore = buildRankedByLoveScore(yearMap, baseline, maxNYears, {
+    ...yearsConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: yearGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
 
   let mostWatchedDecade = null
   let mostLovedDecade = null
@@ -269,7 +301,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Жанр года',
       getGenreNameRu(genreOfTheYear.name),
-      `Love Score: ${formatNumber(Math.round(genreOfTheYear.loveScore))}`,
+      `Love Score: ${formatLoveScore(genreOfTheYear.loveScore)}`,
       'star',
       'green',
     )
@@ -299,7 +331,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Самая любимая страна',
       getCountryNameRu(c.name),
-      `Love Score: ${formatNumber(Math.round(c.loveScore ?? 0))}`,
+      `Love Score: ${formatLoveScore(c.loveScore ?? 0)}`,
       'heart',
       'blue',
     )
@@ -319,7 +351,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Самый любимый режиссёр',
       d.name,
-      `Love Score: ${formatNumber(Math.round(d.loveScore ?? 0))}`,
+      `Love Score: ${formatLoveScore(d.loveScore ?? 0)}`,
       'heart',
       'purple',
     )
@@ -332,7 +364,7 @@ export const computeAggregations = (films) => {
     addBadge(
       'Любимое десятилетие',
       `${mostLovedDecade}-е`,
-      `Love Score: ${formatNumber(Math.round(first.loveScore ?? 0))}`,
+      `Love Score: ${formatLoveScore(first.loveScore ?? 0)}`,
       'heart',
       'gold',
     )

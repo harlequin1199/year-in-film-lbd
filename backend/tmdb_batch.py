@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 # TMDb docs: no strict limit, upper bound ~40 req/s. Using 40 for maximum speed.
-MAX_CONCURRENCY = 8
+# Increased concurrency for local development to reduce semaphore wait times
+MAX_CONCURRENCY = 16  # Increased from 8 to reduce wait times
+# Separate semaphore for cache operations to avoid blocking HTTP requests
+CACHE_CONCURRENCY = 50  # Cache reads can be more concurrent
 RATE_LIMIT_PER_SECOND = 40.0
 MAX_RETRIES = 3
 RETRY_DELAYS = (0.5, 1.0, 2.0)
@@ -25,6 +28,16 @@ RETRY_DELAYS = (0.5, 1.0, 2.0)
 # Rate limiter: track request timestamps
 _request_times: deque = deque()
 _rate_lock = asyncio.Lock()
+
+# Cache semaphore for concurrent cache operations
+_cache_semaphore: Optional[asyncio.Semaphore] = None
+
+def _get_cache_semaphore() -> asyncio.Semaphore:
+    """Get or create cache semaphore."""
+    global _cache_semaphore
+    if _cache_semaphore is None:
+        _cache_semaphore = asyncio.Semaphore(CACHE_CONCURRENCY)
+    return _cache_semaphore
 
 
 async def _rate_limit() -> None:
@@ -65,11 +78,14 @@ async def _search_single(
     title_norm = _normalize_title(title)
     year_val = year or 0
     
-    # Check cache first
+    # Check cache first using separate semaphore to avoid blocking HTTP requests
+    cache_sem = _get_cache_semaphore()
     try:
-        tmdb_id = await asyncio.to_thread(cache_module.get_search, title_norm, year)
+        async with cache_sem:
+            tmdb_id = await asyncio.to_thread(cache_module.get_search, title_norm, year)
         if tmdb_id is not None:
-            movie_data = await asyncio.to_thread(cache_module.get_movie, tmdb_id)
+            async with cache_sem:
+                movie_data = await asyncio.to_thread(cache_module.get_movie, tmdb_id)
             if movie_data:
                 logger.debug("Cache hit for %s (%s)", title, year)
                 return tmdb_id, movie_data, None
@@ -88,13 +104,27 @@ async def _search_single(
     for attempt in range(MAX_RETRIES + 1):
         try:
             await _rate_limit()
+            
+            semaphore_start = time.time()
             async with semaphore:
-                logger.debug("Searching TMDB for %s (%s), attempt %s", title, year, attempt + 1)
-                response = await client.get(
-                    f"{TMDB_BASE_URL}/search/movie",
-                    params=params,
-                    timeout=20.0,
-                )
+                semaphore_wait = time.time() - semaphore_start
+                if semaphore_wait > 1.0:
+                    logger.warning("Semaphore wait for %s took %.2f seconds", title, semaphore_wait)
+                
+                request_start = time.time()
+                try:
+                    response = await client.get(
+                        f"{TMDB_BASE_URL}/search/movie",
+                        params=params,
+                        timeout=10.0,
+                    )
+                except Exception as e:
+                    request_duration = time.time() - request_start
+                    logger.error("TMDB request failed for %s after %.2f seconds: %s", title, request_duration, e)
+                    raise
+                request_duration = time.time() - request_start
+                if request_duration > 5.0:
+                    logger.warning("TMDB request for %s took %.2f seconds", title, request_duration)
                 
                 if response.status_code == 429 or response.status_code >= 500:
                     if attempt >= MAX_RETRIES:
@@ -141,7 +171,9 @@ async def _search_single(
     if tmdb_id is None:
         # Cache negative result
         try:
-            await asyncio.to_thread(cache_module.set_search, title_norm, year, None)
+            cache_sem = _get_cache_semaphore()
+            async with cache_sem:
+                await asyncio.to_thread(cache_module.set_search, title_norm, year, None)
         except Exception:
             pass
         return None, None, None
@@ -150,13 +182,23 @@ async def _search_single(
     for attempt in range(MAX_RETRIES + 1):
         try:
             await _rate_limit()
+            
+            semaphore_start = time.time()
             async with semaphore:
-                logger.debug("Fetching movie details for TMDB ID %s, attempt %s", tmdb_id, attempt + 1)
+                semaphore_wait = time.time() - semaphore_start
+                if semaphore_wait > 1.0:
+                    logger.warning("Semaphore wait for movie details %s took %.2f seconds", tmdb_id, semaphore_wait)
+                
+                request_start = time.time()
                 movie_response = await client.get(
                     f"{TMDB_BASE_URL}/movie/{tmdb_id}",
                     params={"api_key": api_key},
-                    timeout=20.0,
+                    timeout=10.0,
                 )
+                request_duration = time.time() - request_start
+                if request_duration > 5.0:
+                    logger.warning("TMDB movie details request for %s took %.2f seconds", tmdb_id, request_duration)
+                
                 if movie_response.status_code == 429 or movie_response.status_code >= 500:
                     if attempt >= MAX_RETRIES:
                         return tmdb_id, None, f"TMDb error {movie_response.status_code}"
@@ -181,11 +223,14 @@ async def _search_single(
                 return tmdb_id, None, str(e)
             await asyncio.sleep(RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)])
     
-    # Cache results
+    # Cache results using separate semaphore
     try:
-        await asyncio.to_thread(cache_module.set_search, title_norm, year, tmdb_id)
+        cache_sem = _get_cache_semaphore()
+        async with cache_sem:
+            await asyncio.to_thread(cache_module.set_search, title_norm, year, tmdb_id)
         if movie_data:
-            await asyncio.to_thread(cache_module.set_movie, tmdb_id, movie_data)
+            async with cache_sem:
+                await asyncio.to_thread(cache_module.set_movie, tmdb_id, movie_data)
     except Exception as e:
         logger.warning("Cache write error for %s: %s", title, e)
     
@@ -268,9 +313,11 @@ async def search_batch(
     
     semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
     
+    # Use shorter timeouts for local development to avoid hanging
+    timeout_config = httpx.Timeout(10.0, connect=5.0)  # 10s total, 5s connect
     async with httpx.AsyncClient(
         base_url=TMDB_BASE_URL,
-        timeout=30.0,
+        timeout=timeout_config,
         limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=30.0),
         trust_env=False,
     ) as client:
@@ -283,6 +330,7 @@ async def search_batch(
     formatted_results = []
     for i, result in enumerate(results):
         if isinstance(result, Exception):
+            logger.warning("Task %s/%s raised exception: %s", i+1, len(results), result)
             formatted_results.append({
                 "title": items[i]["title"],
                 "year": items[i].get("year"),

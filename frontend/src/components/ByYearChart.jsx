@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { formatNumber, formatRating, formatYear } from '../utils/format.js'
+import { formatNumber, formatRating, formatYear, formatLoveScore } from '../utils/format.js'
 import LoveScoreInfo from './LoveScoreInfo.jsx'
 
 const BAR_HEIGHT = 220
@@ -103,7 +103,7 @@ function ByYearChart({ films, yearsByLoveScore }) {
         count: formatNumber(tooltip.entry.count),
         avg:
           tooltip.entry.avgRating !== null ? formatRating(tooltip.entry.avgRating) : '—',
-        loveScore: tooltip.entry.loveScore != null ? formatNumber(Math.round(tooltip.entry.loveScore)) : null,
+        loveScore: tooltip.entry.loveScore != null ? formatLoveScore(tooltip.entry.loveScore) : null,
       }
     : null
 
