@@ -83,51 +83,24 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const barWidth = getBarWidth(yearCount)
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
-  const loveScorePoints = yearEntries
-    .map((entry, index) => {
-      if (entry.loveScore == null) return null
-      const loveScoreHeight = Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
-      const x = index * (barWidth + gap) + barWidth / 2
-      const y = BAR_HEIGHT - loveScoreHeight * 0.55
-      return { year: entry.year, x, y }
-    })
-    .filter(Boolean)
-
-  const loveScorePath = useMemo(() => {
-    if (loveScorePoints.length < 2) return ''
-
-    const [firstPoint, ...restPoints] = loveScorePoints
-    let path = `M ${firstPoint.x} ${firstPoint.y}`
-
-    restPoints.forEach((point, index) => {
-      const prev = loveScorePoints[index]
-      const cx = (prev.x + point.x) / 2
-      path += ` C ${cx} ${prev.y}, ${cx} ${point.y}, ${point.x} ${point.y}`
-    })
-
-    return path
-  }, [loveScorePoints])
 
   // Calculate decade boundaries
-  const decadeBoundaries = useMemo(() => {
-    const minDecade = Math.floor(minYear / 10) * 10
-    const maxDecade = Math.floor(maxYear / 10) * 10
-    const boundaries = []
-    for (let decade = minDecade; decade <= maxDecade; decade += 10) {
-      // Use the first year of the decade that falls within our range, or the decade start if it's before minYear
-      const yearForDecade = Math.max(decade, minYear)
-      if (yearForDecade <= maxYear) {
-        const yearIndex = yearForDecade - minYear
-        // Allow yearIndex to be equal to yearCount for the last decade boundary
-        if (yearIndex >= 0 && yearIndex <= yearCount) {
-          // Clamp x to chartWidth to ensure it's within bounds
-          const x = Math.min(yearIndex * (barWidth + gap), chartWidth)
-          boundaries.push({ decade, x })
-        }
+  const minDecade = Math.floor(minYear / 10) * 10
+  const maxDecade = Math.floor(maxYear / 10) * 10
+  const decadeBoundaries = []
+  for (let decade = minDecade; decade <= maxDecade; decade += 10) {
+    // Use the first year of the decade that falls within our range, or the decade start if it's before minYear
+    const yearForDecade = Math.max(decade, minYear)
+    if (yearForDecade <= maxYear) {
+      const yearIndex = yearForDecade - minYear
+      // Allow yearIndex to be equal to yearCount for the last decade boundary
+      if (yearIndex >= 0 && yearIndex <= yearCount) {
+        // Clamp x to chartWidth to ensure it's within bounds
+        const x = Math.min(yearIndex * (barWidth + gap), chartWidth)
+        decadeBoundaries.push({ decade, x })
       }
     }
-    return boundaries
-  }, [minYear, maxYear, yearCount, barWidth, gap, chartWidth])
+  }
 
   const handleMove = (event, entry) => {
     const tooltipWidth = 220
@@ -211,7 +184,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
           
           // Calculate minimum distance in pixels (approximately 45px for a 4-digit label with spacing)
           const minDistancePx = 45
-          const minDistancePercent = actualWidth > 0 ? (minDistancePx / actualWidth) * 100 : 8
           const edgeMarginPx = 25
           const edgeMarginPercent = actualWidth > 0 ? (edgeMarginPx / actualWidth) * 100 : 3
           
@@ -341,31 +313,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
-          {mode === 'loveScore' && loveScorePath && (
-            <path
-              d={loveScorePath}
-              fill="none"
-              stroke="#ffd54a"
-              strokeWidth="2.4"
-              vectorEffect="non-scaling-stroke"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.95"
-            />
-          )}
-          {mode === 'loveScore' && loveScorePoints.length > 0 && loveScorePoints.map((point) => (
-            <circle
-              key={`love-score-point-${point.year}`}
-              cx={point.x}
-              cy={point.y}
-              r="1.8"
-              fill="#ffe07a"
-              stroke="#1b1f2a"
-              strokeWidth="0.8"
-              vectorEffect="non-scaling-stroke"
-              opacity="0.95"
-            />
-          ))}
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
