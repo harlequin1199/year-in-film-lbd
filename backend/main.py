@@ -198,6 +198,8 @@ async def tmdb_movies_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str
         logger.info("Batch movies completed: %s results", len(results))
         
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error in batch movies endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -223,6 +225,8 @@ async def tmdb_credits_batch(request: BatchMoviesRequest = Body(...)) -> Dict[st
         logger.info("Batch credits completed: %s results", len(results))
         
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error in batch credits endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -248,6 +252,8 @@ async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[s
         logger.info("Batch keywords completed: %s results", len(results))
         
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error in batch keywords endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -273,6 +279,8 @@ async def tmdb_full_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, 
         logger.info("Batch full metadata completed: %s results", len(results))
         
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error in batch full metadata endpoint: %s", e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
