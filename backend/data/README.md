@@ -1,3 +1,3 @@
 # backend/data
 
-Демо-данные для режима быстрого просмотра: готовый JSON-отчёт и CSV-файл для загрузки через `/api/demo-report` и `/api/demo-csv`.
+Backend demo report assets are stored in `backend/data/demo/`: pre-generated JSON report and CSV file used by `/api/demo-report` and `/api/demo-csv`.

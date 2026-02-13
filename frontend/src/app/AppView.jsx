@@ -98,7 +98,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Запустить демо (CSV, полный расчёт)
+                    Запустить demo report asset CSV (полный расчёт)
                   </button>
                   <button
                     type="button"
@@ -109,7 +109,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Открыть готовый демо-отчёт (мгновенно)
+                    Открыть demo report asset (мгновенно)
                   </button>
                 </div>
               )}
@@ -168,7 +168,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Запустить демо (CSV, полный расчёт)
+                    Запустить demo report asset CSV (полный расчёт)
                   </button>
                   <button
                     type="button"
@@ -179,7 +179,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Открыть готовый демо-отчёт (мгновенно)
+                    Открыть demo report asset (мгновенно)
                   </button>
                 </div>
               )}
@@ -194,7 +194,7 @@ function AppView(props) {
           {SHOW_MOCK_UI && (
             <div className="mock-demo-block">
               <label className="mock-demo-label" htmlFor="demo-select">
-                Демо-отчёт
+                Demo fixture (local)
               </label>
               <div className="mock-demo-row">
                 <select
@@ -216,7 +216,7 @@ function AppView(props) {
                   onClick={handleLoadDemo}
                   disabled={loading}
                 >
-                  Загрузить демо
+                  Загрузить demo fixture
                 </button>
               </div>
             </div>

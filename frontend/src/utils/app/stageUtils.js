@@ -10,7 +10,7 @@ export function buildDemoStages(filmsCount) {
 
 export function buildDemoReportStages(filmsCount) {
   return [
-    { stage: 'parsing', message: 'Загрузка демо-отчёта', percent: 30, delay: 300 },
+    { stage: 'parsing', message: 'Загрузка demo report asset', percent: 30, delay: 300 },
     { stage: 'tmdb_search', message: 'Подготовка данных', percent: 60, delay: 400 },
     { stage: 'finalizing', message: 'Финализация отчёта', percent: 100, delay: 300 },
   ].map((item) => ({ ...item, total: filmsCount, done: Math.round((item.percent / 100) * filmsCount) }))

@@ -1,6 +1,6 @@
 /**
- * Mock mode: load demo JSON instead of calling backend.
- * Only used when VITE_USE_MOCKS=true (e.g. in .env.local).
+ * Demo fixture mode: load local fixture JSON instead of calling backend.
+ * Only for local development / visual tests when VITE_USE_MOCKS=true (e.g. in .env.local).
  */
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true' || import.meta.env.VITE_USE_MOCKS === true
@@ -11,11 +11,11 @@ export const MOCK_OPTIONS = [
   { id: 'mock_empty_sections', label: 'Пустые секции (нет жанров/режиссёров)', file: 'mock_empty_sections.json', error: false },
   { id: 'mock_huge_dataset', label: 'Большой набор (30+ фильмов)', file: 'mock_huge_dataset.json', error: false },
   { id: 'mock_tmdb_error', label: 'Нет постеров / TMDb-данных', file: 'mock_tmdb_error.json', error: false },
-  { id: 'mock_full_demo', label: 'Полный демо-отчёт (минимум 3 элемента в каждом списке)', file: 'mock_full_demo.json', error: false },
+  { id: 'mock_full_demo', label: 'Demo fixture: полный отчёт (минимум 3 элемента в каждом списке)', file: 'mock_full_demo.json', error: false },
   { id: 'mock_favorite_genres', label: 'Самые любимые (тест списка по индексу жанра)', file: 'mock_favorite_genres.json', error: false },
   { id: 'mock_favorite_index', label: 'Индекс: страны, режиссёры, актёры (тест колонки)', file: 'mock_favorite_index.json', error: false },
   { id: 'mock_badges_test', label: 'Тест бейджей (длинные имена, Южная Корея)', file: 'mock_badges_test.json', error: false },
-  { id: 'mock_error', label: 'Ошибка TMDb (демо ошибки)', file: null, error: true },
+  { id: 'mock_error', label: 'Demo fixture: ошибка TMDb', file: null, error: true },
 ]
 
 const modules = import.meta.glob('./*.json')
@@ -31,20 +31,20 @@ async function loadMockFile(fileName) {
 }
 
 /**
- * Load a mock result by option id.
+ * Load a demo fixture by option id.
  * @param {string} optionId - id from MOCK_OPTIONS (e.g. 'mock_ratings_only')
  * @returns {Promise<{ data: object | null, error: string | null }>}
  */
 export async function loadMock(optionId) {
   const option = MOCK_OPTIONS.find((o) => o.id === optionId)
-  if (!option) return { data: null, error: 'Неизвестный демо-отчёт' }
+  if (!option) return { data: null, error: 'Неизвестный demo fixture' }
   if (option.error) {
-    return { data: null, error: 'Ошибка TMDb (демо)' }
+    return { data: null, error: 'Ошибка TMDb (demo fixture)' }
   }
   try {
     const data = await loadMockFile(option.file)
     return { data, error: null }
   } catch (e) {
-    return { data: null, error: e.message || 'Не удалось загрузить демо' }
+    return { data: null, error: e.message || 'Не удалось загрузить demo fixture' }
   }
 }
