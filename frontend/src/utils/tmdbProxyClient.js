@@ -364,7 +364,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
       } catch (err) {
         if (err?.name === 'AbortError') throw err
         console.warn('Batch search failed, falling back to individual requests', err)
-        const searchTasks = chunk.map((item, idx) => {
+        const searchTasks = chunk.map((_, idx) => {
           const k = chunkKeys[idx]
           const parts = k.split(':')
           const yearPart = parts.length > 1 ? parts.pop() : '0'
@@ -380,7 +380,7 @@ export async function runStagedAnalysis(rows, { onProgress, onPartialResult, sig
         })
         const fallbackResults = await runQueue(searchTasks, CONCURRENCY_SEARCH, { signal })
         chunkKeys.forEach((key, i) => keyToTmdbId.set(key, fallbackResults[i]))
-        return fallbackResults.map((id, i) => ({ tmdb: id ? { tmdb_id: id } : null }))
+        return fallbackResults.map((id) => ({ tmdb: id ? { tmdb_id: id } : null }))
       }
     }
     
@@ -632,7 +632,7 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
         return results
       } catch (err) {
         if (err?.name === 'AbortError') throw err
-        const searchTasks = chunk.map((item, idx) => {
+        const searchTasks = chunk.map((_, idx) => {
           const k = chunkKeys[idx]
           const parts = k.split(':')
           const yearPart = parts.length > 1 ? parts.pop() : '0'
@@ -642,7 +642,7 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
         })
         const fallbackResults = await runQueue(searchTasks, concurrency, { signal })
         chunkKeys.forEach((key, i) => keyToTmdbId.set(key, fallbackResults[i]))
-        return fallbackResults.map((id, i) => ({ tmdb: id ? { tmdb_id: id } : null }))
+        return fallbackResults.map((id) => ({ tmdb: id ? { tmdb_id: id } : null }))
       }
     }
     
@@ -690,7 +690,7 @@ export async function enrichFilmsPhase1Only(rows, onProgress, opts = {}) {
     const chunk = movieTasks.slice(j, j + batchSize)
     await runQueue(chunk, concurrency, {
       signal,
-      onProgress: (done, batchLen) => {
+      onProgress: (done) => {
         movieDone = j + done
         if (onProgress) {
           onProgress({

@@ -141,7 +141,7 @@ function AppContainer() {
     }
   }
 
-  const filmsAll = analysis?.filmsLiteAll || analysis?.filmsLite || []
+  const filmsAll = useMemo(() => analysis?.filmsLiteAll || analysis?.filmsLite || [], [analysis])
   const filteredFilms = useMemo(() => selectedYears.length ? filterFilmsByYears(filmsAll, selectedYears) : filmsAll, [filmsAll, selectedYears])
   const computed = useMemo(() => {
     if (!analysis) return null

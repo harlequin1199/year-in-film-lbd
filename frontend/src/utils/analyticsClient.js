@@ -1,4 +1,4 @@
-import { formatFilmsCount, formatNumber, formatRating, formatYear, formatLoveScore } from './format.js'
+import { formatFilmsCount, formatYear, formatLoveScore } from './format.js'
 import { getGenreNameRu } from './genresRu.js'
 import { getCountryNameRu } from './countriesRu.js'
 import { createGenreGlobalFrequencyMap } from './genreGlobalFrequency.js'

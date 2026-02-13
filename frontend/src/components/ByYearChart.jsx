@@ -84,46 +84,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
 
-  const smoothingWindow = 10
-  const leftRadius = Math.floor((smoothingWindow - 1) / 2)
-  const rightRadius = smoothingWindow - leftRadius - 1
-  const smoothedLoveScorePoints = yearEntries
-    .map((entry, index) => {
-      if (entry.loveScore == null) return null
-
-      const windowScores = []
-      const start = Math.max(0, index - leftRadius)
-      const end = Math.min(yearEntries.length - 1, index + rightRadius)
-
-      for (let i = start; i <= end; i += 1) {
-        const score = yearEntries[i].loveScore
-        if (score != null) {
-          windowScores.push(score)
-        }
-      }
-
-      if (windowScores.length === 0) return null
-
-      const smoothedScore = windowScores.reduce((sum, value) => sum + value, 0) / windowScores.length
-      const smoothedHeight = Math.max(2, (smoothedScore / 100) * BAR_HEIGHT)
-      const x = index * (barWidth + gap) + barWidth / 2
-      const y = BAR_HEIGHT - smoothedHeight / 2
-      return { year: entry.year, x, y }
-    })
-    .filter(Boolean)
-
-  let loveScorePath = ''
-  if (smoothedLoveScorePoints.length >= 2) {
-    const [firstPoint, ...restPoints] = smoothedLoveScorePoints
-    loveScorePath = `M ${firstPoint.x} ${firstPoint.y}`
-
-    restPoints.forEach((point, index) => {
-      const prev = smoothedLoveScorePoints[index]
-      const cx = (prev.x + point.x) / 2
-      loveScorePath += ` C ${cx} ${prev.y}, ${cx} ${point.y}, ${point.x} ${point.y}`
-    })
-  }
-
   // Calculate decade boundaries
   const minDecade = Math.floor(minYear / 10) * 10
   const maxDecade = Math.floor(maxYear / 10) * 10
@@ -377,19 +337,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
-          {mode === 'loveScore' && loveScorePath && (
-            <path
-              d={loveScorePath}
-              fill="none"
-              stroke="#fff2a8"
-              strokeWidth="1.4"
-              vectorEffect="non-scaling-stroke"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.98"
-              pointerEvents="none"
-            />
-          )}
         </svg>
         <div className="byyear-axis">
           <span>{formatYear(minYear)}</span>

@@ -100,7 +100,6 @@ const countryNamesRu = {
   'Dominican Republic': 'Доминиканская Республика',
   Jamaica: 'Ямайка',
   'Trinidad and Tobago': 'Тринидад и Тобаго',
-  'Hong Kong': 'Гонконг',
   'Soviet Union': 'СССР',
   'West Germany': 'ФРГ',
   'East Germany': 'ГДР',

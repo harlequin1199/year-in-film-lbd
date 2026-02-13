@@ -136,7 +136,7 @@ function LoveScoreInfo({ variant = 'icon-only', className = '' }) {
 
   return (
     <>
-      <span className={`love-score-info ${className}`} ref={containerRef}>
+      <span className={`love-score-info love-score-info--${variant} ${className}`} ref={containerRef}>
         <button
           type="button"
           className="love-score-info-icon"

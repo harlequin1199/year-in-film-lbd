@@ -52,16 +52,6 @@ function normalizeCountryName(countryName) {
 }
 
 /**
- * Нормализует имя режиссёра или актёра для URL
- */
-function normalizePersonName(name) {
-  if (!name) return ''
-  return String(name)
-    .trim()
-    .replace(/\s+/g, '+') // Заменяем пробелы на +
-}
-
-/**
  * Нормализует имя режиссёра для URL директора (в нижний регистр, заменяет пробелы на дефисы)
  */
 function normalizeDirectorName(name) {
