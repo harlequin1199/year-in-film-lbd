@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# CORS: FRONTEND_ORIGIN for production (e.g. Vercel URL); else allow all
+# CORS configuration:
+# - Production mode: set FRONTEND_ORIGIN to your deployed frontend URL (usually Vercel).
+# - Development mode: leave FRONTEND_ORIGIN empty and only allow local frontend origins.
 _frontend_origin = (os.getenv("FRONTEND_ORIGIN") or "").strip()
-_cors_origins = ["http://localhost:5173", "http://localhost:3000"] if _frontend_origin else ["*"]
-if _frontend_origin:
-    _cors_origins.append(_frontend_origin)
+_dev_origins = ["http://localhost:5173", "http://localhost:3000"]
+_cors_origins = [_frontend_origin] if _frontend_origin else _dev_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
