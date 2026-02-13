@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
-import cache as cache_module
+from . import cache as cache_module
 
 logger = logging.getLogger(__name__)
 

@@ -65,7 +65,7 @@ cp .env.example .env
 # Edit .env and add your TMDB_API_KEY
 
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### 2. Frontend
@@ -101,6 +101,8 @@ cd frontend && npm ci
 
 All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 
+Demo report generation instructions: `docs/demo-report.md`.
+
 ## Deployment
 
 ### Backend → Render
@@ -110,7 +112,7 @@ All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 3. **Build command:** `pip install -r requirements.txt -c constraints.txt`
 4. **Start command:**
    ```
-   gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+   gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
    ```
 5. **Environment variables:**
    | Variable | Required | Description |
@@ -178,10 +180,14 @@ Vercel handles SPA routing automatically for Vite projects.
 
 ```
 ├── backend/                 # FastAPI backend
-│   ├── main.py              # API endpoints
-│   ├── tmdb_batch.py        # Batch TMDb search
-│   ├── tmdb_batch_movies.py # Batch movie details + credits + keywords
-│   ├── cache.py             # SQLite write-behind cache
+│   ├── app/                 # FastAPI application package
+│   │   ├── main.py          # API endpoints
+│   │   ├── tmdb_batch.py    # Batch TMDb search
+│   │   ├── tmdb_batch_movies.py # Batch movie details + credits + keywords
+│   │   └── cache.py         # SQLite write-behind cache
+│   ├── data/                # Demo inputs and generated artifacts
+│   ├── scripts/             # Utility scripts for frequency datasets
+│   ├── tests/
 │   └── requirements.txt
 ├── frontend/                # React SPA
 │   ├── src/

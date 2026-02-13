@@ -9,14 +9,14 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import main
+from app import main
 
 
 @pytest.fixture(autouse=True)
 def mock_cache(monkeypatch):
-    monkeypatch.setattr('cache.init_cache_db', lambda: None)
-    monkeypatch.setattr('cache.start_writer', lambda: None)
-    monkeypatch.setattr('cache.stop_writer', lambda: None)
+    monkeypatch.setattr('app.cache.init_cache_db', lambda: None)
+    monkeypatch.setattr('app.cache.start_writer', lambda: None)
+    monkeypatch.setattr('app.cache.stop_writer', lambda: None)
 
 
 def test_health_endpoint_returns_ok():
@@ -49,7 +49,7 @@ def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, paylo
 
     if module_name == 'tmdb_batch':
         monkeypatch.setattr(main, 'tmdb_batch', types.SimpleNamespace(search_batch=fake_batch), raising=False)
-        monkeypatch.setitem(sys.modules, 'tmdb_batch', types.SimpleNamespace(search_batch=fake_batch))
+        monkeypatch.setitem(sys.modules, 'app.tmdb_batch', types.SimpleNamespace(search_batch=fake_batch))
     else:
         stub = types.SimpleNamespace(
             movies_batch=fake_batch,
@@ -57,7 +57,7 @@ def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, paylo
             keywords_batch=fake_batch,
             full_batch=fake_batch,
         )
-        monkeypatch.setitem(sys.modules, 'tmdb_batch_movies', stub)
+        monkeypatch.setitem(sys.modules, 'app.tmdb_batch_movies', stub)
 
     with TestClient(main.app) as client:
         response = client.post(path, json=payload)

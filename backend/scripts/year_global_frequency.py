@@ -16,7 +16,7 @@ import requests
 from dotenv import load_dotenv
 
 # Load .env from backend dir when running locally; production uses env vars
-_env_path = Path(__file__).resolve().parent / ".env"
+_env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=_env_path)
 load_dotenv()
 
