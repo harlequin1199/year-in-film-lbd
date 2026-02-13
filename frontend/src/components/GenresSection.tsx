@@ -1,0 +1,172 @@
+import { useState } from 'react'
+import { formatNumber, formatRating, formatLoveScore } from '../utils/format'
+import { getGenreNameRu } from '../utils/genresRu'
+import { getGenreIcon } from '../utils/genreIcons'
+import { getLetterboxdGenreUrl } from '../utils/letterboxdUrl'
+import Stars from './Stars'
+import LoveScoreInfo from './LoveScoreInfo'
+import type { RankedEntity, GenreStats } from '../types/stats.types'
+
+interface GenresSectionProps {
+  topGenres: RankedEntity[]
+  topGenresByAvgMin8: GenreStats[]
+  genreOfTheYear: GenreStats | null
+}
+
+export default function GenresSection({
+  topGenres,
+  topGenresByAvgMin8,
+  genreOfTheYear,
+}: GenresSectionProps) {
+  const [highlightedGenre, setHighlightedGenre] = useState<string | null>(null)
+  const [mode, setMode] = useState<'count' | 'avg'>('count')
+  
+  const topGenresList = topGenres || []
+  const byCount = topGenresList
+  const byAvg = topGenresByAvgMin8 || []
+  const totalGenreCount = topGenresList.reduce((acc, g) => acc + g.count, 0)
+  
+  const items = mode === 'count' ? byCount : byAvg
+  const fullList = items || []
+  const fewItems = fullList.length > 0 && fullList.length < 3
+  const showIndex = mode === 'avg' && fullList.length > 0 && (fullList[0] as GenreStats).loveScore != null
+  const showPct = mode === 'count' && totalGenreCount > 0
+
+  const genreIcon = genreOfTheYear ? getGenreIcon(genreOfTheYear.name) : null
+
+  return (
+    <section className="card genres-section">
+      <div className="card-header">
+        <h3>Жанры</h3>
+        <p>Доля жанров и любимые жанры года</p>
+      </div>
+
+      {genreOfTheYear && genreIcon && (
+        <div className="genres-year-block" style={{ '--genre-color': genreIcon.color, '--genre-bg-color': genreIcon.bgColor } as React.CSSProperties}>
+          <div className="genres-year-content">
+            <div className="genres-year-left">
+              <div className="genres-year-label">Жанр года</div>
+              <div className="genres-year-name">
+                <a 
+                  href={getLetterboxdGenreUrl(genreOfTheYear.name)} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                  {getGenreNameRu(genreOfTheYear.name)}
+                </a>
+              </div>
+              <div className="genres-year-subtitle">
+                Фильмов: {formatNumber(genreOfTheYear.count)} • Средняя:{' '}
+                <span className="genres-year-stars">
+                  <Stars rating={genreOfTheYear.avg_rating} />
+                </span>{' '}
+                ({formatRating(genreOfTheYear.avg_rating)}) • 4.5–5★: {formatNumber(genreOfTheYear.high_45)}
+              </div>
+              <div className="genres-year-index">
+                Love Score: {formatLoveScore(genreOfTheYear.loveScore)}
+                <LoveScoreInfo variant="icon-only" />
+              </div>
+            </div>
+            <div className="genres-year-right">
+              <div className="genres-year-icon">
+                <img 
+                  src={genreIcon.iconUrl} 
+                  alt={getGenreNameRu(genreOfTheYear.name)}
+                  className="genres-year-icon-img"
+                  onError={(e) => {
+                    // Fallback на эмодзи если изображение не загрузилось
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const fallback = target.nextElementSibling as HTMLElement
+                    if (fallback) fallback.style.display = 'inline-block'
+                  }}
+                />
+                <span className="genres-year-icon-fallback" style={{ display: 'none' }}>
+                  {genreIcon.fallback}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="toggle-group">
+        <button
+          type="button"
+          className={`toggle-button ${mode === 'count' ? 'active' : ''}`}
+          onClick={() => setMode('count')}
+        >
+          Чаще всего
+        </button>
+        <button
+          type="button"
+          className={`toggle-button ${mode === 'avg' ? 'active' : ''}`}
+          onClick={() => setMode('avg')}
+        >
+          Самые любимые
+        </button>
+      </div>
+
+      {fullList.length === 0 && <div className="empty-inline">Нет данных</div>}
+      {fewItems && <div className="empty-inline section-empty-few">Слишком мало записей для рейтинга.</div>}
+      
+      {fullList.length > 0 && !fewItems && (
+        <div className="table">
+          <div className={`table-head ${showIndex ? 'table-head--with-index' : 'table-head--wide'}`}>
+            <span>Жанр</span>
+            <span>Фильмов</span>
+            <span>Средняя</span>
+            <span>4.5–5★</span>
+            {showIndex && (
+              <span title="Love Score 0–100" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Love Score
+                <LoveScoreInfo variant="icon-only" />
+              </span>
+            )}
+          </div>
+          {fullList.map((g, index) => {
+            const rank = index + 1
+            const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
+            const pct = showPct ? ((g.count / totalGenreCount) * 100).toFixed(1) : null
+            const isHighlighted = highlightedGenre === g.name
+            const genreWithLoveScore = g as GenreStats
+            
+            return (
+              <div
+                key={g.name}
+                className={`table-row ${showIndex ? 'table-row--with-index' : 'table-row--wide'} ${rankClass} ${isHighlighted ? 'genres-list-item-highlight' : ''}`}
+                onMouseEnter={() => setHighlightedGenre(g.name)}
+                onMouseLeave={() => setHighlightedGenre(null)}
+              >
+                <span className="tag-name">
+                  {rank <= 3 && <span className="rank-badge">{rank}</span>}
+                  <a 
+                    href={getLetterboxdGenreUrl(g.name)} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                  >
+                    {getGenreNameRu(g.name)}
+                  </a>
+                </span>
+                <span>
+                  {formatNumber(g.count)}
+                  {showPct && pct && ` (${pct}%)`}
+                </span>
+                <span className="rating-cell">
+                  {formatRating(g.avg_rating)}
+                  <Stars rating={g.avg_rating} />
+                </span>
+                <span>{formatNumber(g.high_45)}</span>
+                {showIndex && (
+                  <span>{genreWithLoveScore.loveScore != null ? formatLoveScore(genreWithLoveScore.loveScore) : '—'}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}

@@ -1,0 +1,584 @@
+import { formatFilmsCount, formatYear, formatLoveScore } from './format'
+import { getGenreNameRu } from './genresRu'
+import { getCountryNameRu } from './countriesRu'
+import { createGenreGlobalFrequencyMap } from './genreGlobalFrequency'
+import { createYearGlobalFrequencyMap, createDecadeGlobalFrequencyMap } from './yearGlobalFrequency'
+import { createCountryGlobalFrequencyMap } from './countryGlobalFrequency'
+import {
+  calculateUserBaselineRating,
+  buildEntityStats,
+  buildRankedByLoveScore,
+  ENTITY_CONFIGS,
+} from '../features/insights/loveScore'
+import type { FilmRow, Film } from '../types/film.types'
+import type { Stage1, Computed } from '../types/analysis.types'
+import type {
+  Stats,
+  RatingBucket,
+  RankedEntity,
+  WatchTime,
+  Badge,
+  DecadeStats,
+  HiddenGem,
+  OverratedFilm,
+  LanguageStats,
+  GenreStats,
+} from '../types/stats.types'
+
+const parseDate = (value: string | null | undefined): Date | null => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+interface EntityStatsMap {
+  count: number
+  sum: number
+  high_45: number
+}
+
+const buildRankedByCount = (
+  map: Map<string, EntityStatsMap>
+): RankedEntity[] => {
+  const list: RankedEntity[] = []
+  map.forEach((stats, name) => {
+    const avg = stats.count ? stats.sum / stats.count : 0
+    list.push({
+      name,
+      count: stats.count,
+      avg_rating: Number(avg.toFixed(2)),
+      high_45: stats.high_45,
+      share_45: stats.count ? Number((stats.high_45 / stats.count).toFixed(2)) : 0,
+    })
+  })
+  list.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count
+    return b.avg_rating - a.avg_rating
+  })
+  return list
+}
+
+const TOP_LIST_MAX = 10
+
+
+/**
+ * Stage 1: CSV-only stats (no TMDb). Use right after parse for instant partial result.
+ */
+export function computeStage1FromRows(rows: FilmRow[]): Stage1 {
+  if (!rows || rows.length === 0) {
+    return {
+      stats: { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+      ratingDistribution: [],
+      top12ByRating: [],
+    }
+  }
+  const ratings = rows.map((r) => r.rating).filter((r): r is number => r !== null && r !== undefined)
+  const years = rows.map((r) => r.year).filter((year): year is number => year !== null && year !== undefined)
+  const stats: Stats = {
+    totalFilms: rows.length,
+    avgRating: ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2)) : 0,
+    count45: ratings.filter((r) => r >= 4.5).length,
+    oldestYear: years.length ? Math.min(...years) : null,
+    newestYear: years.length ? Math.max(...years) : null,
+  }
+  const buckets = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+  const ratingDistribution: RatingBucket[] = buckets.map((low, i) => {
+    const high = buckets[i + 1] ?? 5.5
+    const count = ratings.filter((r) => r >= low && r < high).length
+    return { min: low, max: high, count }
+  })
+  const top12ByRating = [...rows]
+    .filter((r) => r.rating != null)
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.year || 0) - (a.year || 0))
+    .slice(0, 12)
+    .map((r) => ({ title: r.title, year: r.year, rating: r.rating }))
+  return { stats, ratingDistribution, top12ByRating }
+}
+
+/** Partial computed from Stage 1 only (for progressive UI before TMDb data). */
+export function getComputedFromStage1(stage1: Stage1 | null): Computed | null {
+  if (!stage1) return null
+  const { stats, top12ByRating } = stage1
+  const topRatedFilms: Film[] = (top12ByRating || []).map((r) => ({
+    title: r.title,
+    year: r.year,
+    rating: r.rating,
+    date: null,
+    tmdb_id: null,
+    poster_path: null,
+    poster_url: null,
+    poster_url_w342: null,
+    tmdb_vote_average: null,
+    tmdb_vote_count: 0,
+    tmdb_stars: null,
+    genres: [],
+    keywords: [],
+    directors: [],
+    actors: [],
+    countries: [],
+    runtime: null,
+    original_language: null,
+  }))
+  return {
+    stats: stats || { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+    topRatedFilms,
+    topGenres: [],
+    topGenresByAvg: [] as GenreStats[],
+    topGenresByAvgMin8: [],
+    genreOfTheYear: null,
+    hiddenGems: [],
+    overrated: [],
+    topTags: [],
+    watchTime: { totalRuntimeMinutes: 0, totalRuntimeHours: 0, totalRuntimeDays: 0, avgRuntimeMinutes: 0 },
+    totalLanguagesCount: 0,
+    topLanguagesByCount: [],
+    topCountriesByCount: [],
+    topCountriesByAvgRating: [],
+    topDirectorsByCount: [],
+    topDirectorsByAvgRating: [],
+    topActorsByCount: [],
+    topActorsByAvgRating: [],
+    badges: [],
+    decades: [],
+    yearsByLoveScore: [],
+  }
+}
+
+export const computeAggregations = (films: Film[]): Computed => {
+  if (!films || !Array.isArray(films)) {
+    return {
+      stats: { totalFilms: 0, avgRating: 0, count45: 0, oldestYear: null, newestYear: null },
+      topRatedFilms: [],
+      topGenres: [],
+      topGenresByAvg: [],
+      topTags: [],
+      topGenresByAvgMin8: [],
+      genreOfTheYear: null,
+      hiddenGems: [],
+      overrated: [],
+      topCountriesByCount: [],
+      topCountriesByAvgRating: [],
+      topDirectorsByCount: [],
+      topDirectorsByAvgRating: [],
+      topActorsByCount: [],
+      topActorsByAvgRating: [],
+      topLanguagesByCount: [],
+      totalLanguagesCount: 0,
+      decades: [],
+      yearsByLoveScore: [],
+      watchTime: { totalRuntimeMinutes: 0, totalRuntimeHours: 0, totalRuntimeDays: 0, avgRuntimeMinutes: 0 },
+      badges: [],
+    }
+  }
+  
+  const ratings = films.map((film) => film.rating).filter((r): r is number => r !== null && r !== undefined)
+  const years = films.map((film) => film.year).filter((year): year is number => year !== null && year !== undefined)
+  const stats: Stats = {
+    totalFilms: films.length,
+    avgRating: ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2)) : 0,
+    count45: ratings.filter((r) => r >= 4.5).length,
+    oldestYear: years.length ? Math.min(...years) : null,
+    newestYear: years.length ? Math.max(...years) : null,
+  }
+
+  const baseline = calculateUserBaselineRating(films)
+  const genreConfig = ENTITY_CONFIGS.genres!
+  const themesConfig = ENTITY_CONFIGS.themes!
+  const countriesConfig = ENTITY_CONFIGS.countries!
+  const directorsConfig = ENTITY_CONFIGS.directors!
+  const actorsConfig = ENTITY_CONFIGS.actors!
+
+  const genreMap = buildEntityStats(films, (f) => f.genres || [], genreConfig, baseline)
+  const tagMap = buildEntityStats(films, (f) => f.keywords || [], themesConfig, baseline)
+  
+  const directorMap = buildEntityStats(films, (f) => f.directors || [], directorsConfig, baseline)
+  const actorMap = buildEntityStats(films, (f) => f.actors || [], actorsConfig, baseline)
+  const countryMap = buildEntityStats(films, (f) => f.countries || [], countriesConfig, baseline)
+
+  const languageMap = new Map<string, EntityStatsMap>()
+  const runtimeValues: number[] = []
+  let totalRuntime = 0
+  films.forEach((film) => {
+    const rating = film.rating || 0
+    if (film.original_language) {
+      const s = languageMap.get(film.original_language) || { count: 0, sum: 0, high_45: 0 }
+      s.count += 1
+      s.sum += rating
+      if (rating >= 4.5) s.high_45 += 1
+      languageMap.set(film.original_language, s)
+    }
+    if (film.runtime) {
+      runtimeValues.push(film.runtime)
+      totalRuntime += film.runtime
+    }
+  })
+
+  const maxNGenres = genreMap.size ? Math.max(...Array.from(genreMap.values()).map((s) => s.count)) : 0
+  const maxNTags = tagMap.size ? Math.max(...Array.from(tagMap.values()).map((s) => s.count)) : 0
+  const maxNCountries = countryMap.size ? Math.max(...Array.from(countryMap.values()).map((s) => s.count)) : 0
+  const maxNDirectors = directorMap.size ? Math.max(...Array.from(directorMap.values()).map((s) => s.count)) : 0
+  const maxNActors = actorMap.size ? Math.max(...Array.from(actorMap.values()).map((s) => s.count)) : 0
+
+  const topGenres = buildRankedByCount(genreMap)
+  const topTags = buildRankedByLoveScore(tagMap, baseline, maxNTags, themesConfig)
+
+  const topRatedFilms = [...films]
+    .sort((a, b) => {
+      const aRating = a.rating || 0
+      const bRating = b.rating || 0
+      if (bRating !== aRating) return bRating - aRating
+      return (b.year || 0) - (a.year || 0)
+    })
+    .slice(0, 12)
+
+  const watchTime: WatchTime = {
+    totalRuntimeMinutes: totalRuntime,
+    totalRuntimeHours: totalRuntime ? Math.round(totalRuntime / 60) : 0,
+    totalRuntimeDays: totalRuntime ? Number((totalRuntime / 60 / 24).toFixed(1)) : 0,
+    avgRuntimeMinutes: runtimeValues.length
+      ? Number((runtimeValues.reduce((a, b) => a + b, 0) / runtimeValues.length).toFixed(2))
+      : 0,
+  }
+
+  const countriesByCount = buildRankedByCount(countryMap)
+  // Use global frequency for countries to account for rarity (e.g., Jamaica vs United States)
+  const countryGlobalFrequencyMap = createCountryGlobalFrequencyMap()
+  const countriesByAvg = buildRankedByLoveScore(countryMap, baseline, maxNCountries, {
+    ...countriesConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: countryGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
+  const directorsByCount = buildRankedByCount(directorMap)
+  const directorsByAvg = buildRankedByLoveScore(directorMap, baseline, maxNDirectors, directorsConfig)
+  const actorsByCount = buildRankedByCount(actorMap)
+  const actorsByAvg = buildRankedByLoveScore(actorMap, baseline, maxNActors, actorsConfig)
+
+  const topLanguagesByCount: LanguageStats[] = buildRankedByCount(languageMap).map((lang) => ({
+    language: lang.name,
+    count: lang.count,
+    avg_rating: lang.avg_rating,
+    high_45: lang.high_45,
+  }))
+
+  const badges: Badge[] = []
+  const addBadge = (title: string, value: number | string | null, subtitle: string, iconKey: string, tone: string, isRating = false) => {
+    if (value === null || value === undefined) return
+    badges.push({ title, value, subtitle, iconKey, tone, isRating })
+  }
+
+  // Use Love Score for topGenresByAvg to get GenreStats[] (with loveScore and ratingLift)
+  const topGenresByAvgRaw = buildRankedByLoveScore(genreMap, baseline, maxNGenres, genreConfig)
+  // Type assertion: buildRankedByLoveScore returns RankedEntity[] with loveScore and ratingLift,
+  // which matches GenreStats[] structure
+  const topGenresByAvg = topGenresByAvgRaw as unknown as GenreStats[]
+  // Use global frequency for genres to account for rarity (e.g., Western vs Drama)
+  const genreGlobalFrequencyMap = createGenreGlobalFrequencyMap()
+  const topGenresByAvgMin8 = buildRankedByLoveScore(genreMap, baseline, maxNGenres, {
+    ...genreConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: genreGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
+  const topCountriesByAvg = countriesByAvg
+  const topDirectorsByAvg = directorsByAvg
+  const topTagsByAvg = topTags
+
+  const fiveStarCount = ratings.filter((r) => r === 5).length
+  let longestFilm: { runtime: number; title: string } | null = null
+  let shortestFilm: { runtime: number; title: string } | null = null
+  films.forEach((film) => {
+    if (!film.runtime) return
+    if (!longestFilm || film.runtime > longestFilm.runtime) {
+      longestFilm = { runtime: film.runtime, title: film.title || 'Неизвестно' }
+    }
+    if (!shortestFilm || film.runtime < shortestFilm.runtime) {
+      shortestFilm = { runtime: film.runtime, title: film.title || 'Неизвестно' }
+    }
+  })
+
+  const decadesConfig = ENTITY_CONFIGS.decades!
+  const yearsConfig = ENTITY_CONFIGS.years!
+  const decadeExtractor = (film: Film): string[] => {
+    if (!film.year) return []
+    const decade = Math.floor(film.year / 10) * 10
+    return [String(decade)]
+  }
+  const yearExtractor = (film: Film): string[] => (film.year ? [String(film.year)] : [])
+  const decadeMap = buildEntityStats(films, decadeExtractor, decadesConfig, baseline)
+  const yearMap = buildEntityStats(films, yearExtractor, yearsConfig, baseline)
+  const maxNDecades = decadeMap.size ? Math.max(...Array.from(decadeMap.values()).map((s) => s.count)) : 0
+  const maxNYears = yearMap.size ? Math.max(...Array.from(yearMap.values()).map((s) => s.count)) : 0
+  // Use global frequency for decades to account for different availability across decades (e.g., 1900s vs 2020s)
+  const decadeGlobalFrequencyMap = createDecadeGlobalFrequencyMap()
+  const decadesByLoveScore = buildRankedByLoveScore(decadeMap, baseline, maxNDecades, {
+    ...decadesConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: decadeGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
+  // Use global frequency for years to account for different availability across years (e.g., 1900s vs 2020s)
+  const yearGlobalFrequencyMap = createYearGlobalFrequencyMap()
+  const yearsByLoveScore = buildRankedByLoveScore(yearMap, baseline, maxNYears, {
+    ...yearsConfig,
+    useGlobalFrequency: true,
+    globalFrequencyMap: yearGlobalFrequencyMap,
+    totalFilms: films.length,
+  })
+
+  let mostWatchedDecade: number | null = null
+  let mostLovedDecade: number | null = null
+  if (decadeMap.size) {
+    const byCount = [...decadeMap.entries()].sort((a, b) => b[1].count - a[1].count)[0]
+    mostWatchedDecade = byCount && byCount[0] !== undefined ? Number(byCount[0]) : null
+    if (decadesByLoveScore.length > 0 && decadesByLoveScore[0]) {
+      mostLovedDecade = Number(decadesByLoveScore[0].name)
+    }
+  }
+
+  const genreOfTheYear = topGenresByAvgMin8.length > 0 ? topGenresByAvgMin8[0] : null
+
+  addBadge('Фильмов за год', stats.totalFilms, 'Всего фильмов', 'film', 'gold')
+  addBadge('Средняя оценка', stats.avgRating, 'Средняя по всем фильмам', 'star', 'gold', true)
+  addBadge('Пятёрки', fiveStarCount, 'Оценки 5★', 'star', 'purple')
+  addBadge('Оценки 4.5–5★', stats.count45, 'Очень высокие оценки', 'star', 'purple')
+  if (genreOfTheYear) {
+    addBadge(
+      'Жанр года',
+      getGenreNameRu(genreOfTheYear.name),
+      `Love Score: ${formatLoveScore(genreOfTheYear.loveScore)}`,
+      'star',
+      'green',
+    )
+  }
+  if (topGenres.length && topGenres[0]) {
+    const g = topGenres[0]
+    addBadge(
+      'Самый частый жанр',
+      getGenreNameRu(g.name),
+      formatFilmsCount(g.count),
+      'tag',
+      'green',
+    )
+  }
+  if (countriesByCount.length && countriesByCount[0]) {
+    const c = countriesByCount[0]
+    addBadge(
+      'Самая частая страна',
+      getCountryNameRu(c.name),
+      formatFilmsCount(c.count),
+      'globe',
+      'blue',
+    )
+  }
+  if (topCountriesByAvg.length && topCountriesByAvg[0]) {
+    const c = topCountriesByAvg[0]
+    addBadge(
+      'Самая любимая страна',
+      getCountryNameRu(c.name),
+      `Love Score: ${formatLoveScore(c.loveScore ?? 0)}`,
+      'heart',
+      'blue',
+    )
+  }
+  if (directorsByCount.length && directorsByCount[0]) {
+    const d = directorsByCount[0]
+    addBadge(
+      'Самый частый режиссёр',
+      d.name,
+      formatFilmsCount(d.count),
+      'trophy',
+      'purple',
+    )
+  }
+  if (topDirectorsByAvg.length && topDirectorsByAvg[0]) {
+    const d = topDirectorsByAvg[0]
+    addBadge(
+      'Самый любимый режиссёр',
+      d.name,
+      `Love Score: ${formatLoveScore(d.loveScore ?? 0)}`,
+      'heart',
+      'purple',
+    )
+  }
+  if (mostWatchedDecade) {
+    addBadge('Самое частое десятилетие', `${mostWatchedDecade}-е`, 'Чаще всего', 'calendar', 'gold')
+  }
+  if (mostLovedDecade != null && decadesByLoveScore.length > 0 && decadesByLoveScore[0]) {
+    const first = decadesByLoveScore[0]
+    addBadge(
+      'Любимое десятилетие',
+      `${mostLovedDecade}-е`,
+      `Love Score: ${formatLoveScore(first.loveScore ?? 0)}`,
+      'heart',
+      'gold',
+    )
+  }
+  addBadge('Самый ранний год', stats.oldestYear ? String(stats.oldestYear) : null, 'Год старейшего фильма', 'calendar', 'green')
+  addBadge('Самый новый год', stats.newestYear ? String(stats.newestYear) : null, 'Год новейшего фильма', 'calendar', 'green')
+  addBadge('Всего стран', countryMap.size, 'Стран в подборке', 'globe', 'blue')
+  addBadge('Всего языков', languageMap.size, 'Языков в подборке', 'globe', 'blue')
+  if (totalRuntime) addBadge('Часы просмотра', Math.round(totalRuntime / 60), 'Суммарно за год', 'clock', 'gold')
+  if (longestFilm) {
+    const film = longestFilm as { runtime: number; title: string }
+    addBadge('Самый длинный фильм', film.runtime, film.title, 'clock', 'purple')
+  }
+  if (shortestFilm) {
+    const film = shortestFilm as { runtime: number; title: string }
+    addBadge('Самый короткий фильм', film.runtime, film.title, 'clock', 'purple')
+  }
+  if (topTags.length && topTags[0]) addBadge('Самая частая тема', topTags[0].count, `Тема: ${topTags[0].name}`, 'tag', 'green')
+  if (topTagsByAvg.length && topTagsByAvg[0]) {
+    addBadge(
+      'Самая любимая тема',
+      topTagsByAvg[0].avg_rating,
+      `Тема: ${topTagsByAvg[0].name}`,
+      'heart',
+      'green',
+      true,
+    )
+  }
+
+  const trimmedBadges = badges.length > 12 ? badges.slice(0, 12) : badges
+
+  const decades: DecadeStats[] = decadesByLoveScore.map((item) => ({
+    decade: Number(item.name),
+    count: item.count,
+    avgRating: item.avg_rating,
+    loveScore: item.loveScore,
+    ratingLift: item.ratingLift,
+  }))
+
+  const hiddenGems = computeHiddenGems(films)
+  const overrated = computeOverrated(films)
+
+  const topGenresByAvgSliced = topGenresByAvg.slice(0, TOP_LIST_MAX) as unknown as GenreStats[]
+  return {
+    stats,
+    // @ts-expect-error TS2322: buildRankedByLoveScore returns RankedEntity[] with loveScore and ratingLift,
+    // which matches GenreStats[] structure at runtime. Type assertion is safe here.
+    topGenres: topGenres.slice(0, TOP_LIST_MAX),
+    topGenresByAvg: topGenresByAvgSliced,
+    topGenresByAvgMin8: topGenresByAvgMin8.slice(0, TOP_LIST_MAX),
+    genreOfTheYear: genreOfTheYear ?? null,
+    hiddenGems,
+    overrated,
+    topTags: topTags.slice(0, TOP_LIST_MAX),
+    topRatedFilms,
+    watchTime,
+    totalLanguagesCount: languageMap.size,
+    topLanguagesByCount: topLanguagesByCount.slice(0, TOP_LIST_MAX),
+    topCountriesByCount: countriesByCount.slice(0, TOP_LIST_MAX),
+    topCountriesByAvgRating: countriesByAvg.slice(0, TOP_LIST_MAX),
+    topDirectorsByCount: directorsByCount.slice(0, TOP_LIST_MAX),
+    topDirectorsByAvgRating: directorsByAvg.slice(0, TOP_LIST_MAX),
+    topActorsByCount: actorsByCount.slice(0, TOP_LIST_MAX),
+    topActorsByAvgRating: actorsByAvg.slice(0, TOP_LIST_MAX),
+    badges: trimmedBadges,
+    decades,
+    yearsByLoveScore,
+  }
+}
+
+/**
+ * Hidden gems: user rating >= 3.5, tmdb_vote_count >= 200, diff (user - tmdb_stars) >= 1.5.
+ * Sort by diff desc, then user rating desc. Top 12.
+ */
+export const computeHiddenGems = (films: Film[]): HiddenGem[] => {
+  if (!films || films.length === 0) return []
+  const MIN_USER_RATING = 3.5
+  const MIN_TMDB_VOTES = 200
+  const MIN_DIFF = 1.5
+  const list = films
+    .filter((f) => {
+      const user = f.rating != null ? Number(f.rating) : 0
+      const vc = f.tmdb_vote_count != null ? Number(f.tmdb_vote_count) : 0
+      const tmdbStars = f.tmdb_stars != null ? Number(f.tmdb_stars) : null
+      if (user < MIN_USER_RATING || vc < MIN_TMDB_VOTES || tmdbStars == null) return false
+      const diff = user - tmdbStars
+      return diff >= MIN_DIFF
+    })
+    .map((f) => ({
+      title: f.title,
+      year: f.year,
+      rating: f.rating,
+      tmdb_stars: f.tmdb_stars,
+      diff: Number((f.rating! - f.tmdb_stars!).toFixed(1)),
+      poster_url: f.poster_url,
+      poster_url_w342: f.poster_url_w342,
+      tmdb_id: f.tmdb_id,
+    }))
+    .sort((a, b) => {
+      if (b.diff !== a.diff) return b.diff - a.diff
+      return (b.rating || 0) - (a.rating || 0)
+    })
+  return list
+}
+
+/**
+ * Overrated: tmdbStars - userRating >= 1.5, tmdbStars >= 3.5, tmdb_vote_count >= 200.
+ * Sort by diff desc, then tmdbStars desc. Top 12. Badge shows e.g. "-1.7★".
+ */
+export const computeOverrated = (films: Film[]): OverratedFilm[] => {
+  if (!films || films.length === 0) return []
+  const MIN_TMDB_STARS = 3.5
+  const MIN_TMDB_VOTES = 200
+  const MIN_DIFF = 1.5
+  const list = films
+    .filter((f) => {
+      const user = f.rating != null ? Number(f.rating) : 0
+      const vc = f.tmdb_vote_count != null ? Number(f.tmdb_vote_count) : 0
+      const tmdbStars = f.tmdb_stars != null ? Number(f.tmdb_stars) : null
+      if (tmdbStars == null || tmdbStars < MIN_TMDB_STARS || vc < MIN_TMDB_VOTES) return false
+      const diff = tmdbStars - user
+      return diff >= MIN_DIFF
+    })
+    .map((f) => ({
+      title: f.title,
+      year: f.year,
+      rating: f.rating,
+      tmdb_stars: f.tmdb_stars,
+      diff: Number((f.tmdb_stars! - f.rating!).toFixed(1)),
+      poster_url: f.poster_url,
+      poster_url_w342: f.poster_url_w342,
+      tmdb_id: f.tmdb_id,
+    }))
+    .sort((a, b) => {
+      if (b.diff !== a.diff) return b.diff - a.diff
+      return (b.tmdb_stars || 0) - (a.tmdb_stars || 0)
+    })
+  return list
+}
+
+export const filterFilmsByYears = (films: Film[], years: number[]): Film[] => {
+  if (!films || !Array.isArray(films)) {
+    return []
+  }
+  
+  if (!years || years.length === 0) return films
+  const yearSet = new Set(years)
+  return films.filter((film) => {
+    const date = parseDate(film.date)
+    if (!date) return false
+    return yearSet.has(date.getFullYear())
+  })
+}
+
+export const getYearRangeLabel = (years: number[]): string => {
+  if (!years || years.length === 0) return 'all'
+  const sorted = [...years].sort((a, b) => a - b)
+  if (sorted.length === 1) return `${sorted[0]}`
+  return `${sorted[0]}-${sorted[sorted.length - 1]}`
+}
+
+export const formatYearRange = (years: number[], availableYears: number[]): string => {
+  if (!availableYears || !Array.isArray(availableYears) || availableYears.length === 0) return 'Период: все годы'
+  const firstYear = availableYears[0]
+  const lastYear = availableYears[availableYears.length - 1]
+  if (firstYear == null || lastYear == null) return 'Период: все годы'
+  const range = `${firstYear}–${lastYear}`
+  if (!years || !Array.isArray(years) || years.length === 0) return `Период: все годы (${range})`
+  const sorted = [...years].sort((a, b) => a - b)
+  if (sorted.length === 1) return `Период: ${formatYear(sorted[0])}`
+  return `Период: ${sorted.map((year) => formatYear(year)).join(' + ')} (суммарно)`
+}

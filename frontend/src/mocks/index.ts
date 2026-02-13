@@ -1,0 +1,58 @@
+/**
+ * Demo fixture mode: load local fixture JSON instead of calling backend.
+ * Only for local development / visual tests when VITE_USE_MOCKS=true (e.g. in .env.local).
+ */
+
+export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
+
+export interface MockOption {
+  id: string
+  label: string
+  file: string | null
+  error: boolean
+}
+
+export const MOCK_OPTIONS: MockOption[] = [
+  { id: 'mock_ratings_only', label: 'Только ratings', file: 'mock_ratings_only.json', error: false },
+  { id: 'mock_multi_year', label: 'Много лет (до 10)', file: 'mock_multi_year.json', error: false },
+  { id: 'mock_empty_sections', label: 'Пустые секции (нет жанров/режиссёров)', file: 'mock_empty_sections.json', error: false },
+  { id: 'mock_huge_dataset', label: 'Большой набор (30+ фильмов)', file: 'mock_huge_dataset.json', error: false },
+  { id: 'mock_tmdb_error', label: 'Нет постеров / TMDb-данных', file: 'mock_tmdb_error.json', error: false },
+  { id: 'mock_full_demo', label: 'Demo fixture: полный отчёт (минимум 3 элемента в каждом списке)', file: 'mock_full_demo.json', error: false },
+  { id: 'mock_favorite_genres', label: 'Самые любимые (тест списка по индексу жанра)', file: 'mock_favorite_genres.json', error: false },
+  { id: 'mock_favorite_index', label: 'Индекс: страны, режиссёры, актёры (тест колонки)', file: 'mock_favorite_index.json', error: false },
+  { id: 'mock_badges_test', label: 'Тест бейджей (длинные имена, Южная Корея)', file: 'mock_badges_test.json', error: false },
+  { id: 'mock_error', label: 'Demo fixture: ошибка TMDb', file: null, error: true },
+]
+
+const modules = import.meta.glob<{ default: unknown }>('./*.json')
+
+async function loadMockFile(fileName: string): Promise<unknown> {
+  const key = `./${fileName}`
+  const loader = modules[key]
+  if (!loader) throw new Error(`Mock not found: ${fileName}`)
+  const mod = await loader()
+  const data = mod?.default ?? mod
+  if (!data) throw new Error(`Mock empty: ${fileName}`)
+  return data
+}
+
+/**
+ * Load a demo fixture by option id.
+ * @param optionId - id from MOCK_OPTIONS (e.g. 'mock_ratings_only')
+ * @returns Promise with data or error
+ */
+export async function loadMock(optionId: string): Promise<{ data: unknown | null; error: string | null }> {
+  const option = MOCK_OPTIONS.find((o) => o.id === optionId)
+  if (!option) return { data: null, error: 'Неизвестный demo fixture' }
+  if (option.error) {
+    return { data: null, error: 'Ошибка TMDb (demo fixture)' }
+  }
+  try {
+    const data = await loadMockFile(option.file!)
+    return { data, error: null }
+  } catch (e) {
+    const error = e as Error
+    return { data: null, error: error.message || 'Не удалось загрузить demo fixture' }
+  }
+}
