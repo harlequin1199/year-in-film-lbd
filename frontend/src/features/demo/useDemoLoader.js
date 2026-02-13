@@ -27,9 +27,9 @@ export function useDemoLoader({ abortControllerRef, setAnalysis, setError, setLo
       setProgress({ stage: 'finalizing', message: 'Готово', total: filmsCount, done: filmsCount, percent: 100 })
       await new Promise((resolve) => setTimeout(resolve, 200))
       setAnalysis(data)
-      setLastUploadedFileName('демо')
+      setLastUploadedFileName('demo fixture (local)')
     } catch (err) {
-      setError(err.message || 'Не удалось загрузить демо')
+      setError(err.message || 'Не удалось загрузить demo fixture')
     } finally {
       setLoading(false)
       setProgress(null)
@@ -85,7 +85,7 @@ export function useDemoLoader({ abortControllerRef, setAnalysis, setError, setLo
         filmsLiteAll,
         availableYears,
         simplifiedMode: data?.simplifiedMode || false,
-        fileName: data?.fileName || 'демо-отчёт (готовый)',
+        fileName: data?.fileName || 'demo report asset (готовый)',
         warnings: Array.isArray(data?.warnings) ? data.warnings : [],
         ...(data?.stage1 ? { stage1: data.stage1 } : {}),
       }
@@ -97,11 +97,11 @@ export function useDemoLoader({ abortControllerRef, setAnalysis, setError, setLo
       setProgress({ stage: 'finalizing', message: 'Готово', total: filmsCount, done: filmsCount, percent: 100 })
       await new Promise((resolve) => setTimeout(resolve, 200))
       setAnalysis(normalizedData)
-      setLastUploadedFileName('демо-отчёт (готовый)')
+      setLastUploadedFileName('demo report asset (готовый)')
       await setLastReport(normalizedData)
       setLastReportAvailable(true)
     } catch (err) {
-      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось открыть готовый демо-отчёт (мгновенный режим)')
+      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось открыть demo report asset (мгновенный режим)')
     } finally {
       setLoading(false)
       setProgress(null)

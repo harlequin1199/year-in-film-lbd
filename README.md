@@ -101,7 +101,7 @@ cd frontend && npm ci
 
 All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 
-Demo report generation instructions: `docs/demo-report.md`.
+Demo report asset generation instructions: `docs/demo-report.md`.
 
 ## Deployment
 
@@ -195,7 +195,7 @@ Vercel handles SPA routing automatically for Vite projects.
 │   │   ├── components/      # UI components (sections, charts, cards)
 │   │   ├── utils/           # Analytics engine, CSV parsing, formatting
 │   │   ├── workers/         # Web Workers for heavy parsing
-│   │   └── mocks/           # Demo data for testing
+│   │   └── mocks/           # Demo fixtures for local dev / visual tests
 │   └── vite.config.js
 └── README.md
 ```

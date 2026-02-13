@@ -55,7 +55,7 @@ def _startup():
     api_key = (os.getenv("TMDB_API_KEY") or "").strip()
     if not api_key:
         logger.warning(
-            "TMDB_API_KEY is not set. TMDB endpoints will not work, but demo report endpoint is available."
+            "TMDB_API_KEY is not set. TMDB endpoints will not work, but demo report asset endpoints are available."
         )
     else:
         logger.info("Backend started; TMDB_API_KEY is set.")
@@ -286,25 +286,25 @@ async def tmdb_full_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, 
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-# Cache for demo report to avoid loading from disk on every request
+# Cache for demo report asset to avoid loading from disk on every request
 _demo_report_cache: Optional[Dict[str, Any]] = None
 
 
 @app.get("/api/demo-report")
 async def get_demo_report():
     """
-    Get the pre-generated demo report (1000 films).
+    Get the pre-generated demo report asset (1000 films).
     Returns JSON with filmsLite, filmsLiteAll, and availableYears.
     """
     global _demo_report_cache
     
     try:
         if _demo_report_cache is None:
-            demo_file = Path(__file__).resolve().parent.parent / "data" / "demo_report_1000.json"
+            demo_file = Path(__file__).resolve().parent.parent / "data" / "demo" / "demo_report_1000.json"
             if not demo_file.exists():
                 raise HTTPException(
                     status_code=404,
-                    detail="Demo report file not found. Please generate demo_report_1000.json first."
+                    detail="Demo report asset not found at backend/data/demo/demo_report_1000.json. Please generate it first."
                 )
             
             with open(demo_file, "r", encoding="utf-8") as f:
@@ -313,28 +313,28 @@ async def get_demo_report():
             # Log memory usage estimate
             import sys
             cache_size_mb = sys.getsizeof(json.dumps(_demo_report_cache)) / (1024 * 1024)
-            logger.info(f"Demo report loaded into cache. Estimated size: {cache_size_mb:.2f} MB")
+            logger.info(f"Demo report asset loaded into cache. Estimated size: {cache_size_mb:.2f} MB")
         
         return _demo_report_cache
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Error loading demo report: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to load demo report: {str(e)}")
+        logger.exception("Error loading demo report asset: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to load demo report asset: {str(e)}")
 
 
 @app.get("/api/demo-csv")
 async def get_demo_csv():
     """
-    Get the demo CSV file (1000 films).
+    Get the demo report asset CSV file (1000 films).
     Returns CSV file that can be processed through the full analysis pipeline.
     """
     try:
-        csv_file = Path(__file__).resolve().parent.parent / "data" / "demo_ratings_1000.csv"
+        csv_file = Path(__file__).resolve().parent.parent / "data" / "demo" / "demo_ratings_1000.csv"
         if not csv_file.exists():
             raise HTTPException(
                 status_code=404,
-                detail="Demo CSV file not found. Please generate demo_ratings_1000.csv first."
+                detail="Demo report asset CSV not found at backend/data/demo/demo_ratings_1000.csv. Please generate it first."
             )
         
         return FileResponse(
@@ -346,8 +346,8 @@ async def get_demo_csv():
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Error loading demo CSV: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to load demo CSV: {str(e)}")
+        logger.exception("Error loading demo report asset CSV: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to load demo report asset CSV: {str(e)}")
 
 
 if __name__ == "__main__":

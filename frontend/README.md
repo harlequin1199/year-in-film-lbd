@@ -49,7 +49,7 @@ src/
 │   └── csvParse.worker.js          # Web Worker for CSV parsing
 ├── components/                     # Dashboard UI blocks
 ├── utils/                          # Analytics + formatting/localization helpers
-├── mocks/                          # Demo / test data (JSON)
+├── mocks/                          # Demo fixtures for local dev / visual tests (JSON)
 └── styles/                         # CSS
 ```
 
