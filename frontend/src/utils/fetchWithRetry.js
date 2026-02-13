@@ -51,12 +51,19 @@ export async function fetchWithRetry(url, options = {}, { onRetryMessage } = {})
       }
 
       const text = await res.text()
-      throw new Error(text || `Ошибка ${res.status}`)
+      const nonRetryableError = new Error(text || `Ошибка ${res.status}`)
+      nonRetryableError.isRetryable = false
+      throw nonRetryableError
     } catch (err) {
       if (err?.name === 'AbortError') throw err
+      if (err?.isRetryable === false) throw err
       lastError = err
       if (attempt === MAX_RETRIES - 1) break
-      throw err
+
+      const base = BACKOFF_MS[attempt] ?? 16000
+      const delay = Math.min(BACKOFF_MAX_MS, base + jitter())
+      if (onRetryMessage) onRetryMessage('TMDb временно недоступен — повторяем запрос…')
+      await sleep(delay, signal)
     }
   }
   const msg = lastError?.message || 'Не удалось загрузить данные'
