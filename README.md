@@ -120,6 +120,34 @@ All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 - `backend/constraints.txt` pins exact versions used in production builds (especially on Render) for reproducibility.
 - Recommended cadence: run a dependency bump every 2–4 weeks, then perform a smoke-check (`/health`, one TMDb batch request, frontend ↔ backend connectivity) before deploying.
 
+## Production Runbook
+
+### Typical symptoms
+
+- **Long first request (cold start):** the first API call after idle time is significantly slower than normal.
+- **Spikes of 429 / 5xx:** enrichment requests intermittently fail with rate limits or upstream errors.
+- **Enrichment delays:** progress stalls or moves much slower than expected on large datasets.
+
+### Quick checks
+
+1. **Backend health:** call `GET /health` and confirm a fast `200 OK` response.
+2. **Minimal TMDb smoke test:** run one small `/tmdb/search/batch` request (single known title/year) to validate end-to-end enrichment path.
+3. **Frontend connectivity:** verify the frontend can reach the backend URL configured via `VITE_API_URL` (network tab + no CORS errors).
+
+### Actions
+
+1. **Retry/backoff wait:** for transient 429/5xx bursts, wait and retry with exponential backoff.
+2. **Reduce load:** temporarily lower enrichment `batch` size and request `concurrency`.
+3. **Resume from saved state:** restart enrichment from IndexedDB resume state instead of re-uploading/reprocessing from scratch.
+
+### Environment variables and common misconfigurations
+
+| Variable | Where | Typical misconfig | What to check |
+|---|---|---|---|
+| `VITE_API_URL` | Frontend (Vercel/local) | Missing protocol, wrong domain, points to stale backend, trailing path that breaks endpoint URLs | Must be full backend origin (e.g. `https://your-api.onrender.com`) and match the active backend deployment |
+| `FRONTEND_ORIGIN` | Backend (Render/local prod mode) | Not set in production, typo in domain, includes extra slash/path, mismatch with actual frontend URL | Must exactly match deployed frontend origin so CORS preflight succeeds |
+| `TMDB_API_KEY` | Backend | Missing/invalid key, rotated key not updated in env | Verify key exists in runtime env and TMDb requests succeed |
+
 ### Frontend → Vercel
 
 1. Import the repo on [vercel.com](https://vercel.com/).
