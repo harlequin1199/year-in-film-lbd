@@ -83,6 +83,15 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const barWidth = getBarWidth(yearCount)
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
+  const loveScorePoints = yearEntries
+    .map((entry, index) => {
+      if (entry.loveScore == null) return null
+      const x = index * (barWidth + gap) + barWidth / 2
+      const y = BAR_HEIGHT - Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
+      return { year: entry.year, x, y }
+    })
+    .filter(Boolean)
+  const loveScorePolylinePoints = loveScorePoints.map(({ x, y }) => `${x},${y}`).join(' ')
 
   // Calculate decade boundaries
   const decadeBoundaries = useMemo(() => {
@@ -317,6 +326,30 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
+          {mode === 'loveScore' && loveScorePoints.length > 1 && (
+            <polyline
+              points={loveScorePolylinePoints}
+              fill="none"
+              stroke="url(#byyear-lovescore)"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+          )}
+          {mode === 'loveScore' && loveScorePoints.length > 0 && loveScorePoints.map((point) => (
+            <circle
+              key={`love-score-point-${point.year}`}
+              cx={point.x}
+              cy={point.y}
+              r="2.5"
+              fill="url(#byyear-lovescore)"
+              stroke="#10131a"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
