@@ -5,8 +5,6 @@ import { getGenreNameRu } from '../utils/genresRu.js'
 function DonutRow({ genres }) {
   const top = (genres || []).slice(0, 6)
   const total = top.reduce((acc, g) => acc + g.count, 0) || 1
-  let offset = 0
-
   return (
     <section className="card">
       <div className="card-header">
@@ -16,11 +14,11 @@ function DonutRow({ genres }) {
       <div className="donut-row">
         <svg viewBox="0 0 120 120" className="donut">
           <circle className="donut-ring" cx="60" cy="60" r="52" />
-          {top.map((genre, index) => {
+          {top.reduce((acc, genre, index) => {
             const portion = genre.count / total
             const dash = portion * 2 * Math.PI * 52
             const gap = 2 * Math.PI * 52 - dash
-            const circle = (
+            const segment = (
               <circle
                 key={genre.name}
                 className="donut-segment"
@@ -29,12 +27,14 @@ function DonutRow({ genres }) {
                 r="52"
                 stroke={CHART_COLORS[index % CHART_COLORS.length]}
                 strokeDasharray={`${dash} ${gap}`}
-                strokeDashoffset={-offset}
+                strokeDashoffset={-acc.offset}
               />
             )
-            offset += dash
-            return circle
-          })}
+            return {
+              offset: acc.offset + dash,
+              items: [...acc.items, segment],
+            }
+          }, { offset: 0, items: [] }).items}
         </svg>
         <div className="legend">
           {top.map((genre, index) => (
