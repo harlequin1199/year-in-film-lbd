@@ -12,7 +12,7 @@ React SPA that parses Letterboxd CSV exports and renders an interactive analytic
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 

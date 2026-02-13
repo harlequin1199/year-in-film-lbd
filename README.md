@@ -72,11 +72,17 @@ uvicorn main:app --reload --port 8000
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `localhost:8000` by default.
+
+Canonical frontend dependency install command (for local setup and CI):
+
+```bash
+cd frontend && npm ci
+```
 
 
 ## Testing
