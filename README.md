@@ -89,7 +89,7 @@ Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `l
    | Variable | Required | Description |
    |---|---|---|
    | `TMDB_API_KEY` | Yes | TMDb API key |
-   | `FRONTEND_ORIGIN` | Recommended | Frontend URL for CORS (e.g. `https://your-project.vercel.app`) |
+   | `FRONTEND_ORIGIN` | Recommended (required in prod) | In production, set this to the exact frontend URL (e.g. `https://your-project.vercel.app`) so CORS allows only that origin. If omitted, backend falls back to localhost-only origins for development (`http://localhost:5173`, `http://localhost:3000`). |
 
 > Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
 
