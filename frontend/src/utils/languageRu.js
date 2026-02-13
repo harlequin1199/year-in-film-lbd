@@ -26,6 +26,8 @@ const languageMap = {
   vi: 'Вьетнамский',
   uk: 'Украинский',
   cs: 'Чешский',
+  kk: 'Казахский',
+  kaz: 'Казахский',
 }
 
 export const getLanguageRu = (code) => {
