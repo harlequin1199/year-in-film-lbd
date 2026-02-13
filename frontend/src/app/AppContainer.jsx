@@ -151,8 +151,6 @@ function AppContainer() {
 
   const posterSetIdsTop12 = useMemo(() => new Set((computed?.topRatedFilms || []).slice(0, 12).map((f) => f.tmdb_id).filter(Boolean)), [computed?.topRatedFilms])
   const summaryText = formatYearRange(selectedYears, availableYears)
-  const yearsLabel = getYearRangeLabel(selectedYears.length ? selectedYears : availableYears)
-  const yearsHeader = selectedYears.length ? [...selectedYears].sort((a, b) => a - b).join(' + ') : 'Все годы'
 
   const { demoMockId, setDemoMockId, handleLoadDemo, handleLoadDemoCSV, handleLoadDemoReport } = useDemoLoader({
     abortControllerRef,
