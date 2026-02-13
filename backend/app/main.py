@@ -8,12 +8,11 @@ from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
-from typing import List, Optional
 import httpx
 import json
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
-_env_path = Path(__file__).resolve().parent / ".env"
+_env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=_env_path)
 load_dotenv()
 
@@ -60,7 +59,7 @@ def _startup():
         )
     else:
         logger.info("Backend started; TMDB_API_KEY is set.")
-    import cache
+    from . import cache
     cache.init_cache_db()
     cache.start_writer()
     logger.info("Backend started successfully.")
@@ -68,7 +67,7 @@ def _startup():
 
 @app.on_event("shutdown")
 def _shutdown():
-    import cache
+    from . import cache
     cache.stop_writer()
     logger.info("Backend shutting down; cache writer stopped.")
 
@@ -164,7 +163,7 @@ async def tmdb_search_batch(request: BatchSearchRequest = Body(...)) -> Dict[str
                 detail="Too many items. Maximum 500 items per batch.",
             )
         
-        import tmdb_batch
+        from . import tmdb_batch
         
         items_dict = [{"title": item.title, "year": item.year} for item in request.items]
         logger.info("Processing batch search for %s items", len(items_dict))
@@ -194,7 +193,7 @@ async def tmdb_movies_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str
         if len(request.tmdb_ids) > 500:
             raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
-        import tmdb_batch_movies
+        from . import tmdb_batch_movies
         results = await tmdb_batch_movies.movies_batch(request.tmdb_ids, api_key)
         logger.info("Batch movies completed: %s results", len(results))
         
@@ -221,7 +220,7 @@ async def tmdb_credits_batch(request: BatchMoviesRequest = Body(...)) -> Dict[st
         if len(request.tmdb_ids) > 500:
             raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
-        import tmdb_batch_movies
+        from . import tmdb_batch_movies
         results = await tmdb_batch_movies.credits_batch(request.tmdb_ids, api_key)
         logger.info("Batch credits completed: %s results", len(results))
         
@@ -248,7 +247,7 @@ async def tmdb_keywords_batch(request: BatchMoviesRequest = Body(...)) -> Dict[s
         if len(request.tmdb_ids) > 500:
             raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
-        import tmdb_batch_movies
+        from . import tmdb_batch_movies
         results = await tmdb_batch_movies.keywords_batch(request.tmdb_ids, api_key)
         logger.info("Batch keywords completed: %s results", len(results))
         
@@ -275,7 +274,7 @@ async def tmdb_full_batch(request: BatchMoviesRequest = Body(...)) -> Dict[str, 
         if len(request.tmdb_ids) > 500:
             raise HTTPException(status_code=400, detail="Too many items. Maximum 500 items per batch.")
         
-        import tmdb_batch_movies
+        from . import tmdb_batch_movies
         results = await tmdb_batch_movies.full_batch(request.tmdb_ids, api_key)
         logger.info("Batch full metadata completed: %s results", len(results))
         
@@ -301,7 +300,7 @@ async def get_demo_report():
     
     try:
         if _demo_report_cache is None:
-            demo_file = Path(__file__).resolve().parent / "demo_report_1000.json"
+            demo_file = Path(__file__).resolve().parent.parent / "data" / "demo_report_1000.json"
             if not demo_file.exists():
                 raise HTTPException(
                     status_code=404,
@@ -331,7 +330,7 @@ async def get_demo_csv():
     Returns CSV file that can be processed through the full analysis pipeline.
     """
     try:
-        csv_file = Path(__file__).resolve().parent / "demo_ratings_1000.csv"
+        csv_file = Path(__file__).resolve().parent.parent / "data" / "demo_ratings_1000.csv"
         if not csv_file.exists():
             raise HTTPException(
                 status_code=404,
