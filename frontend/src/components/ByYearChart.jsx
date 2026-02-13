@@ -83,51 +83,63 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const barWidth = getBarWidth(yearCount)
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
-  const loveScorePoints = yearEntries
+
+  const smoothingWindow = 5
+  const radius = Math.floor(smoothingWindow / 2)
+  const smoothedLoveScorePoints = yearEntries
     .map((entry, index) => {
       if (entry.loveScore == null) return null
-      const loveScoreHeight = Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
+
+      const windowScores = []
+      const start = Math.max(0, index - radius)
+      const end = Math.min(yearEntries.length - 1, index + radius)
+
+      for (let i = start; i <= end; i += 1) {
+        const score = yearEntries[i].loveScore
+        if (score != null) {
+          windowScores.push(score)
+        }
+      }
+
+      if (windowScores.length === 0) return null
+
+      const smoothedScore = windowScores.reduce((sum, value) => sum + value, 0) / windowScores.length
+      const smoothedHeight = Math.max(2, (smoothedScore / 100) * BAR_HEIGHT)
       const x = index * (barWidth + gap) + barWidth / 2
-      const y = BAR_HEIGHT - loveScoreHeight * 0.55
+      const y = BAR_HEIGHT - smoothedHeight
       return { year: entry.year, x, y }
     })
     .filter(Boolean)
 
-  const loveScorePath = useMemo(() => {
-    if (loveScorePoints.length < 2) return ''
-
-    const [firstPoint, ...restPoints] = loveScorePoints
-    let path = `M ${firstPoint.x} ${firstPoint.y}`
+  let loveScorePath = ''
+  if (smoothedLoveScorePoints.length >= 2) {
+    const [firstPoint, ...restPoints] = smoothedLoveScorePoints
+    loveScorePath = `M ${firstPoint.x} ${firstPoint.y}`
 
     restPoints.forEach((point, index) => {
-      const prev = loveScorePoints[index]
+      const prev = smoothedLoveScorePoints[index]
       const cx = (prev.x + point.x) / 2
-      path += ` C ${cx} ${prev.y}, ${cx} ${point.y}, ${point.x} ${point.y}`
+      loveScorePath += ` C ${cx} ${prev.y}, ${cx} ${point.y}, ${point.x} ${point.y}`
     })
-
-    return path
-  }, [loveScorePoints])
+  }
 
   // Calculate decade boundaries
-  const decadeBoundaries = useMemo(() => {
-    const minDecade = Math.floor(minYear / 10) * 10
-    const maxDecade = Math.floor(maxYear / 10) * 10
-    const boundaries = []
-    for (let decade = minDecade; decade <= maxDecade; decade += 10) {
-      // Use the first year of the decade that falls within our range, or the decade start if it's before minYear
-      const yearForDecade = Math.max(decade, minYear)
-      if (yearForDecade <= maxYear) {
-        const yearIndex = yearForDecade - minYear
-        // Allow yearIndex to be equal to yearCount for the last decade boundary
-        if (yearIndex >= 0 && yearIndex <= yearCount) {
-          // Clamp x to chartWidth to ensure it's within bounds
-          const x = Math.min(yearIndex * (barWidth + gap), chartWidth)
-          boundaries.push({ decade, x })
-        }
+  const minDecade = Math.floor(minYear / 10) * 10
+  const maxDecade = Math.floor(maxYear / 10) * 10
+  const decadeBoundaries = []
+  for (let decade = minDecade; decade <= maxDecade; decade += 10) {
+    // Use the first year of the decade that falls within our range, or the decade start if it's before minYear
+    const yearForDecade = Math.max(decade, minYear)
+    if (yearForDecade <= maxYear) {
+      const yearIndex = yearForDecade - minYear
+      // Allow yearIndex to be equal to yearCount for the last decade boundary
+      if (yearIndex >= 0 && yearIndex <= yearCount) {
+        // Clamp x to chartWidth to ensure it's within bounds
+        const x = Math.min(yearIndex * (barWidth + gap), chartWidth)
+        decadeBoundaries.push({ decade, x })
       }
     }
-    return boundaries
-  }, [minYear, maxYear, yearCount, barWidth, gap, chartWidth])
+  }
 
   const handleMove = (event, entry) => {
     const tooltipWidth = 220
@@ -211,7 +223,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
           
           // Calculate minimum distance in pixels (approximately 45px for a 4-digit label with spacing)
           const minDistancePx = 45
-          const minDistancePercent = actualWidth > 0 ? (minDistancePx / actualWidth) * 100 : 8
           const edgeMarginPx = 25
           const edgeMarginPercent = actualWidth > 0 ? (edgeMarginPx / actualWidth) * 100 : 3
           
@@ -341,31 +352,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
-          {mode === 'loveScore' && loveScorePath && (
-            <path
-              d={loveScorePath}
-              fill="none"
-              stroke="#ffd54a"
-              strokeWidth="2.4"
-              vectorEffect="non-scaling-stroke"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.95"
-            />
-          )}
-          {mode === 'loveScore' && loveScorePoints.length > 0 && loveScorePoints.map((point) => (
-            <circle
-              key={`love-score-point-${point.year}`}
-              cx={point.x}
-              cy={point.y}
-              r="1.8"
-              fill="#ffe07a"
-              stroke="#1b1f2a"
-              strokeWidth="0.8"
-              vectorEffect="non-scaling-stroke"
-              opacity="0.95"
-            />
-          ))}
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
@@ -390,6 +376,33 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
+          {mode === 'loveScore' && loveScorePath && (
+            <path
+              d={loveScorePath}
+              fill="none"
+              stroke="#fff2a8"
+              strokeWidth="1.4"
+              vectorEffect="non-scaling-stroke"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.98"
+              pointerEvents="none"
+            />
+          )}
+          {mode === 'loveScore' && smoothedLoveScorePoints.length > 0 && smoothedLoveScorePoints.map((point) => (
+            <circle
+              key={`love-score-point-${point.year}`}
+              cx={point.x}
+              cy={point.y}
+              r="1.2"
+              fill="#fff8d5"
+              stroke="#3a2f07"
+              strokeWidth="0.5"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.98"
+              pointerEvents="none"
+            />
+          ))}
         </svg>
         <div className="byyear-axis">
           <span>{formatYear(minYear)}</span>
