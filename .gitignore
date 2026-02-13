@@ -19,3 +19,6 @@ frontend/dist/
 
 # IDE
 .cursor/
+
+# Local git worktrees
+.worktrees/
