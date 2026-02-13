@@ -83,6 +83,30 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const barWidth = getBarWidth(yearCount)
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
+  const loveScorePoints = yearEntries
+    .map((entry, index) => {
+      if (entry.loveScore == null) return null
+      const loveScoreHeight = Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
+      const x = index * (barWidth + gap) + barWidth / 2
+      const y = BAR_HEIGHT - loveScoreHeight * 0.55
+      return { year: entry.year, x, y }
+    })
+    .filter(Boolean)
+
+  const loveScorePath = useMemo(() => {
+    if (loveScorePoints.length < 2) return ''
+
+    const [firstPoint, ...restPoints] = loveScorePoints
+    let path = `M ${firstPoint.x} ${firstPoint.y}`
+
+    restPoints.forEach((point, index) => {
+      const prev = loveScorePoints[index]
+      const cx = (prev.x + point.x) / 2
+      path += ` C ${cx} ${prev.y}, ${cx} ${point.y}, ${point.x} ${point.y}`
+    })
+
+    return path
+  }, [loveScorePoints])
 
   // Calculate decade boundaries
   const decadeBoundaries = useMemo(() => {
@@ -317,6 +341,31 @@ function ByYearChart({ films, yearsByLoveScore }) {
               />
             )
           })}
+          {mode === 'loveScore' && loveScorePath && (
+            <path
+              d={loveScorePath}
+              fill="none"
+              stroke="#ffd54a"
+              strokeWidth="2.4"
+              vectorEffect="non-scaling-stroke"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+          )}
+          {mode === 'loveScore' && loveScorePoints.length > 0 && loveScorePoints.map((point) => (
+            <circle
+              key={`love-score-point-${point.year}`}
+              cx={point.x}
+              cy={point.y}
+              r="1.8"
+              fill="#ffe07a"
+              stroke="#1b1f2a"
+              strokeWidth="0.8"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.95"
+            />
+          ))}
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
