@@ -78,6 +78,23 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `localhost:8000` by default.
 
+
+## Testing
+
+- **Frontend (npm script):**
+  ```bash
+  cd frontend
+  npm run test
+  ```
+- **Backend (pip + pytest):**
+  ```bash
+  cd backend
+  pip install -r requirements.txt -r requirements-dev.txt
+  python -m pytest
+  ```
+
+All tests are deterministic and use mocks/fixtures (no external TMDb calls).
+
 ## Deployment
 
 ### Backend → Render
