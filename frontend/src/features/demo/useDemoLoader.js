@@ -53,7 +53,7 @@ export function useDemoLoader({ abortControllerRef, setAnalysis, setError, setLo
       const csvFile = new File([blob], 'demo_ratings_1000.csv', { type: 'text/csv' })
       await runAnalysis(csvFile, false)
     } catch (err) {
-      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось загрузить демо CSV')
+      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось запустить демо через CSV (полный расчёт)')
     } finally {
       abortControllerRef.current = null
     }
@@ -101,7 +101,7 @@ export function useDemoLoader({ abortControllerRef, setAnalysis, setError, setLo
       await setLastReport(normalizedData)
       setLastReportAvailable(true)
     } catch (err) {
-      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось загрузить готовый демо-отчёт')
+      if (err?.name !== 'AbortError') setError(err.message || 'Не удалось открыть готовый демо-отчёт (мгновенный режим)')
     } finally {
       setLoading(false)
       setProgress(null)

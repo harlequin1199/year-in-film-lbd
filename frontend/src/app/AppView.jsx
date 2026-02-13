@@ -98,7 +98,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Загрузить демо-отчёт
+                    Запустить демо (CSV, полный расчёт)
                   </button>
                   <button
                     type="button"
@@ -109,7 +109,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Загрузить готовый демо-отчёт
+                    Открыть готовый демо-отчёт (мгновенно)
                   </button>
                 </div>
               )}
@@ -168,7 +168,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Загрузить демо-отчёт
+                    Запустить демо (CSV, полный расчёт)
                   </button>
                   <button
                     type="button"
@@ -179,7 +179,7 @@ function AppView(props) {
                     }}
                     disabled={loading}
                   >
-                    Загрузить готовый демо-отчёт
+                    Открыть готовый демо-отчёт (мгновенно)
                   </button>
                 </div>
               )}
