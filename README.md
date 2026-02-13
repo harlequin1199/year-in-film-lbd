@@ -80,7 +80,7 @@ Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `l
 
 1. Create a **Web Service**, connect the repo.
 2. **Root directory:** `backend`
-3. **Build command:** `pip install -r requirements.txt`
+3. **Build command:** `pip install -r requirements.txt -c constraints.txt`
 4. **Start command:**
    ```
    gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
@@ -92,6 +92,12 @@ Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `l
    | `FRONTEND_ORIGIN` | Recommended | Frontend URL for CORS (e.g. `https://your-project.vercel.app`) |
 
 > Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
+
+## Dependency Update Policy
+
+- Backend dependencies in `backend/requirements.txt` are version-ranged for safe patch/minor updates.
+- `backend/constraints.txt` pins exact versions used in production builds (especially on Render) for reproducibility.
+- Recommended cadence: run a dependency bump every 2–4 weeks, then perform a smoke-check (`/health`, one TMDb batch request, frontend ↔ backend connectivity) before deploying.
 
 ### Frontend → Vercel
 
