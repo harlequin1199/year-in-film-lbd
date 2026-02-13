@@ -69,6 +69,7 @@ src/
 ## Key Design Decisions
 
 - **Client-side analytics** — the backend only provides TMDb data; all stats, rankings, and charts are computed in the browser. This keeps the backend stateless and lightweight.
+- **Data policy** — the CSV file is not uploaded to the server in full; only fields required for TMDb enrichment are sent to the backend (for example: `title`, `year`, `tmdb_ids`); enrichment cache and resume state are stored locally in IndexedDB.
 - **Progressive loading** — basic stats (from CSV only) appear instantly. TMDb enrichment (posters, genres, directors, etc.) loads in the background with a progress indicator.
 - **Resume support** — enrichment progress is saved to IndexedDB. If the user closes the tab and returns, analysis continues from where it left off.
 - **Simplified mode** — on mobile or with very large datasets, a lighter analysis path is used to keep the UI responsive.

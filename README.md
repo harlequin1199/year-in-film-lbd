@@ -35,7 +35,11 @@ Upload your `ratings.csv` (and optionally `diary.csv`) and get an interactive da
 | **Frontend** | CSV parsing, analytics computation, UI | Vercel |
 | **Backend** | Batch TMDb search/details/credits/keywords with SQLite cache | Render |
 
-All heavy analytics run **client-side** — the backend is only used for TMDb API batch operations and caching.
+All heavy analytics run **client-side**. Data policy:
+
+- The CSV file is **not** uploaded to the server in full.
+- Only fields required for TMDb enrichment are sent to the backend (for example: `title`, `year`, `tmdb_ids`).
+- Enrichment cache and resume state are stored locally in **IndexedDB**.
 
 ## Tech Stack
 
@@ -115,8 +119,8 @@ Vercel handles SPA routing automatically for Vite projects.
 
 1. User uploads their Letterboxd CSV export (`ratings.csv` + optional `diary.csv`)
 2. Frontend parses the CSV in a **Web Worker** and shows instant basic stats
-3. Frontend sends film titles in batches to the backend for TMDb enrichment (posters, genres, directors, actors, keywords, etc.)
-4. Progress is saved to **IndexedDB** — if the page is closed, analysis resumes where it left off
+3. Frontend sends only the data required for TMDb enrichment (for example: `title`, `year`, `tmdb_ids`) in batches to the backend
+4. Enrichment cache and progress are saved to **IndexedDB** locally — if the page is closed, analysis resumes where it left off
 5. Once enrichment is complete, the full analytics dashboard is rendered client-side
 
 ## Project Structure
