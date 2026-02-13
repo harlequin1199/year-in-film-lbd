@@ -4,7 +4,7 @@
  *        { type: 'rows', rows } for ratings
  */
 
-import { parseRatings } from './csvParse'
+import { parseRatings } from './csvParseCore'
 
 self.onmessage = async (e) => {
   const { type, ratingsText } = e.data

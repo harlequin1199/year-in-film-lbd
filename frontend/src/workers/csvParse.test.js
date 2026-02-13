@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseRfcCsvLine, parseRatings } from './csvParse'
+import { parseRfcCsvLine, parseRatings } from './csvParseCore'
 
 describe('csv parser worker helpers', () => {
   it('parses quoted fields and escaped quotes', () => {
