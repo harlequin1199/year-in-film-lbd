@@ -84,15 +84,16 @@ function ByYearChart({ films, yearsByLoveScore }) {
   const gap = yearCount > 120 ? 0 : 1
   const chartWidth = yearCount * (barWidth + gap)
 
-  const smoothingWindow = 5
-  const radius = Math.floor(smoothingWindow / 2)
+  const smoothingWindow = 10
+  const leftRadius = Math.floor((smoothingWindow - 1) / 2)
+  const rightRadius = smoothingWindow - leftRadius - 1
   const smoothedLoveScorePoints = yearEntries
     .map((entry, index) => {
       if (entry.loveScore == null) return null
 
       const windowScores = []
-      const start = Math.max(0, index - radius)
-      const end = Math.min(yearEntries.length - 1, index + radius)
+      const start = Math.max(0, index - leftRadius)
+      const end = Math.min(yearEntries.length - 1, index + rightRadius)
 
       for (let i = start; i <= end; i += 1) {
         const score = yearEntries[i].loveScore
@@ -106,7 +107,7 @@ function ByYearChart({ films, yearsByLoveScore }) {
       const smoothedScore = windowScores.reduce((sum, value) => sum + value, 0) / windowScores.length
       const smoothedHeight = Math.max(2, (smoothedScore / 100) * BAR_HEIGHT)
       const x = index * (barWidth + gap) + barWidth / 2
-      const y = BAR_HEIGHT - smoothedHeight
+      const y = BAR_HEIGHT - smoothedHeight / 2
       return { year: entry.year, x, y }
     })
     .filter(Boolean)
@@ -389,20 +390,6 @@ function ByYearChart({ films, yearsByLoveScore }) {
               pointerEvents="none"
             />
           )}
-          {mode === 'loveScore' && smoothedLoveScorePoints.length > 0 && smoothedLoveScorePoints.map((point) => (
-            <circle
-              key={`love-score-point-${point.year}`}
-              cx={point.x}
-              cy={point.y}
-              r="1.2"
-              fill="#fff8d5"
-              stroke="#3a2f07"
-              strokeWidth="0.5"
-              vectorEffect="non-scaling-stroke"
-              opacity="0.98"
-              pointerEvents="none"
-            />
-          ))}
         </svg>
         <div className="byyear-axis">
           <span>{formatYear(minYear)}</span>
