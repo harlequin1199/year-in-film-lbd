@@ -222,7 +222,7 @@ function AppView(props) {
             </div>
           )}
           <p className="upload-privacy">
-            Файл обрабатывается только в браузере. Никуда не отправляется.
+            CSV-файл целиком не загружается на сервер; на backend отправляются только данные, нужные для TMDb-обогащения (например, title/year/tmdb_ids); кеш хранится локально в IndexedDB.
           </p>
           <p className="upload-settings">
             <button
