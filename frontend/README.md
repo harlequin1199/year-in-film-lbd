@@ -35,36 +35,27 @@ npm run preview   # preview the production build locally
 
 ```
 src/
-├── App.jsx                  # Main app: file upload, orchestration, layout
-├── components/
-│   ├── StatsCards.jsx        # Overview metrics (films, avg rating, etc.)
-│   ├── FilmsGrid.jsx         # Top-rated films poster grid
-│   ├── GenresSection.jsx     # Genre breakdown (by count & avg rating)
-│   ├── TagsTable.jsx         # Keywords / themes table
-│   ├── DirectorsSection.jsx  # Directors rankings
-│   ├── ActorsSection.jsx     # Actors rankings
-│   ├── CountriesSection.jsx  # Countries breakdown
-│   ├── LanguagesSection.jsx  # Languages diversity
-│   ├── TimelineChart.jsx     # Monthly viewing timeline
-│   ├── BadgesSection.jsx     # Achievement-style highlight cards
-│   ├── HiddenGemsSection.jsx # Under-appreciated films
-│   ├── DecadesSection.jsx    # Favorite decades
-│   ├── WatchTimeCard.jsx     # Total watch time
-│   ├── YearFilter.jsx        # Filter by calendar year
-│   ├── Stars.jsx             # Star rating display
-│   └── ...
-├── utils/
-│   ├── analyticsClient.js    # Main analytics engine (aggregations, badges)
-│   ├── csvParser.js          # CSV → structured data
-│   ├── format.js             # Number/date formatting helpers
-│   ├── genresRu.js           # Genre name localization (EN → RU)
-│   ├── countriesRu.js        # Country name localization (EN → RU)
-│   └── genreIcons.js         # Genre icon mapping
+├── app/
+│   ├── AppContainer.jsx            # App orchestration: upload, progress, resume wiring
+│   └── AppView.jsx                 # Main UI composition/layout
+├── features/
+│   ├── upload/
+│   │   └── useCsvAnalysisFlow.js   # Upload + analysis pipeline coordination
+│   ├── resume/
+│   │   └── useResumeState.js       # IndexedDB-backed resume/cache state
+│   └── demo/
+│       └── useDemoLoader.js        # Demo dataset loading flow
 ├── workers/
-│   └── csvWorker.js          # Web Worker for parsing large CSVs
-├── mocks/                    # Demo / test data (JSON)
-└── styles/                   # CSS
+│   └── csvParse.worker.js          # Web Worker for CSV parsing
+├── components/                     # Dashboard UI blocks
+├── utils/                          # Analytics + formatting/localization helpers
+├── mocks/                          # Demo / test data (JSON)
+└── styles/                         # CSS
 ```
+
+## Flow
+
+`upload → parse worker → TMDb enrichment → IndexedDB resume/cache`
 
 ## Key Design Decisions
 
