@@ -13,6 +13,10 @@ import { useResumeState } from '../features/resume/useResumeState'
 import { useCsvAnalysisFlow } from '../features/upload/useCsvAnalysisFlow'
 import { useDemoLoader } from '../features/demo/useDemoLoader'
 import { useAnalysisStore } from '../store/analysisStore'
+<<<<<<< HEAD
+=======
+import { selectAnalysisSummary, selectProgressView } from '../store/analysisSelectors'
+>>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
 
 const SHOW_MOCK_UI = import.meta.env.DEV && USE_MOCKS
 
@@ -39,8 +43,19 @@ function AppContainer() {
   })
 
   const {
+<<<<<<< HEAD
     setAnalysis,
     setError,
+=======
+    analysis: flowAnalysis,
+    setAnalysis,
+    loading: flowLoading,
+    error: flowError,
+    setError,
+    progress: flowProgress,
+    retryMessage,
+    lastUploadedFileName,
+>>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
     setLastUploadedFileName,
     showMobileModal,
     setShowMobileModal,
@@ -63,7 +78,31 @@ function AppContainer() {
   }))
 
   useEffect(() => {
+<<<<<<< HEAD
     updateResumeModalVisibility()
+=======
+    useAnalysisStore.setState({
+      analysis: flowAnalysis,
+      loading: flowLoading,
+      error: flowError,
+      progress: flowProgress,
+      retryMessage,
+      lastUploadedFileName,
+      simplifiedMode: flow.simplifiedMode,
+    })
+  }, [flowAnalysis, flowError, flowLoading, flowProgress, flow.simplifiedMode, lastUploadedFileName, retryMessage])
+
+  const analysisSummary = useAnalysisStore(selectAnalysisSummary)
+  const progressView = useAnalysisStore(selectProgressView)
+  const analysis = useAnalysisStore((state) => state.analysis)
+  const progress = useAnalysisStore((state) => state.progress)
+  const hasProgress = progressView.hasProgress
+  const loading = analysisSummary.loading
+  const error = analysisSummary.error
+
+  useEffect(() => {
+    updateResumeModalVisibility(loading)
+>>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
   }, [loading, updateResumeModalVisibility])
 
   useEffect(() => {
@@ -208,7 +247,7 @@ function AppContainer() {
       showMobileModal={showMobileModal}
       handleMobileCancel={() => { setShowMobileModal(false); setPendingFiles(null) }}
       handleMobileContinue={handleMobileContinue}
-      progress={progress}
+      progress={hasProgress ? progress : null}
       handleCancelAnalysis={cancelAnalysis}
       retryMessage={retryMessage}
       error={error}
