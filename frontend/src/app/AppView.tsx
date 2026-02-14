@@ -189,7 +189,8 @@ function AppView(props: AppViewProps) {
             />
           )}
         </div>
-        <div className="hero-actions">
+        <FeatureErrorBoundary featureName="upload">
+          <div className="hero-actions">
           {!isMobile() && (
             <div
               ref={demoDropdownRef}
@@ -237,16 +238,12 @@ function AppView(props: AppViewProps) {
               )}
             </div>
           )}
-          <FeatureErrorBoundary featureName="upload">
-            <div data-testid="feature-upload">
-              <UploadZone
-                onUpload={handleUpload}
-                loading={loading}
-                selectedFileName={analysis ? lastUploadedFileName : ''}
-                selectedFilmCount={analysis ? filteredFilms.length : 0}
-              />
-            </div>
-          </FeatureErrorBoundary>
+          <UploadZone
+            onUpload={handleUpload}
+            loading={loading}
+            selectedFileName={analysis ? lastUploadedFileName : ''}
+            selectedFilmCount={analysis ? filteredFilms.length : 0}
+          />
           {SHOW_MOCK_UI && (
             <div className="mock-demo-block">
               <label className="mock-demo-label" htmlFor="demo-select">
@@ -302,7 +299,8 @@ function AppView(props: AppViewProps) {
               </button>
             )}
           </p>
-        </div>
+          </div>
+        </FeatureErrorBoundary>
       </header>
 
       {showResumeModal && resumeState && (

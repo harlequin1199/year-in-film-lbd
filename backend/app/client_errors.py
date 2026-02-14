@@ -1,31 +1,20 @@
-import logging
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
-from .client_errors_repository import ClientErrorsRepository
-
-logger = logging.getLogger(__name__)
 
 
 class ClientErrorEventIn(BaseModel):
     errorId: str
     message: str
-    stack: str | None = None
-    componentStack: str | None = None
-    boundaryScope: Literal["global", "feature"]
-    featureName: str | None = None
-    route: str | None = None
-    userAgent: str | None = None
+    stack: Optional[str] = None
+    componentStack: Optional[str] = None
+    boundaryScope: Literal['global', 'feature']
+    featureName: Optional[str] = None
+    route: Optional[str] = None
+    userAgent: Optional[str] = None
     timestamp: datetime
 
 
-def persist_client_error_event(
-    payload: ClientErrorEventIn,
-    repository: ClientErrorsRepository | None = None,
-) -> None:
-    repo = repository or ClientErrorsRepository()
-    try:
-        repo.insert_event(payload.model_dump())
-    except Exception:
-        logger.exception("Failed to persist client error event")
+class ClientErrorEventOut(BaseModel):
+    errorId: str

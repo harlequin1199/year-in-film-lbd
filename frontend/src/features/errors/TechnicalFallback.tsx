@@ -1,4 +1,4 @@
-type TechnicalFallbackProps = {
+interface TechnicalFallbackProps {
   mode: 'global' | 'feature'
   errorId: string
   message: string
@@ -6,14 +6,19 @@ type TechnicalFallbackProps = {
   onGoHome?: () => void
 }
 
-export function TechnicalFallback(props: TechnicalFallbackProps) {
+export function TechnicalFallback({ mode, errorId, message, onRetry, onGoHome }: TechnicalFallbackProps) {
   return (
-    <section role="alert" data-mode={props.mode}>
-      <p>Error ID: {props.errorId}</p>
-      <p>{props.message}</p>
-      <button onClick={props.onRetry}>Retry</button>
-      <button onClick={() => window.location.reload()}>Reload</button>
-      <button onClick={props.onGoHome}>Go Home</button>
+    <section role="alert" className={`technical-fallback technical-fallback-${mode}`}>
+      <h2>Unexpected error</h2>
+      <p>Error ID: {errorId}</p>
+      <p>{message}</p>
+      <div className="technical-fallback-actions">
+        <button type="button" className="btn" onClick={onRetry}>Retry</button>
+        <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>Reload</button>
+        {onGoHome && (
+          <button type="button" className="btn btn-secondary" onClick={onGoHome}>Go Home</button>
+        )}
+      </div>
     </section>
   )
 }

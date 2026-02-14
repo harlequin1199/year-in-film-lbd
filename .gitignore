@@ -12,10 +12,18 @@ __pycache__/
 
 # Backend
 backend/cache.db
+backend/app/cache.db
+backend/app/cache.db-shm
+backend/app/cache.db-wal
+backend/app/__pycache__/
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
+
+# Test artifacts
+backend/.coverage
 
 # IDE
 .cursor/

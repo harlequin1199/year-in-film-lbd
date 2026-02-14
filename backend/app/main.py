@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, Optional, Any, List
 
@@ -10,7 +11,8 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 import httpx
 import json
-from .client_errors import ClientErrorEventIn, persist_client_error_event
+
+from .client_errors import ClientErrorEventIn, ClientErrorEventOut
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -20,7 +22,40 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    import asyncio
+    import platform
+
+    if platform.system() == 'Windows':
+        try:
+            loop = asyncio.get_event_loop()
+            if not isinstance(loop, asyncio.ProactorEventLoop):
+                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+                logger.info("Switched to ProactorEventLoop for Windows compatibility")
+        except Exception as exc:
+            logger.warning("Could not set ProactorEventLoop: %s", exc)
+
+    api_key = (os.getenv("TMDB_API_KEY") or "").strip()
+    if not api_key:
+        logger.warning(
+            "TMDB_API_KEY is not set. TMDB endpoints will not work, but demo report asset endpoints are available."
+        )
+    else:
+        logger.info("Backend started; TMDB_API_KEY is set.")
+
+    from . import cache
+    cache.init_cache_db()
+    cache.start_writer()
+    logger.info("Backend started successfully.")
+    try:
+        yield
+    finally:
+        cache.stop_writer()
+        logger.info("Backend shutting down; cache writer stopped.")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS configuration:
 # - Production mode: set FRONTEND_ORIGIN to your deployed frontend URL (usually Vercel).
@@ -36,46 +71,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-@app.on_event("startup")
-def _startup():
-    import asyncio
-    import platform
-    
-    # Use ProactorEventLoop on Windows to avoid select() file descriptor limit
-    if platform.system() == 'Windows':
-        try:
-            loop = asyncio.get_event_loop()
-            if not isinstance(loop, asyncio.ProactorEventLoop):
-                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-                logger.info("Switched to ProactorEventLoop for Windows compatibility")
-        except Exception as e:
-            logger.warning(f"Could not set ProactorEventLoop: {e}")
-    
-    api_key = (os.getenv("TMDB_API_KEY") or "").strip()
-    if not api_key:
-        logger.warning(
-            "TMDB_API_KEY is not set. TMDB endpoints will not work, but demo report asset endpoints are available."
-        )
-    else:
-        logger.info("Backend started; TMDB_API_KEY is set.")
-    from . import cache
-    cache.init_cache_db()
-    cache.start_writer()
-    logger.info("Backend started successfully.")
-
-
-@app.on_event("shutdown")
-def _shutdown():
-    from . import cache
-    cache.stop_writer()
-    logger.info("Backend shutting down; cache writer stopped.")
-
-
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/api/client-errors", status_code=201, response_model=ClientErrorEventOut)
+def post_client_errors(payload: ClientErrorEventIn) -> ClientErrorEventOut:
+    logger.error(
+        "Client error event received: %s scope=%s route=%s",
+        payload.errorId,
+        payload.boundaryScope,
+        payload.route,
+    )
+    return ClientErrorEventOut(errorId=payload.errorId)
 
 
 @app.get("/tmdb/image/{size}/{path:path}")
@@ -349,12 +358,6 @@ async def get_demo_csv():
     except Exception as e:
         logger.exception("Error loading demo report asset CSV: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to load demo report asset CSV: {str(e)}")
-
-
-@app.post("/api/client-errors", status_code=201)
-def post_client_errors(payload: ClientErrorEventIn):
-    persist_client_error_event(payload)
-    return {"errorId": payload.errorId}
 
 
 if __name__ == "__main__":

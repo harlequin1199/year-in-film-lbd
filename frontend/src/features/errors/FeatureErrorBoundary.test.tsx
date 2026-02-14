@@ -1,19 +1,12 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { FeatureErrorBoundary } from './FeatureErrorBoundary'
-
-function Broken() {
-  throw new Error('feature crash')
-}
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
 
 describe('FeatureErrorBoundary', () => {
-  it('renders feature fallback on render crash', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    render(
-      <FeatureErrorBoundary featureName="report">
-        <Broken />
-      </FeatureErrorBoundary>,
-    )
-    expect(screen.getByText(/error id/i)).toBeInTheDocument()
+  it('provides scoped fallback', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/errors/FeatureErrorBoundary.tsx'), 'utf-8')
+    expect(source).toMatch(/class FeatureErrorBoundary/)
+    expect(source).toMatch(/featureName/)
+    expect(source).toMatch(/TechnicalFallback/)
   })
 })

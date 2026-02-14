@@ -33,3 +33,7 @@ Trade-offs:
 ## Alternatives Considered
 - Keep mixed local+global ownership during migration: rejected due to drift risk.
 - Move all UI state to store: rejected as unnecessary for ephemeral view state.
+
+## Implementation Notes
+- `frontend/src/store/analysisStore.ts` is the runtime store contract.
+- `frontend/src/store/analysisSelectors.ts` is the default read-path for business state in container components.

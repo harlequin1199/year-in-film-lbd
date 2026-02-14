@@ -1,33 +1,40 @@
 import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
 import type { Analysis, Progress } from '../types'
 
-interface AnalysisStoreState {
+export interface AnalysisStoreState {
   analysis: Analysis | null
   loading: boolean
-  progress: Progress | null
   error: string
+  progress: Progress | null
   retryMessage: string
   lastUploadedFileName: string
+  simplifiedMode: boolean
   startRun: (fileName: string) => void
-  setProgress: (progress: Progress) => void
+  setProgress: (progress: Progress | null) => void
   completeRun: (analysis: Analysis) => void
   failRun: (message: string) => void
   abortRun: () => void
   cleanupRun: () => void
+  resetForTests: () => void
 }
 
-export const useAnalysisStore = create<AnalysisStoreState>()(devtools((set) => ({
+const initialState = {
   analysis: null,
   loading: false,
-  progress: null,
   error: '',
+  progress: null,
   retryMessage: '',
   lastUploadedFileName: '',
-  startRun: (fileName) => set({ analysis: null, loading: true, error: '', lastUploadedFileName: fileName }, false, 'startRun'),
-  setProgress: (progress) => set({ progress }, false, 'setProgress'),
-  completeRun: (analysis) => set({ analysis, loading: false }, false, 'completeRun'),
-  failRun: (message) => set({ loading: false, progress: null, error: message }, false, 'failRun'),
-  abortRun: () => set({ analysis: null, loading: false, progress: null, error: 'ÐÐ½Ð°Ð»Ð¸Ð· Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½.' }, false, 'abortRun'),
-  cleanupRun: () => set({ loading: false, progress: null, retryMessage: '' }, false, 'cleanupRun'),
-})))
+  simplifiedMode: false,
+}
+
+export const useAnalysisStore = create<AnalysisStoreState>((set) => ({
+  ...initialState,
+  startRun: (fileName) => set({ analysis: null, loading: true, error: '', progress: null, retryMessage: '', lastUploadedFileName: fileName }),
+  setProgress: (progress) => set({ progress }),
+  completeRun: (analysis) => set({ analysis, loading: false, progress: null, error: '', retryMessage: '', simplifiedMode: analysis.simplifiedMode }),
+  failRun: (message) => set({ loading: false, progress: null, error: message }),
+  abortRun: () => set({ analysis: null, loading: false, progress: null, error: 'Àíàëèç îñòàíîâëåí.' }),
+  cleanupRun: () => set({ loading: false, progress: null, retryMessage: '' }),
+  resetForTests: () => set({ ...initialState }),
+}))

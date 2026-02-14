@@ -7,7 +7,7 @@ import tsparser from '@typescript-eslint/parser'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'coverage']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -33,7 +33,7 @@ export default defineConfig([
     languageOptions: {
       parser: tsparser,
       ecmaVersion: 2020,
-      globals: { ...globals.browser, React: 'readonly' },
+      globals: { ...globals.browser, ...globals.node, React: 'readonly' },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
