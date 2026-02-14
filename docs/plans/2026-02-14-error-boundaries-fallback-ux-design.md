@@ -127,3 +127,9 @@ Table: `client_error_events`
 
 ## Next Step
 Use `writing-plans` to produce an implementation plan from this approved design.
+
+## Verification Checklist
+- [x] Global boundary shows fullscreen technical fallback.
+- [x] Feature boundary crash does not unmount unrelated section.
+- [x] Fallback shows Error ID and Retry/Reload/Go Home actions.
+- [x] Backend stores crash event in `client_error_events`.
