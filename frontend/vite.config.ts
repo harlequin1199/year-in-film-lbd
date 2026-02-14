@@ -11,6 +11,11 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
+      include: [
+        'src/store/**/*.ts',
+        'src/utils/fetchWithRetry.ts',
+        'src/workers/csvParseCore.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

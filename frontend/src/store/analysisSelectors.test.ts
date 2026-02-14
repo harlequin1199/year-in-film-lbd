@@ -26,4 +26,19 @@ describe('analysis selectors', () => {
       message: 'y',
     })
   })
+
+  it('returns empty progress payload when progress is missing', () => {
+    const out = selectProgressView({
+      progress: null,
+      loading: false,
+    })
+
+    expect(out).toEqual({
+      hasProgress: false,
+      loading: false,
+      percent: 0,
+      stage: '',
+      message: '',
+    })
+  })
 })
