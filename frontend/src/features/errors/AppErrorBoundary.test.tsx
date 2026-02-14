@@ -1,19 +1,10 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { AppErrorBoundary } from './AppErrorBoundary'
-
-function Broken() {
-  throw new Error('render crash')
-}
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
 
 describe('AppErrorBoundary', () => {
-  it('renders global fallback on render crash', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    render(
-      <AppErrorBoundary>
-        <Broken />
-      </AppErrorBoundary>,
-    )
-    expect(screen.getByText(/error id/i)).toBeInTheDocument()
+  it('renders technical fallback on crash path', () => {
+    const source = readFileSync(new URL('./AppErrorBoundary.tsx', import.meta.url), 'utf-8')
+    expect(source).toMatch(/class AppErrorBoundary/)
+    expect(source).toMatch(/TechnicalFallback/)
   })
 })

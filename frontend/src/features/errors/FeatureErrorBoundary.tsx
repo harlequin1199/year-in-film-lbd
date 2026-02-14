@@ -1,51 +1,53 @@
 import React from 'react'
-import { postClientErrorEvent } from './clientErrorApi'
 import { TechnicalFallback } from './TechnicalFallback'
 
 type FeatureErrorBoundaryProps = React.PropsWithChildren<{
   featureName: string
 }>
 
-type BoundaryState = { hasError: boolean; errorId: string; message: string }
+type FeatureErrorBoundaryState = {
+  hasError: boolean
+  errorId: string
+  message: string
+}
 
-export class FeatureErrorBoundary extends React.Component<FeatureErrorBoundaryProps, BoundaryState> {
-  state: BoundaryState = { hasError: false, errorId: '', message: '' }
+export class FeatureErrorBoundary extends React.Component<FeatureErrorBoundaryProps, FeatureErrorBoundaryState> {
+  state: FeatureErrorBoundaryState = {
+    hasError: false,
+    errorId: '',
+    message: '',
+  }
 
-  static getDerivedStateFromError(error: Error): BoundaryState {
+  static getDerivedStateFromError(error: Error): FeatureErrorBoundaryState {
     return {
       hasError: true,
       errorId: crypto.randomUUID(),
-      message: error.message || 'Unexpected error',
+      message: error.message || 'Feature failed to render',
     }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    void postClientErrorEvent({
-      errorId: this.state.errorId,
-      message: error.message || 'Unexpected error',
-      stack: error.stack ?? null,
-      componentStack: info.componentStack ?? null,
-      boundaryScope: 'feature',
-      featureName: this.props.featureName,
-      route: window.location.pathname,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
-    })
+    void error
+    void info
+    // Client error reporting hook point.
   }
 
-  private reset = () => this.setState({ hasError: false, errorId: '', message: '' })
+  private reset = () => {
+    this.setState({ hasError: false, errorId: '', message: '' })
+  }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <TechnicalFallback
           mode="feature"
-          errorId={this.state.errorId}
+          errorId={`${this.props.featureName}-${this.state.errorId}`}
           message={this.state.message}
           onRetry={this.reset}
         />
       )
     }
+
     return this.props.children
   }
 }
