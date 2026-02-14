@@ -33,7 +33,7 @@ export default defineConfig([
     languageOptions: {
       parser: tsparser,
       ecmaVersion: 2020,
-      globals: { ...globals.browser, React: 'readonly' },
+      globals: { ...globals.browser, ...globals.node, React: 'readonly' },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
