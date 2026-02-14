@@ -23,6 +23,7 @@ export function useResumeState() {
   }, [loading, resumeState])
 
   const clearResume = useCallback(async () => {
+    useAnalysisStore.getState().cleanupRun()
     setResumeState(null)
     setShowResumeModal(false)
     await clearResumeState().catch(() => {})

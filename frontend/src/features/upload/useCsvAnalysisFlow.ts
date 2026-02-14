@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { computeStage1FromRows } from '../../utils/analyticsClient'
 import { enrichFilmsPhase1Only, runStagedAnalysis } from '../../utils/tmdbProxyClient'
-import { clearResumeState, setLastReport } from '../../utils/indexedDbCache'
+import { clearResumeState } from '../../utils/indexedDbCache'
 import { extractYears } from '../../utils/app/yearUtils'
 import { shouldForceSimplifiedMobileMode } from '../../utils/app/mobileRules'
 import type { Analysis, Progress, FilmRow, Film, ResumeState } from '../../types'
+import { useAnalysisStore } from '../../store/analysisStore'
+import { finalizeAnalysisEffects } from './analysisEffects'
 
 interface UseCsvAnalysisFlowProps {
   persistResume: (state: ResumeState & { timestamp: number }) => void
@@ -37,47 +39,87 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
     }
   }, [])
 
+  const setAnalysisState = useCallback((next: Analysis | null | ((prev: Analysis | null) => Analysis | null)) => {
+    setAnalysis(next)
+    useAnalysisStore.setState((state) => ({
+      analysis: typeof next === 'function'
+        ? (next as (prev: Analysis | null) => Analysis | null)(state.analysis)
+        : next,
+    }))
+  }, [])
+
+  const setLoadingState = useCallback((next: boolean) => {
+    setLoading(next)
+    useAnalysisStore.setState({ loading: next })
+  }, [])
+
+  const setErrorState = useCallback((next: string) => {
+    setError(next)
+    useAnalysisStore.setState({ error: next })
+  }, [])
+
+  const setProgressState = useCallback((next: Progress | null) => {
+    setProgress(next)
+    useAnalysisStore.setState({ progress: next })
+  }, [])
+
   const runAnalysisFromRows = useCallback(async (
     parsedRows: FilmRow[],
     simplified = false,
     signal: AbortSignal | null = null,
     fileName = ''
   ) => {
+    const { setProgress: dispatchProgress, completeRun } = useAnalysisStore.getState()
+
     const opts = {
       signal: signal || abortControllerRef.current?.signal || undefined,
-      onRetryMessage: (msg: string) => setRetryMessage(msg || ''),
+      onRetryMessage: (msg: string) => {
+        setRetryMessage(msg || '')
+        useAnalysisStore.setState({ retryMessage: msg || '' })
+      },
     }
 
-    setProgress({ stage: 'stage1', message: 'Р‘Р°Р·РѕРІР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°', total: 1, done: 1, percent: 8 })
+    const stage1Progress: Progress = { stage: 'stage1', message: 'Базовая статистика', total: 1, done: 1, percent: 8 }
+    setProgressState(stage1Progress)
+    dispatchProgress(stage1Progress)
+
     const stage1 = computeStage1FromRows(parsedRows)
-    setAnalysis({ stage1, filmsLite: [], filmsLiteAll: [], availableYears: [], simplifiedMode: simplified, fileName, warnings: [] })
+    setAnalysisState({ stage1, filmsLite: [], filmsLiteAll: [], availableYears: [], simplifiedMode: simplified, fileName, warnings: [] })
 
     if (simplified) {
       const films = await enrichFilmsPhase1Only(parsedRows, (p: Progress) => {
         progressRef.current = p
-        setProgress(p)
+        setProgressState(p)
+        dispatchProgress(p)
       }, opts)
+
       const availableYears = extractYears(films)
       const result: Analysis = { filmsLite: films, filmsLiteAll: films, availableYears, simplifiedMode: true, fileName, warnings: [] }
-      setAnalysis((prev) => ({ ...prev, ...result, stage1: undefined }))
-      setProgress({ stage: 'finalizing', message: 'Р“РѕС‚РѕРІРѕ', total: films.length, done: films.length, percent: 100 })
-      await setLastReport(result)
-      onReportSaved()
-      await clearResumeState()
+      setAnalysisState((prev) => ({ ...prev, ...result, stage1: undefined }))
+      completeRun(result)
+
+      const doneProgress: Progress = { stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 }
+      setProgressState(doneProgress)
+      dispatchProgress(doneProgress)
+      await finalizeAnalysisEffects(result, onReportSaved)
       return
     }
 
-    setProgress({ stage: 'tmdb_search', message: 'РџРѕРёСЃРє С„РёР»СЊРјРѕРІ РІ TMDb', total: parsedRows.length, done: 0, percent: 8 })
+    const searchProgress: Progress = { stage: 'tmdb_search', message: 'Поиск фильмов в TMDb', total: parsedRows.length, done: 0, percent: 8 }
+    setProgressState(searchProgress)
+    dispatchProgress(searchProgress)
+
     const films = await runStagedAnalysis(parsedRows, {
       ...opts,
       onProgress: (p: Progress) => {
         progressRef.current = p
-        setProgress(p)
+        setProgressState(p)
+        dispatchProgress(p)
       },
       onPartialResult: (partial: { films?: Film[]; stage?: number; warnings?: string[] }) => {
         if (!partial.films) return
         const years = extractYears(partial.films)
-        setAnalysis((prev) => ({
+        setAnalysisState((prev) => ({
           ...prev!,
           filmsLite: partial.films!,
           filmsLiteAll: partial.films!,
@@ -88,27 +130,44 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
       },
     })
 
-    if (!Array.isArray(films)) throw new Error(`runStagedAnalysis РІРµСЂРЅСѓР» РЅРµРІРµСЂРЅС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚: ${typeof films}`)
+    if (!Array.isArray(films)) throw new Error(`runStagedAnalysis вернул неверный результат: ${typeof films}`)
 
     const availableYears = extractYears(films)
     const result: Analysis = { filmsLite: films, filmsLiteAll: films, availableYears, simplifiedMode: false, fileName, warnings: [] }
-    setProgress({ stage: 'finalizing', message: 'Р¤РёРЅР°Р»РёР·Р°С†РёСЏ РѕС‚С‡С‘С‚Р°', total: films.length, done: films.length, percent: 95 })
-    setAnalysis(result)
-    setProgress({ stage: 'finalizing', message: 'Р“РѕС‚РѕРІРѕ', total: films.length, done: films.length, percent: 100 })
-    await setLastReport(result)
-    onReportSaved()
-    await clearResumeState()
-  }, [onReportSaved])
+
+    const finalizeProgress: Progress = { stage: 'finalizing', message: 'Финализация отчета', total: films.length, done: films.length, percent: 95 }
+    setProgressState(finalizeProgress)
+    dispatchProgress(finalizeProgress)
+
+    setAnalysisState(result)
+    completeRun(result)
+
+    const doneProgress: Progress = { stage: 'finalizing', message: 'Готово', total: films.length, done: films.length, percent: 100 }
+    setProgressState(doneProgress)
+    dispatchProgress(doneProgress)
+
+    await finalizeAnalysisEffects(result, onReportSaved)
+  }, [onReportSaved, setAnalysisState, setProgressState])
 
   const runAnalysis = useCallback(async (ratingsFile: File, simplified = false, isMobile = false) => {
-    setError('')
+    const { startRun, setProgress: dispatchProgress, failRun, abortRun, cleanupRun } = useAnalysisStore.getState()
+
+    setErrorState('')
     setRetryMessage('')
-    setLoading(true)
-    setAnalysis(null)
-    setProgress({ stage: 'parsing', message: 'Р§С‚РµРЅРёРµ CSV', total: 1, done: 0, percent: 0 })
-    setLastUploadedFileName(ratingsFile?.name || '')
-    abortControllerRef.current = new AbortController()
+    useAnalysisStore.setState({ retryMessage: '' })
+
     const fileName = ratingsFile?.name || ''
+    startRun(fileName)
+
+    setLoadingState(true)
+    setAnalysisState(null)
+
+    const parsingProgress: Progress = { stage: 'parsing', message: 'Чтение CSV', total: 1, done: 0, percent: 0 }
+    setProgressState(parsingProgress)
+    dispatchProgress(parsingProgress)
+
+    setLastUploadedFileName(fileName)
+    abortControllerRef.current = new AbortController()
 
     try {
       const ratingsText = await ratingsFile.text()
@@ -117,7 +176,11 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
         worker.postMessage({ type: 'parse', ratingsText })
         worker.onmessage = (ev: MessageEvent<{ type: string; rows?: FilmRow[]; message?: string } | Progress>) => {
           const data = ev.data as { type?: string; rows?: FilmRow[]; message?: string } | Progress
-          if ('type' in data && data.type === 'progress') setProgress(data as Progress)
+          if ('type' in data && data.type === 'progress') {
+            const p = data as Progress
+            setProgressState(p)
+            dispatchProgress(p)
+          }
           if ('type' in data && data.type === 'rows') {
             worker.terminate()
             resolve((data as { rows: FilmRow[] }).rows)
@@ -127,21 +190,23 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
             reject(new Error((data as { message: string }).message))
           }
         }
-        worker.onerror = () => reject(new Error('РћС€РёР±РєР° РїР°СЂСЃРёРЅРіР° CSV'))
+        worker.onerror = () => reject(new Error('Ошибка парсинга CSV'))
       })
 
       if (!parsedRows?.length) {
-        setError('Р’ CSV РЅРµС‚ Р·Р°РїРёСЃРµР№ Рѕ С„РёР»СЊРјР°С…')
-        setLoading(false)
-        setProgress(null)
+        setErrorState('В CSV нет записей о фильмах')
+        setLoadingState(false)
+        setProgressState(null)
+        cleanupRun()
         return
       }
 
       if (shouldForceSimplifiedMobileMode({ isMobile, rowsCount: parsedRows.length, simplified })) {
         setPendingFiles({ parsedRows })
         setShowMobileModal(true)
-        setLoading(false)
-        setProgress(null)
+        setLoadingState(false)
+        setProgressState(null)
+        cleanupRun()
         return
       }
 
@@ -155,22 +220,26 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
       await runAnalysisFromRows(parsedRows, simplified, abortControllerRef.current.signal, fileName)
       if (simplified) setSimplifiedMode(true)
     } catch (err) {
-      setAnalysis(null)
-      const error = err as Error & { name?: string }
-      if (error?.name === 'AbortError') {
-        setError('РђРЅР°Р»РёР· РѕСЃС‚Р°РЅРѕРІР»РµРЅ.')
+      setAnalysisState(null)
+      const caught = err as Error & { name?: string }
+      if (caught?.name === 'AbortError') {
+        setErrorState('Анализ остановлен.')
+        abortRun()
         clearResumeState().catch(() => {})
       } else {
-        setError(error.message || 'РџСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР°')
+        setErrorState(caught.message || 'Произошла ошибка')
+        failRun(caught.message || 'Произошла ошибка')
       }
     } finally {
       clearTimers()
-      setLoading(false)
-      setProgress(null)
+      setLoadingState(false)
+      setProgressState(null)
       setRetryMessage('')
+      useAnalysisStore.setState({ retryMessage: '' })
+      cleanupRun()
       abortControllerRef.current = null
     }
-  }, [clearTimers, persistResume, runAnalysisFromRows])
+  }, [clearTimers, persistResume, runAnalysisFromRows, setAnalysisState, setErrorState, setLoadingState, setProgressState])
 
   const cancelAnalysis = useCallback(() => {
     abortControllerRef.current?.abort()
@@ -178,10 +247,10 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
 
   return {
     analysis,
-    setAnalysis,
+    setAnalysis: setAnalysisState,
     loading,
     error,
-    setError,
+    setError: setErrorState,
     progress,
     retryMessage,
     lastUploadedFileName,
@@ -196,7 +265,7 @@ export function useCsvAnalysisFlow({ persistResume, onReportSaved }: UseCsvAnaly
     runAnalysisFromRows,
     cancelAnalysis,
     abortControllerRef,
-    setLoading,
-    setProgress,
+    setLoading: setLoadingState,
+    setProgress: setProgressState,
   }
 }
