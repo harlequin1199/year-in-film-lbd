@@ -35,14 +35,14 @@ Main pain point: predictability and traceability of transitions (`start/progress
 Decision: Use Zustand with explicit action protocol.
 
 ## Target Architecture
-Create `frontend/src/store/analysisStore.ts` with two layers:
-- domain state: `analysis`, `loading`, `error`, `progress`, `retryMessage`, `resumeState`, `lastReportAvailable`, `simplifiedMode`
-- ui-session state: `showMobileModal`, `pendingFiles`, `lastUploadedFileName`
+Create `frontend/src/store/analysisStore.ts` with explicit analysis lifecycle ownership:
+- domain state: `analysis`, `loading`, `error`, `progress`, `retryMessage`, `lastUploadedFileName`
+- local UI-session state (kept in hooks/components): `showMobileModal`, `pendingFiles`, dropdown/cache flags, year filter
 
 Keep local component state for ephemeral UI only (drag, popovers, expanded toggles).
 
 ## Action Protocol (Single Lifecycle)
-`startRun -> parsingProgress -> stage1Ready -> tmdbProgress -> partialReady* -> completeRun | failRun | abortRun -> cleanupRun`
+`startRun -> setProgress(parsing/stages) -> completeRun | failRun | abortRun -> cleanupRun`
 
 All business mutations must happen through named actions.
 
@@ -54,8 +54,8 @@ All business mutations must happen through named actions.
 - No duplicated ownership of business fields between local state and store.
 
 ## Side Effects Strategy
-Centralize persistence side effects in one orchestration layer:
-- IndexedDB resume/report writes
+Centralize persistence side effects in one orchestration layer (`analysisEffects`):
+- IndexedDB report writes and resume clear
 - periodic resume persistence
 - resume clear on terminal states
 
