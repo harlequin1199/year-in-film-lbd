@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 import httpx
 import json
-from .client_errors import ClientErrorEventIn
+from .client_errors import ClientErrorEventIn, persist_client_error_event
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -353,6 +353,7 @@ async def get_demo_csv():
 
 @app.post("/api/client-errors", status_code=201)
 def post_client_errors(payload: ClientErrorEventIn):
+    persist_client_error_event(payload)
     return {"errorId": payload.errorId}
 
 
