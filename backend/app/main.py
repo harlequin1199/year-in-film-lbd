@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 import httpx
 import json
+from .client_errors import ClientErrorEventIn
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -348,6 +349,11 @@ async def get_demo_csv():
     except Exception as e:
         logger.exception("Error loading demo report asset CSV: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to load demo report asset CSV: {str(e)}")
+
+
+@app.post("/api/client-errors", status_code=201)
+def post_client_errors(payload: ClientErrorEventIn):
+    return {"errorId": payload.errorId}
 
 
 if __name__ == "__main__":
