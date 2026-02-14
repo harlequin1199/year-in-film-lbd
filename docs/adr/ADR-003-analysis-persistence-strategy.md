@@ -33,3 +33,7 @@ Trade-offs:
 ## Alternatives Considered
 - Store-managed direct persistence middleware for all fields: rejected for over-coupling and harder flow control.
 - IndexedDB-first rendering model: rejected due to stale data and complexity.
+
+## Implementation Notes
+- Persistence remains in utilities/effects (`frontend/src/utils/indexedDbCache.ts`) and is invoked by flow orchestration.
+- Store state is hydrated and transitioned through explicit actions instead of direct persistence callbacks.

@@ -111,6 +111,22 @@ cd frontend && npm ci
 
 All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 
+- **Frontend coverage gate:**
+  ```bash
+  cd frontend
+  npm run test:coverage
+  ```
+- **Backend coverage gate:**
+  ```bash
+  cd backend
+  python -m pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=15
+  ```
+
+Architecture decisions are documented in ADRs:
+- `docs/adr/ADR-001-analysis-store-boundaries.md`
+- `docs/adr/ADR-002-analysis-lifecycle-invariants.md`
+- `docs/adr/ADR-003-analysis-persistence-strategy.md`
+
 Demo report asset generation instructions: `docs/demo-report.md`.
 
 ## Deployment

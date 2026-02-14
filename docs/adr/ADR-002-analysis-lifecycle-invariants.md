@@ -39,3 +39,7 @@ Trade-offs:
 ## Alternatives Considered
 - Implicit lifecycle through direct `setState` in hooks/components: rejected due to weak guarantees.
 - Single generic `setState` action: rejected due to poor traceability and invariant drift.
+
+## Implementation Notes
+- Lifecycle actions are implemented in `frontend/src/store/analysisStore.ts`.
+- Upload orchestration dispatches lifecycle transitions via `frontend/src/features/upload/useCsvAnalysisFlow.ts`.
