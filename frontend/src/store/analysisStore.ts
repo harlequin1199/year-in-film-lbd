@@ -28,6 +28,6 @@ export const useAnalysisStore = create<AnalysisStoreState>()(devtools((set) => (
   setProgress: (progress) => set({ progress }, false, 'setProgress'),
   completeRun: (analysis) => set({ analysis, loading: false }, false, 'completeRun'),
   failRun: (message) => set({ loading: false, progress: null, error: message }, false, 'failRun'),
-  abortRun: () => set({ loading: false, progress: null, error: 'Анализ остановлен.' }, false, 'abortRun'),
+  abortRun: () => set({ analysis: null, loading: false, progress: null, error: 'Анализ остановлен.' }, false, 'abortRun'),
   cleanupRun: () => set({ loading: false, progress: null, retryMessage: '' }, false, 'cleanupRun'),
 })))

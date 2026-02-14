@@ -41,8 +41,6 @@ function AppContainer() {
   const {
     setAnalysis,
     setError,
-    retryMessage,
-    lastUploadedFileName,
     setLastUploadedFileName,
     showMobileModal,
     setShowMobileModal,
@@ -55,11 +53,13 @@ function AppContainer() {
     setLoading,
     setProgress,
   } = flow
-  const { loading, error, progress, analysis } = useAnalysisStore((s) => ({
+  const { loading, error, progress, analysis, retryMessage, lastUploadedFileName } = useAnalysisStore((s) => ({
     loading: s.loading,
     error: s.error,
     progress: s.progress,
     analysis: s.analysis,
+    retryMessage: s.retryMessage,
+    lastUploadedFileName: s.lastUploadedFileName,
   }))
 
   useEffect(() => {
