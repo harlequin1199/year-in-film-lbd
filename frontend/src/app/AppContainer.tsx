@@ -12,6 +12,7 @@ import AppView from './AppView'
 import { useResumeState } from '../features/resume/useResumeState'
 import { useCsvAnalysisFlow } from '../features/upload/useCsvAnalysisFlow'
 import { useDemoLoader } from '../features/demo/useDemoLoader'
+import { useAnalysisStore } from '../store/analysisStore'
 
 const SHOW_MOCK_UI = import.meta.env.DEV && USE_MOCKS
 
@@ -38,12 +39,8 @@ function AppContainer() {
   })
 
   const {
-    analysis,
     setAnalysis,
-    loading,
-    error,
     setError,
-    progress,
     retryMessage,
     lastUploadedFileName,
     setLastUploadedFileName,
@@ -58,9 +55,15 @@ function AppContainer() {
     setLoading,
     setProgress,
   } = flow
+  const { loading, error, progress, analysis } = useAnalysisStore((s) => ({
+    loading: s.loading,
+    error: s.error,
+    progress: s.progress,
+    analysis: s.analysis,
+  }))
 
   useEffect(() => {
-    updateResumeModalVisibility(loading)
+    updateResumeModalVisibility()
   }, [loading, updateResumeModalVisibility])
 
   useEffect(() => {
