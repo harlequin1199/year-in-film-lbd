@@ -117,8 +117,9 @@ Demo report asset generation instructions: `docs/demo-report.md`.
 5. **Environment variables:**
    | Variable | Required | Description |
    |---|---|---|
-   | `TMDB_API_KEY` | Yes | TMDb API key |
-   | `FRONTEND_ORIGIN` | Recommended (required in prod) | In production, set this to the exact frontend URL (e.g. `https://your-project.vercel.app`) so CORS allows only that origin. If omitted, backend falls back to localhost-only origins for development (`http://localhost:5173`, `http://localhost:3000`). |
+| `TMDB_API_KEY` | Yes | TMDb API key |
+| `FRONTEND_ORIGIN` | Recommended (required in prod) | In production, set this to the exact frontend URL (e.g. `https://your-project.vercel.app`) so CORS allows only that origin. If omitted, backend falls back to localhost-only origins for development (`http://localhost:5173`, `http://localhost:3000`). |
+| `DATABASE_URL` | Yes (for client error persistence) | PostgreSQL connection string used by `/api/client-errors` intake storage. |
 
 > Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
 
@@ -175,6 +176,34 @@ Vercel handles SPA routing automatically for Vite projects.
 3. Frontend sends only the data required for TMDb enrichment (for example: `title`, `year`, `tmdb_ids`) in batches to the backend
 4. Enrichment cache and progress are saved to **IndexedDB** locally — if the page is closed, analysis resumes where it left off
 5. Once enrichment is complete, the full analytics dashboard is rendered client-side
+
+## Client Error Boundaries And Crash Intake
+
+- Frontend uses a root `AppErrorBoundary` plus scoped `FeatureErrorBoundary` wrappers for upload and report zones.
+- Fallback UI is technical and exposes an `Error ID` with actions: `Retry`, `Reload`, `Go Home`.
+- Crash events are posted from frontend to backend endpoint `POST /api/client-errors`.
+
+Example payload:
+
+```json
+{
+  "errorId": "e-1",
+  "message": "render crash",
+  "stack": "Error: ...",
+  "componentStack": "at BrokenComponent ...",
+  "boundaryScope": "feature",
+  "featureName": "report",
+  "route": "/",
+  "userAgent": "Mozilla/5.0 ...",
+  "timestamp": "2026-02-14T00:00:00.000Z"
+}
+```
+
+Operational note:
+
+- Backend stores events in PostgreSQL table `client_error_events`.
+- `stack` and `component_stack` are trimmed to 16384 chars before insert.
+- `errorId` is the correlation key between user-visible fallback and backend record.
 
 ## Project Structure
 
