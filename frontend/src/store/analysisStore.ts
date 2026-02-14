@@ -34,7 +34,7 @@ export const useAnalysisStore = create<AnalysisStoreState>((set) => ({
   setProgress: (progress) => set({ progress }),
   completeRun: (analysis) => set({ analysis, loading: false, progress: null, error: '', retryMessage: '', simplifiedMode: analysis.simplifiedMode }),
   failRun: (message) => set({ loading: false, progress: null, error: message }),
-  abortRun: () => set({ loading: false, progress: null, error: 'Анализ остановлен.' }),
+  abortRun: () => set({ analysis: null, loading: false, progress: null, error: 'Анализ остановлен.' }),
   cleanupRun: () => set({ loading: false, progress: null, retryMessage: '' }),
   resetForTests: () => set({ ...initialState }),
 }))

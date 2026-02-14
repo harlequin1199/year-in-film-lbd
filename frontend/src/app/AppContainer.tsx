@@ -13,10 +13,7 @@ import { useResumeState } from '../features/resume/useResumeState'
 import { useCsvAnalysisFlow } from '../features/upload/useCsvAnalysisFlow'
 import { useDemoLoader } from '../features/demo/useDemoLoader'
 import { useAnalysisStore } from '../store/analysisStore'
-<<<<<<< HEAD
-=======
 import { selectAnalysisSummary, selectProgressView } from '../store/analysisSelectors'
->>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
 
 const SHOW_MOCK_UI = import.meta.env.DEV && USE_MOCKS
 
@@ -43,10 +40,6 @@ function AppContainer() {
   })
 
   const {
-<<<<<<< HEAD
-    setAnalysis,
-    setError,
-=======
     analysis: flowAnalysis,
     setAnalysis,
     loading: flowLoading,
@@ -55,7 +48,6 @@ function AppContainer() {
     progress: flowProgress,
     retryMessage,
     lastUploadedFileName,
->>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
     setLastUploadedFileName,
     showMobileModal,
     setShowMobileModal,
@@ -68,19 +60,8 @@ function AppContainer() {
     setLoading,
     setProgress,
   } = flow
-  const { loading, error, progress, analysis, retryMessage, lastUploadedFileName } = useAnalysisStore((s) => ({
-    loading: s.loading,
-    error: s.error,
-    progress: s.progress,
-    analysis: s.analysis,
-    retryMessage: s.retryMessage,
-    lastUploadedFileName: s.lastUploadedFileName,
-  }))
 
   useEffect(() => {
-<<<<<<< HEAD
-    updateResumeModalVisibility()
-=======
     useAnalysisStore.setState({
       analysis: flowAnalysis,
       loading: flowLoading,
@@ -102,7 +83,6 @@ function AppContainer() {
 
   useEffect(() => {
     updateResumeModalVisibility(loading)
->>>>>>> cbb9284 (refactor(frontend): migrate app read path to analysis store)
   }, [loading, updateResumeModalVisibility])
 
   useEffect(() => {
