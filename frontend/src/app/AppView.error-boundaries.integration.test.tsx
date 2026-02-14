@@ -1,4 +1,4 @@
-import { createRef } from 'react'
+import { createRef, type ComponentProps } from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import AppView from './AppView'
@@ -23,7 +23,7 @@ vi.mock('../components/YearFilter', () => ({ default: () => <div /> }))
 vi.mock('../components/LazyChartsSection', () => ({ default: () => <div /> }))
 vi.mock('../components/FavoriteDecades', () => ({ default: () => <div /> }))
 
-function createProps(): any {
+function createProps(): ComponentProps<typeof AppView> {
   return {
     isMobile: () => false,
     demoDropdownRef: createRef<HTMLDivElement>(),
