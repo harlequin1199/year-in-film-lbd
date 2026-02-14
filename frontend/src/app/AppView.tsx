@@ -16,6 +16,7 @@ import { formatNumber, formatRating } from '../utils/format'
 import { getCountryNameRu } from '../utils/countriesRu'
 import { getLetterboxdCountryUrl, getLetterboxdDirectorUrl, getLetterboxdActorUrl } from '../utils/letterboxdUrl'
 import type { Analysis, Computed, Progress, ResumeState, Film } from '../types'
+import { FeatureErrorBoundary } from '../features/errors/FeatureErrorBoundary'
 
 const LazyChartsSection = lazy(() => import('../components/LazyChartsSection'))
 const LazyFavoriteDecades = lazy(() => import('../components/FavoriteDecades'))
@@ -236,12 +237,16 @@ function AppView(props: AppViewProps) {
               )}
             </div>
           )}
-          <UploadZone
-            onUpload={handleUpload}
-            loading={loading}
-            selectedFileName={analysis ? lastUploadedFileName : ''}
-            selectedFilmCount={analysis ? filteredFilms.length : 0}
-          />
+          <FeatureErrorBoundary featureName="upload">
+            <div data-testid="feature-upload">
+              <UploadZone
+                onUpload={handleUpload}
+                loading={loading}
+                selectedFileName={analysis ? lastUploadedFileName : ''}
+                selectedFilmCount={analysis ? filteredFilms.length : 0}
+              />
+            </div>
+          </FeatureErrorBoundary>
           {SHOW_MOCK_UI && (
             <div className="mock-demo-block">
               <label className="mock-demo-label" htmlFor="demo-select">
@@ -379,7 +384,8 @@ function AppView(props: AppViewProps) {
       )}
 
       {!loading && analysis && computed && computed.stats.totalFilms > 0 && (
-        <main className="dashboard">
+        <FeatureErrorBoundary featureName="report">
+          <main className="dashboard">
           <StatsCards stats={computed.stats} />
           <FilmsGrid films={computed.topRatedFilms} posterSetIds={posterSetIdsTop12} />
           <section className="grid">
@@ -464,7 +470,8 @@ function AppView(props: AppViewProps) {
           <section className="grid">
             <BadgesSection badges={computed.badges} />
           </section>
-        </main>
+          </main>
+        </FeatureErrorBoundary>
       )}
       {!loading && analysis && computed && computed.stats.totalFilms > 0 && selectedYears.length > 0 && filteredFilms.length === 0 && (
         <section className="empty-state">

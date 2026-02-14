@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import './styles.css'
 import App from './App'
+import { AppErrorBoundary } from './features/errors/AppErrorBoundary'
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {
@@ -11,7 +12,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
-    <Analytics />
+    <AppErrorBoundary>
+      <App />
+      <Analytics />
+    </AppErrorBoundary>
   </StrictMode>,
 )
