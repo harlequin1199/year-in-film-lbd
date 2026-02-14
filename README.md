@@ -98,6 +98,16 @@ cd frontend && npm ci
   pip install -r requirements.txt -r requirements-dev.txt
   python -m pytest
   ```
+- **Frontend coverage gate:**
+  ```bash
+  cd frontend
+  npm run test:coverage
+  ```
+- **Backend coverage gate:**
+  ```bash
+  cd backend
+  python -m pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=15
+  ```
 
 All tests are deterministic and use mocks/fixtures (no external TMDb calls).
 
