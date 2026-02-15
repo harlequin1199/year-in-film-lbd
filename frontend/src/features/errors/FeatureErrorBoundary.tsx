@@ -1,4 +1,5 @@
 import React from 'react'
+import * as Sentry from '@sentry/react'
 import { TechnicalFallback } from './TechnicalFallback'
 
 type FeatureErrorBoundaryProps = React.PropsWithChildren<{
@@ -27,9 +28,10 @@ export class FeatureErrorBoundary extends React.Component<FeatureErrorBoundaryPr
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    void error
-    void info
-    // Client error reporting hook point.
+    Sentry.captureException(error, {
+      tags: { boundary_scope: 'feature', feature_name: this.props.featureName },
+      extra: { componentStack: info.componentStack },
+    })
   }
 
   private reset = () => {
