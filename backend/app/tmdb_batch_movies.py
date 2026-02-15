@@ -28,6 +28,18 @@ import time
 _request_times: deque = deque()
 _rate_lock = asyncio.Lock()
 
+def _named_values(items: Any) -> List[str]:
+    """Extract non-empty `name` fields from a list of dict-like items."""
+    if not isinstance(items, list):
+        return []
+    values: List[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            name = item.get("name")
+            if name:
+                values.append(name)
+    return values
+
 
 async def _rate_limit() -> None:
     """Wait if needed to respect rate limit (RATE_LIMIT_PER_SECOND)."""
@@ -434,21 +446,19 @@ async def movies_batch(
                 
                 formatted_results.append({
                     "tmdb_id": tmdb_ids[i],
-                    "movie": {
-                        "id": movie_data.get("id") if movie_data else tmdb_ids[i],
-                        "poster_path": movie_data.get("poster_path") if movie_data else None,
-                        "genres": [g.get("name") for g in movie_data.get("genres", []) if g.get("name")] if movie_data else [],
-                        "runtime": movie_data.get("runtime") if movie_data else None,
-                        "vote_average": movie_data.get("vote_average") if movie_data else None,
-                        "vote_count": movie_data.get("vote_count") or 0 if movie_data else 0,
-                        "original_language": movie_data.get("original_language") if movie_data else None,
-                        "production_countries": [
-                            c.get("name") for c in movie_data.get("production_countries", []) if c.get("name")
-                        ] if movie_data else [],
-                        "release_date": release_date,
-                    },
-                    "error": None,
-                })
+                        "movie": {
+                            "id": movie_data.get("id") if movie_data else tmdb_ids[i],
+                            "poster_path": movie_data.get("poster_path") if movie_data else None,
+                            "genres": _named_values(movie_data.get("genres", [])) if movie_data else [],
+                            "runtime": movie_data.get("runtime") if movie_data else None,
+                            "vote_average": movie_data.get("vote_average") if movie_data else None,
+                            "vote_count": movie_data.get("vote_count") or 0 if movie_data else 0,
+                            "original_language": movie_data.get("original_language") if movie_data else None,
+                            "production_countries": _named_values(movie_data.get("production_countries", [])) if movie_data else [],
+                            "release_date": release_date,
+                        },
+                        "error": None,
+                    })
     
     return formatted_results
 
@@ -656,14 +666,12 @@ async def full_batch(
             result["movie"] = {
                 "id": movie_data.get("id") if movie_data else tmdb_id,
                 "poster_path": movie_data.get("poster_path") if movie_data else None,
-                "genres": [g.get("name") for g in movie_data.get("genres", []) if g.get("name")] if movie_data else [],
+                "genres": _named_values(movie_data.get("genres", [])) if movie_data else [],
                 "runtime": movie_data.get("runtime") if movie_data else None,
                 "vote_average": movie_data.get("vote_average") if movie_data else None,
                 "vote_count": movie_data.get("vote_count") or 0 if movie_data else 0,
                 "original_language": movie_data.get("original_language") if movie_data else None,
-                "production_countries": [
-                    c.get("name") for c in movie_data.get("production_countries", []) if c.get("name")
-                ] if movie_data else [],
+                "production_countries": _named_values(movie_data.get("production_countries", [])) if movie_data else [],
                 "release_date": release_date,
             }
         
