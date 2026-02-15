@@ -123,7 +123,7 @@ def _is_expired(updated_at: str) -> bool:
     try:
         dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
         return datetime.utcnow() - dt.replace(tzinfo=None) > timedelta(days=TTL_DAYS)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
         return True
 
 

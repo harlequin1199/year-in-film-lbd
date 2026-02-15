@@ -9,6 +9,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+import app as app_pkg
 from app import main
 
 
@@ -48,8 +49,10 @@ def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, paylo
         return [{'id': 1, 'ok': True}]
 
     if module_name == 'tmdb_batch':
-        monkeypatch.setattr(main, 'tmdb_batch', types.SimpleNamespace(search_batch=fake_batch), raising=False)
-        monkeypatch.setitem(sys.modules, 'app.tmdb_batch', types.SimpleNamespace(search_batch=fake_batch))
+        stub = types.SimpleNamespace(search_batch=fake_batch)
+        monkeypatch.setattr(main, 'tmdb_batch', stub, raising=False)
+        monkeypatch.setattr(app_pkg, 'tmdb_batch', stub, raising=False)
+        monkeypatch.setitem(sys.modules, 'app.tmdb_batch', stub)
     else:
         stub = types.SimpleNamespace(
             movies_batch=fake_batch,
@@ -57,6 +60,7 @@ def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, paylo
             keywords_batch=fake_batch,
             full_batch=fake_batch,
         )
+        monkeypatch.setattr(app_pkg, 'tmdb_batch_movies', stub, raising=False)
         monkeypatch.setitem(sys.modules, 'app.tmdb_batch_movies', stub)
 
     with TestClient(main.app) as client:
