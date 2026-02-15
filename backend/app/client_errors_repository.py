@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 MAX_STACK_LEN = 16384
@@ -14,10 +14,17 @@ def _trim(value: str | None) -> str | None:
 
 def _parse_timestamp(value: str | datetime | None) -> datetime:
     if isinstance(value, datetime):
-        return value
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    if value is None:
+        return datetime.now(timezone.utc)
     if isinstance(value, str):
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return datetime.utcnow()
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    return datetime.now(timezone.utc)
 
 
 class ClientErrorsRepository:

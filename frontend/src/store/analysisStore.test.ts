@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+п»їimport { beforeEach, describe, expect, it } from 'vitest'
 import type { Analysis, Progress } from '../types'
 import { useAnalysisStore } from './analysisStore'
 
@@ -56,6 +56,6 @@ describe('analysisStore lifecycle', () => {
     const next = useAnalysisStore.getState()
     expect(next.loading).toBe(false)
     expect(next.progress).toBeNull()
-    expect(next.error).toMatch(/остановлен/i)
+    expect(next.error).toMatch(/\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d/i)
   })
 })
