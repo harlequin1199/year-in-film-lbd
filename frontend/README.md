@@ -1,67 +1,70 @@
-# Frontend — Year in Film
+# Frontend (Year in Film)
 
-React SPA that parses Letterboxd CSV exports and renders an interactive analytics dashboard. All analytics computation happens client-side.
+SPA-приложение на React, которое:
+- принимает CSV из Letterboxd,
+- выполняет аналитику в браузере,
+- показывает интерактивный отчет,
+- сохраняет прогресс анализа локально.
 
-## Tech Stack
+## Основные технологии
 
-- **React 19** — UI components
-- **Vite 7** — build tooling and dev server
-- **Web Workers** — off-main-thread CSV parsing for large files
-- **IndexedDB** — persistent cache and resume state for TMDb enrichment
+- `React 19`
+- `TypeScript`
+- `Vite 7`
+- `Vitest`
+- `zustand`
+- `IndexedDB`
 
-## Development
+## Локальный запуск
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Opens at [http://localhost:5173](http://localhost:5173). The dev server proxies `/tmdb/*` requests to the backend at `localhost:8000` (configured in `vite.config.js`).
+По умолчанию приложение открывается на `http://localhost:5173`.
 
-## Build
+## Сборка
 
 ```bash
-npm run build     # production build → dist/
-npm run preview   # preview the production build locally
+npm run build
+npm run preview
 ```
 
-## Environment Variables
+## Переменные окружения
 
-| Variable | Default | Description |
-|---|---|---|
-| `VITE_API_URL` | `http://localhost:8000` | Backend API base URL |
+См. `frontend/.env.example`.
 
-## Project Structure
+- `VITE_API_URL` — base URL backend API.
+- `VITE_BACKEND_URL` — алиас backend origin для интеграционных сценариев.
+- `VITE_CLIENT_ERRORS_PATH` — (опционально) путь для отправки client error событий.
+- `VITE_USE_MOCKS` — (опционально, dev) запуск в mock-режиме.
 
-```
-src/
-├── app/
-│   ├── AppContainer.jsx            # App orchestration: upload, progress, resume wiring
-│   └── AppView.jsx                 # Main UI composition/layout
-├── features/
-│   ├── upload/
-│   │   └── useCsvAnalysisFlow.js   # Upload + analysis pipeline coordination
-│   ├── resume/
-│   │   └── useResumeState.js       # IndexedDB-backed resume/cache state
-│   └── demo/
-│       └── useDemoLoader.js        # Demo dataset loading flow
-├── workers/
-│   └── csvParse.worker.js          # Web Worker for CSV parsing
-├── components/                     # Dashboard UI blocks
-├── utils/                          # Analytics + formatting/localization helpers
-├── mocks/                          # Demo fixtures for local dev / visual tests (JSON)
-└── styles/                         # CSS
+## Тесты и линт
+
+```bash
+npm run lint
+npm run test
+npm run test:coverage
 ```
 
-## Flow
+Порог покрытия задан в `frontend/vite.config.ts`.
 
-`upload → parse worker → TMDb enrichment → IndexedDB resume/cache`
+## Ключевые модули
 
-## Key Design Decisions
+- `src/app/AppContainer.tsx` — оркестрация загрузки, прогресса и анализа.
+- `src/app/AppView.tsx` — компоновка основного UI.
+- `src/features/upload/useCsvAnalysisFlow.ts` — pipeline анализа и управление стадиями.
+- `src/store/analysisStore.ts` — глобальное состояние анализа.
+- `src/features/errors/*` — error boundaries и fallback UX.
+- `src/workers/*` — воркеры для тяжелых операций (парсинг CSV).
 
-- **Client-side analytics** — the backend only provides TMDb data; all stats, rankings, and charts are computed in the browser. This keeps the backend stateless and lightweight.
-- **Data policy** — the CSV file is not uploaded to the server in full; only fields required for TMDb enrichment are sent to the backend (for example: `title`, `year`, `tmdb_ids`); enrichment cache and resume state are stored locally in IndexedDB.
-- **Progressive loading** — basic stats (from CSV only) appear instantly. TMDb enrichment (posters, genres, directors, etc.) loads in the background with a progress indicator.
-- **Resume support** — enrichment progress is saved to IndexedDB. If the user closes the tab and returns, analysis continues from where it left off.
-- **Simplified mode** — on mobile or with very large datasets, a lighter analysis path is used to keep the UI responsive.
-- **Russian localization** — genre and country names are localized to Russian for the UI, while internal data stays in English for TMDb compatibility.
+## Поток данных
+
+`upload -> parse worker -> TMDb enrichment -> computed analytics -> render report`
+
+## Принципы
+
+- Основная аналитика выполняется на клиенте.
+- Backend используется как enrichment/интеграционный слой для TMDb.
+- Прогресс и часть кэша сохраняются локально (resume после перезагрузки).
