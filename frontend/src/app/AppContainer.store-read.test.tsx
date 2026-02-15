@@ -9,4 +9,9 @@ describe('AppContainer store read path', () => {
     expect(source).toMatch(/selectAnalysisSummary/)
     expect(source).toMatch(/selectProgressView/)
   })
+
+  it('keeps progress message for TMDb search in readable Russian', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/AppContainer.tsx'), 'utf-8')
+    expect(source).toMatch(/Поиск фильмов в TMDb/)
+  })
 })

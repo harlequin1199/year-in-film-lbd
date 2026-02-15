@@ -17,6 +17,7 @@ import { getCountryNameRu } from '../utils/countriesRu'
 import { getLetterboxdCountryUrl, getLetterboxdDirectorUrl, getLetterboxdActorUrl } from '../utils/letterboxdUrl'
 import type { Analysis, Computed, Progress, ResumeState, Film } from '../types'
 import { FeatureErrorBoundary } from '../features/errors/FeatureErrorBoundary'
+import { normalizeMojibakeText } from '../utils/normalizeMojibakeText'
 
 const LazyChartsSection = lazy(() => import('../components/LazyChartsSection'))
 const LazyFavoriteDecades = lazy(() => import('../components/FavoriteDecades'))
@@ -351,7 +352,7 @@ function AppView(props: AppViewProps) {
       )}
       {error && (
         <div className="error-banner">
-          <span>{error}</span>
+          <span>{normalizeMojibakeText(error)}</span>
           <button type="button" className="btn btn-secondary btn-small" onClick={() => setError('')}>
             Повторить
           </button>
@@ -359,7 +360,7 @@ function AppView(props: AppViewProps) {
       )}
       {analysis?.warnings && analysis.warnings.length > 0 && (
         <div className="warning-banner" role="alert">
-          {analysis.warnings.join(' ')}
+          {analysis.warnings.map((warning) => normalizeMojibakeText(warning)).join(' ')}
         </div>
       )}
 

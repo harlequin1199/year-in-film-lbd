@@ -1,3 +1,5 @@
+import { normalizeMojibakeText } from '../../utils/normalizeMojibakeText'
+
 interface TechnicalFallbackProps {
   mode: 'global' | 'feature'
   errorId: string
@@ -11,7 +13,7 @@ export function TechnicalFallback({ mode, errorId, message, onRetry, onGoHome }:
     <section role="alert" className={`technical-fallback technical-fallback-${mode}`}>
       <h2>Unexpected error</h2>
       <p>Error ID: {errorId}</p>
-      <p>{message}</p>
+      <p>{normalizeMojibakeText(message)}</p>
       <div className="technical-fallback-actions">
         <button type="button" className="btn" onClick={onRetry}>Retry</button>
         <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>Reload</button>

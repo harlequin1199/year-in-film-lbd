@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/shallow'
 import {
   computeAggregations,
   filterFilmsByYears,
@@ -73,8 +74,8 @@ function AppContainer() {
     })
   }, [flowAnalysis, flowError, flowLoading, flowProgress, flow.simplifiedMode, lastUploadedFileName, retryMessage])
 
-  const analysisSummary = useAnalysisStore(selectAnalysisSummary)
-  const progressView = useAnalysisStore(selectProgressView)
+  const analysisSummary = useAnalysisStore(useShallow(selectAnalysisSummary))
+  const progressView = useAnalysisStore(useShallow(selectProgressView))
   const analysis = useAnalysisStore((state) => state.analysis)
   const progress = useAnalysisStore((state) => state.progress)
   const hasProgress = progressView.hasProgress
