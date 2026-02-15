@@ -1,12 +1,13 @@
 import { formatNumber } from '../utils/format'
 import type { Progress } from '../types'
+import { normalizeMojibakeText } from '../utils/normalizeMojibakeText'
 
 const DISPLAY_STEPS = [
-  { key: 'parsing', label: 'Чтение CSV' },
-  { key: 'stage1', label: 'Базовая статистика' },
-  { key: 'tmdb_search', label: 'Поиск фильмов в TMDb' },
-  { key: 'tmdb_details', label: 'Загрузка данных TMDb' },
-  { key: 'finalizing', label: 'Финализация отчёта' },
+  { key: 'parsing', label: '\u0427\u0442\u0435\u043d\u0438\u0435 CSV' },
+  { key: 'stage1', label: '\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430' },
+  { key: 'tmdb_search', label: '\u041f\u043e\u0438\u0441\u043a \u0444\u0438\u043b\u044c\u043c\u043e\u0432 \u0432 TMDb' },
+  { key: 'tmdb_details', label: '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0434\u0430\u043d\u043d\u044b\u0445 TMDb' },
+  { key: 'finalizing', label: '\u0424\u0438\u043d\u0430\u043b\u0438\u0437\u0430\u0446\u0438\u044f \u043e\u0442\u0447\u0451\u0442\u0430' },
 ] as const
 
 interface ProgressStatusProps {
@@ -17,10 +18,20 @@ interface ProgressStatusProps {
 
 function ProgressStatus({ progress, onCancel, retryMessage }: ProgressStatusProps) {
   if (!progress) return null
+
   const total = progress.total || 0
   const done = progress.done || 0
   const percent = progress.percent ?? (total ? Math.min(100, Math.round((done / total) * 100)) : 0)
   const stage = progress.stage || 'parsing'
+
+  const stageLabelByKey = Object.fromEntries(DISPLAY_STEPS.map((step) => [step.key, step.label])) as Record<string, string>
+  const fallbackStageLabel = stage === 'analytics' ? stageLabelByKey.tmdb_details : stageLabelByKey[stage]
+  const normalizedMessage = normalizeMojibakeText(progress.message || '')
+  const hasBrokenEncoding = /�|ï¿½|Ð|Ñ|Ã/.test(progress.message || '') || normalizedMessage !== (progress.message || '')
+  const displayTitle = progress.message
+    ? (hasBrokenEncoding && fallbackStageLabel ? fallbackStageLabel : normalizedMessage)
+    : (fallbackStageLabel || '\u0410\u043d\u0430\u043b\u0438\u0437\u0438\u0440\u0443\u044e \u0432\u0430\u0448 \u0433\u043e\u0434 \u0432 \u043a\u0438\u043d\u043e')
+
   const stepIndex = (() => {
     if (stage === 'parsing') return 0
     if (stage === 'stage1') return 1
@@ -34,18 +45,18 @@ function ProgressStatus({ progress, onCancel, retryMessage }: ProgressStatusProp
       <div className="progress-header">
         <div className="spinner" />
         <div>
-          <p className="progress-title">{progress.message || 'Анализирую ваш год в кино'}</p>
+          <p className="progress-title">{displayTitle}</p>
           <p className="progress-subtitle">
-            Обработано {formatNumber(done)} из {formatNumber(total)}
+            {'\u041e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d\u043e'} {formatNumber(done)} {'\u0438\u0437'} {formatNumber(total)}
           </p>
-          {retryMessage && <p className="progress-retry-message">{retryMessage}</p>}
+          {retryMessage && <p className="progress-retry-message">{normalizeMojibakeText(retryMessage)}</p>}
         </div>
         <div className="progress-percent">{percent}%</div>
       </div>
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${percent}%` }} />
       </div>
-      <div className="progress-steps" aria-label="Этапы обработки">
+      <div className="progress-steps" aria-label={'\u042d\u0442\u0430\u043f\u044b \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0438'}>
         {DISPLAY_STEPS.map((s, i) => (
           <span
             key={s.key}
@@ -59,7 +70,7 @@ function ProgressStatus({ progress, onCancel, retryMessage }: ProgressStatusProp
       {onCancel && (
         <div className="progress-actions">
           <button type="button" className="btn btn-secondary btn-small" onClick={onCancel}>
-            Остановить анализ
+            {'\u041e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c \u0430\u043d\u0430\u043b\u0438\u0437'}
           </button>
         </div>
       )}

@@ -50,13 +50,19 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
   useEffect(() => {
     const updateWidth = () => {
       if (chartContainerRef.current) {
-        setContainerWidth(chartContainerRef.current.offsetWidth)
+        const nextWidth = chartContainerRef.current.offsetWidth
+        setContainerWidth((prev) => (prev === nextWidth ? prev : nextWidth))
       }
     }
-    
+
     updateWidth()
+    const resizeObserver = new ResizeObserver(updateWidth)
+    if (chartContainerRef.current) resizeObserver.observe(chartContainerRef.current)
     window.addEventListener('resize', updateWidth)
-    return () => window.removeEventListener('resize', updateWidth)
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateWidth)
+    }
   }, [])
 
   const loveScoreByYear = useMemo(() => {
@@ -201,12 +207,7 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
           <LoveScoreInfo variant="icon-only" className="byyear-love-score-info" />
         </div>
       </div>
-      <div className="byyear-chart" ref={(el) => {
-        if (el && containerWidth !== el.offsetWidth) {
-          setContainerWidth(el.offsetWidth)
-        }
-        chartContainerRef.current = el
-      }}>
+      <div className="byyear-chart" ref={chartContainerRef}>
         {/* Decade labels at the top - positioned between divider lines */}
         {decadeBoundaries.length > 1 && (() => {
           // Get actual container width for better distance calculation
