@@ -3,6 +3,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, Optional, Any, List
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Body
@@ -11,8 +12,9 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 import httpx
 import json
-
-from .client_errors import ClientErrorEventIn, ClientErrorEventOut
+import sentry_sdk
+from prometheus_fastapi_instrumentator import Instrumentator
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 
 # Load .env from backend dir when running locally; production uses env vars (e.g. Render)
 _env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -21,6 +23,53 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def _should_enable_sentry(env: dict[str, str]) -> bool:
+    return env.get("SENTRY_ENABLED") == "true" and bool(env.get("SENTRY_DSN"))
+
+
+def _redact_sentry_event(event: dict[str, Any], _hint: Any) -> dict[str, Any]:
+    request = event.get("request")
+    if not isinstance(request, dict):
+        return event
+
+    headers = request.get("headers")
+    if isinstance(headers, dict):
+        for key in ("authorization", "Authorization", "cookie", "Cookie", "x-api-key", "X-API-Key"):
+            headers.pop(key, None)
+
+    url = request.get("url")
+    if isinstance(url, str):
+        parts = urlsplit(url)
+        if parts.query:
+            filtered = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if "token" not in k.lower()]
+            request["url"] = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(filtered), parts.fragment))
+
+    return event
+
+
+def _init_sentry_from_env() -> None:
+    env = {
+        "SENTRY_ENABLED": os.getenv("SENTRY_ENABLED", "false"),
+        "SENTRY_DSN": os.getenv("SENTRY_DSN", ""),
+        "SENTRY_ENVIRONMENT": os.getenv("SENTRY_ENVIRONMENT", "development"),
+        "SENTRY_RELEASE": os.getenv("SENTRY_RELEASE", ""),
+    }
+
+    if not _should_enable_sentry(env):
+        logger.info("Sentry disabled (SENTRY_ENABLED!=true or SENTRY_DSN missing).")
+        return
+
+    sentry_sdk.init(
+        dsn=env["SENTRY_DSN"],
+        environment=env["SENTRY_ENVIRONMENT"],
+        release=env["SENTRY_RELEASE"] or None,
+        traces_sample_rate=0.1,
+        before_send=_redact_sentry_event,
+        integrations=[FastApiIntegration()],
+    )
+    logger.info("Sentry initialized for environment=%s", env["SENTRY_ENVIRONMENT"])
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -56,6 +105,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+_init_sentry_from_env()
 
 # CORS configuration:
 # - Production mode: set FRONTEND_ORIGIN to your deployed frontend URL (usually Vercel).
@@ -71,20 +121,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
-
-
-@app.post("/api/client-errors", status_code=201, response_model=ClientErrorEventOut)
-def post_client_errors(payload: ClientErrorEventIn) -> ClientErrorEventOut:
-    logger.error(
-        "Client error event received: %s scope=%s route=%s",
-        payload.errorId,
-        payload.boundaryScope,
-        payload.route,
-    )
-    return ClientErrorEventOut(errorId=payload.errorId)
 
 
 @app.get("/tmdb/image/{size}/{path:path}")
