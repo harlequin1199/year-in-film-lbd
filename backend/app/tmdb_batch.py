@@ -270,6 +270,17 @@ def _format_result(
         except ValueError:
             pass
     
+    def _named_values(items: Any) -> List[str]:
+        if not isinstance(items, list):
+            return []
+        values: List[str] = []
+        for item in items:
+            if isinstance(item, dict):
+                value = item.get("name")
+                if value:
+                    values.append(value)
+        return values
+
     tmdb_result = {
         "tmdb_id": tmdb_id,
         "title": movie_data.get("title"),
@@ -277,11 +288,9 @@ def _format_result(
         "poster_path": movie_data.get("poster_path"),
         "vote_average": movie_data.get("vote_average"),
         "vote_count": movie_data.get("vote_count") or 0,
-        "genres": [g.get("name") for g in movie_data.get("genres", []) if g.get("name")],
+        "genres": _named_values(movie_data.get("genres", [])),
         "runtime": movie_data.get("runtime"),
-        "production_countries": [
-            c.get("name") for c in movie_data.get("production_countries", []) if c.get("name")
-        ],
+        "production_countries": _named_values(movie_data.get("production_countries", [])),
         "original_language": movie_data.get("original_language"),
         "release_date": release_date,
     }
