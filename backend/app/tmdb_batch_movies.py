@@ -565,10 +565,23 @@ async def full_batch(
     if not tmdb_ids:
         return []
     
-    # Batch check cache for all data types
-    cached_movies = await asyncio.to_thread(cache_module.get_movie_batch, tmdb_ids)
-    cached_credits = await asyncio.to_thread(cache_module.get_credits_batch, tmdb_ids)
-    cached_keywords = await asyncio.to_thread(cache_module.get_keywords_batch, tmdb_ids)
+    # Batch cache read is an optimization. If it fails, continue with API path.
+    try:
+        cached_movies = await asyncio.to_thread(cache_module.get_movie_batch, tmdb_ids)
+        cached_credits = await asyncio.to_thread(cache_module.get_credits_batch, tmdb_ids)
+        cached_keywords = await asyncio.to_thread(cache_module.get_keywords_batch, tmdb_ids)
+    except Exception as exc:
+        logger.warning("Batch cache read failed in full_batch: %s", exc)
+        cached_movies = {}
+        cached_credits = {}
+        cached_keywords = {}
+
+    if not isinstance(cached_movies, dict):
+        cached_movies = {}
+    if not isinstance(cached_credits, dict):
+        cached_credits = {}
+    if not isinstance(cached_keywords, dict):
+        cached_keywords = {}
     
     # Determine which IDs need API calls
     # Use unified approach: if ANY data is missing, fetch all via append_to_response
