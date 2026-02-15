@@ -1,70 +1,50 @@
-# Letterboxd Year in Review
+# Year in Film (Letterboxd)
 
-A full-stack web app that turns your [Letterboxd](https://letterboxd.com/) export into a rich, visual **Year in Film** report — think Spotify Wrapped, but for movies.
+Полноценное fullstack-приложение, которое превращает экспорт из Letterboxd в интерактивный годовой отчет по фильмам.
 
-Upload your `ratings.csv` (and optionally `diary.csv`) and get an interactive dashboard with personalized stats, charts, rankings, and insights about your movie-watching habits.
+Пользователь загружает `ratings.csv` и получает дашборд в стиле «Spotify Wrapped», но для кино: метрики, ранжирования, графики, теги, десятилетия и персональные инсайты.
 
-## Features
+## Что умеет проект
 
-- **Overview stats** — total films, average rating, 4.5-5 star count, year range
-- **Top-rated films** — poster grid of your highest-rated movies (via TMDb)
-- **Genre breakdown** — most watched vs. highest-rated genres, Genre of the Year
-- **Hidden gems & overrated** — films where your rating diverges most from the TMDb consensus
-- **Themes & tags** — keyword analysis across your entire watchlist
-- **Directors & actors** — top by count and by average rating
-- **Countries & languages** — geographic diversity of your taste
-- **Decades** — which era you gravitate toward
-- **Watch time** — total hours, longest / shortest film
-- **Timeline & activity** — viewing patterns by month and weekday (diary mode)
-- **Badges** — achievement-style cards summarizing highlights
-- **Year filter** — slice the analysis by specific calendar years
-- **Progressive loading** — instant CSV stats, then TMDb enrichment with resume support
+- Быстрый старт анализа сразу после загрузки CSV.
+- Пошаговое обогащение данных через TMDb (постеры, жанры, актеры, режиссеры, ключевые слова).
+- Режим возобновления анализа после перезагрузки страницы (IndexedDB).
+- Фильтрация отчета по годам.
+- Обработка ошибок рендеринга через `AppErrorBoundary` и `FeatureErrorBoundary`.
+- Отправка клиентских crash-событий на backend: `POST /api/client-errors`.
 
-## Architecture
+## Архитектура
 
-```
-┌────────────────────┐      ┌────────────────────┐
-│   Frontend (SPA)   │─────▸│  Backend API (REST)│
-│   React + Vite     │      │  FastAPI + SQLite  │
-│   Vercel           │      │  Render            │
-└────────────────────┘      └────────────────────┘
-```
+- `frontend` (React + Vite):
+  - парсинг CSV,
+  - расчет аналитики,
+  - UI и визуализация,
+  - локальный кэш и resume-состояние.
+- `backend` (FastAPI):
+  - batch-endpoints для TMDb,
+  - прокси TMDb-изображений,
+  - write-behind SQLite-кэш,
+  - intake endpoint для клиентских ошибок.
 
-| Service | Role | Hosting |
-|---|---|---|
-| **Frontend** | CSV parsing, analytics computation, UI | Vercel |
-| **Backend** | Batch TMDb search/details/credits/keywords with SQLite cache | Render |
+Принцип приватности данных:
+- полный CSV не отправляется на сервер;
+- на backend уходит только минимум полей, нужный для TMDb enrichment.
 
-All heavy analytics run **client-side**. Data policy:
+## Стек
 
-- The CSV file is **not** uploaded to the server in full.
-- Only fields required for TMDb enrichment are sent to the backend (for example: `title`, `year`, `tmdb_ids`).
-- Enrichment cache and resume state are stored locally in **IndexedDB**.
+- Frontend: `React 19`, `TypeScript`, `Vite 7`, `Vitest`, `zustand`.
+- Backend: `Python`, `FastAPI`, `httpx`, `SQLite`.
+- Интеграции: `TMDb API v3`.
 
-## Tech Stack
-
-| Layer | Technologies |
-|---|---|
-| Frontend | React 19, Vite 7, Web Workers, IndexedDB |
-| Backend | Python, FastAPI, Uvicorn, SQLite, httpx |
-| Data | TMDb API v3, Letterboxd CSV export |
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- Python 3.10+
-- [TMDb API key](https://www.themoviedb.org/settings/api) (free)
+## Быстрый старт (локально)
 
 ### 1. Backend
 
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and add your TMDB_API_KEY
-
-pip install -r requirements.txt
+# Добавьте TMDB_API_KEY в .env
+python -m pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -76,187 +56,74 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — the frontend talks to `localhost:8000` by default.
+Откройте `http://localhost:5173`.
 
-Canonical frontend dependency install command (for local setup and CI):
+## Переменные окружения
+
+### Backend
+
+- `TMDB_API_KEY` (обязательно): ключ TMDb.
+- `FRONTEND_ORIGIN` (рекомендуется в production): origin фронтенда для CORS.
+- `DATABASE_URL` (опционально/production): PostgreSQL для хранения client error событий.
+
+### Frontend
+
+- `VITE_API_URL`: base URL backend API.
+- `VITE_BACKEND_URL`: алиас backend origin для интеграционных сценариев.
+- `VITE_CLIENT_ERRORS_PATH` (опционально): путь для intake клиентских ошибок.
+
+## Тестирование и качество
+
+Frontend:
 
 ```bash
-cd frontend && npm ci
+cd frontend
+npm run lint
+npm run test
+npm run test:coverage
 ```
 
+Backend:
 
-## Testing
-
-- **Frontend (npm script):**
-  ```bash
-  cd frontend
-  npm run test
-  ```
-- **Backend (pip + pytest):**
-  ```bash
-  cd backend
-  pip install -r requirements.txt -r requirements-dev.txt
-  python -m pytest
-  ```
-- **Frontend coverage gate:**
-  ```bash
-  cd frontend
-  npm run test:coverage
-  ```
-- **Backend coverage gate:**
-  ```bash
-  cd backend
-  python -m pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=15
-  ```
-
-All tests are deterministic and use mocks/fixtures (no external TMDb calls).
-
-- **Frontend coverage gate:**
-  ```bash
-  cd frontend
-  npm run test:coverage
-  ```
-- **Backend coverage gate:**
-  ```bash
-  cd backend
-  python -m pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=15
-  ```
-
-Architecture decisions are documented in ADRs:
-- `docs/adr/ADR-001-analysis-store-boundaries.md`
-- `docs/adr/ADR-002-analysis-lifecycle-invariants.md`
-- `docs/adr/ADR-003-analysis-persistence-strategy.md`
-
-Demo report asset generation instructions: `docs/demo-report.md`.
-
-## Deployment
-
-### Backend → Render
-
-1. Create a **Web Service**, connect the repo.
-2. **Root directory:** `backend`
-3. **Build command:** `pip install -r requirements.txt -c constraints.txt`
-4. **Start command:**
-   ```
-   gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
-   ```
-5. **Environment variables:**
-   | Variable | Required | Description |
-   |---|---|---|
-| `TMDB_API_KEY` | Yes | TMDb API key |
-| `FRONTEND_ORIGIN` | Recommended (required in prod) | In production, set this to the exact frontend URL (e.g. `https://your-project.vercel.app`) so CORS allows only that origin. If omitted, backend falls back to localhost-only origins for development (`http://localhost:5173`, `http://localhost:3000`). |
-| `DATABASE_URL` | Yes (for client error persistence) | PostgreSQL connection string used by `/api/client-errors` intake storage. |
-
-> Free tier: 512 MB RAM. The backend is optimized to stay within this limit.
-
-## Dependency Update Policy
-
-- Backend dependencies in `backend/requirements.txt` are version-ranged for safe patch/minor updates.
-- `backend/constraints.txt` pins exact versions used in production builds (especially on Render) for reproducibility.
-- Recommended cadence: run a dependency bump every 2–4 weeks, then perform a smoke-check (`/health`, one TMDb batch request, frontend ↔ backend connectivity) before deploying.
-
-## Production Runbook
-
-### Typical symptoms
-
-- **Long first request (cold start):** the first API call after idle time is significantly slower than normal.
-- **Spikes of 429 / 5xx:** enrichment requests intermittently fail with rate limits or upstream errors.
-- **Enrichment delays:** progress stalls or moves much slower than expected on large datasets.
-
-### Quick checks
-
-1. **Backend health:** call `GET /health` and confirm a fast `200 OK` response.
-2. **Minimal TMDb smoke test:** run one small `/tmdb/search/batch` request (single known title/year) to validate end-to-end enrichment path.
-3. **Frontend connectivity:** verify the frontend can reach the backend URL configured via `VITE_API_URL` (network tab + no CORS errors).
-
-### Actions
-
-1. **Retry/backoff wait:** for transient 429/5xx bursts, wait and retry with exponential backoff.
-2. **Reduce load:** temporarily lower enrichment `batch` size and request `concurrency`.
-3. **Resume from saved state:** restart enrichment from IndexedDB resume state instead of re-uploading/reprocessing from scratch.
-
-### Environment variables and common misconfigurations
-
-| Variable | Where | Typical misconfig | What to check |
-|---|---|---|---|
-| `VITE_API_URL` | Frontend (Vercel/local) | Missing protocol, wrong domain, points to stale backend, trailing path that breaks endpoint URLs | Must be full backend origin (e.g. `https://your-api.onrender.com`) and match the active backend deployment |
-| `FRONTEND_ORIGIN` | Backend (Render/local prod mode) | Not set in production, typo in domain, includes extra slash/path, mismatch with actual frontend URL | Must exactly match deployed frontend origin so CORS preflight succeeds |
-| `TMDB_API_KEY` | Backend | Missing/invalid key, rotated key not updated in env | Verify key exists in runtime env and TMDb requests succeed |
-
-### Frontend → Vercel
-
-1. Import the repo on [vercel.com](https://vercel.com/).
-2. **Root directory:** `frontend`
-3. **Framework Preset:** Vite
-4. **Environment variable:**
-   | Variable | Required | Description |
-   |---|---|---|
-   | `VITE_API_URL` | Yes | Backend URL (e.g. `https://your-api.onrender.com`) |
-
-Vercel handles SPA routing automatically for Vite projects.
-
-## How It Works
-
-1. User uploads their Letterboxd CSV export (`ratings.csv` + optional `diary.csv`)
-2. Frontend parses the CSV in a **Web Worker** and shows instant basic stats
-3. Frontend sends only the data required for TMDb enrichment (for example: `title`, `year`, `tmdb_ids`) in batches to the backend
-4. Enrichment cache and progress are saved to **IndexedDB** locally — if the page is closed, analysis resumes where it left off
-5. Once enrichment is complete, the full analytics dashboard is rendered client-side
-
-## Client Error Boundaries And Crash Intake
-
-- Frontend uses a root `AppErrorBoundary` plus scoped `FeatureErrorBoundary` wrappers for upload and report zones.
-- Fallback UI is technical and exposes an `Error ID` with actions: `Retry`, `Reload`, `Go Home`.
-- Crash events are posted from frontend to backend endpoint `POST /api/client-errors`.
-
-Example payload:
-
-```json
-{
-  "errorId": "e-1",
-  "message": "render crash",
-  "stack": "Error: ...",
-  "componentStack": "at BrokenComponent ...",
-  "boundaryScope": "feature",
-  "featureName": "report",
-  "route": "/",
-  "userAgent": "Mozilla/5.0 ...",
-  "timestamp": "2026-02-14T00:00:00.000Z"
-}
+```bash
+cd backend
+python -m pytest -q
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=15
 ```
 
-Operational note:
+CI запускает обязательные проверки в GitHub Actions (`.github/workflows/ci.yml`).
 
-- Backend stores events in PostgreSQL table `client_error_events`.
-- `stack` and `component_stack` are trimmed to 16384 chars before insert.
-- `errorId` is the correlation key between user-visible fallback and backend record.
+## Полезные endpoint'ы
 
-## Project Structure
+- `GET /health`
+- `POST /tmdb/search/batch`
+- `POST /tmdb/movies/batch`
+- `POST /tmdb/movies/credits/batch`
+- `POST /tmdb/movies/keywords/batch`
+- `POST /tmdb/movies/full/batch`
+- `POST /api/client-errors`
+- `GET /api/demo-report`
+- `GET /api/demo-csv`
 
+## Документация
+
+- ADR:
+  - `docs/adr/ADR-001-analysis-store-boundaries.md`
+  - `docs/adr/ADR-002-analysis-lifecycle-invariants.md`
+  - `docs/adr/ADR-003-analysis-persistence-strategy.md`
+- Чеклист baseline/quality: `docs/plans/2026-02-14-senior-portfolio-foundation-checklist.md`
+- Инструкции по demo-asset: `docs/demo-report.md`
+
+## Структура репозитория
+
+```text
+backend/
+frontend/
+docs/
 ```
-├── backend/                 # FastAPI backend
-│   ├── app/                 # FastAPI application package
-│   │   ├── main.py          # API endpoints
-│   │   ├── tmdb_batch.py    # Batch TMDb search
-│   │   ├── tmdb_batch_movies.py # Batch movie details + credits + keywords
-│   │   └── cache.py         # SQLite write-behind cache
-│   ├── data/                # Demo inputs and generated artifacts
-│   ├── scripts/             # Utility scripts for frequency datasets
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/                # React SPA
-│   ├── src/
-│   │   ├── App.jsx          # Main app & orchestration
-│   │   ├── components/      # UI components (sections, charts, cards)
-│   │   ├── utils/           # Analytics engine, CSV parsing, formatting
-│   │   ├── workers/         # Web Workers for heavy parsing
-│   │   └── mocks/           # Demo fixtures for local dev / visual tests
-│   └── vite.config.js
-└── README.md
-```
 
-## License
+## Лицензия
 
-This project is for personal / portfolio use.
+Проект для портфолио и персонального использования.
 
-Data provided by [The Movie Database (TMDb)](https://www.themoviedb.org/). This product uses the TMDb API but is not endorsed or certified by TMDb.
+Используются данные The Movie Database (TMDb). Продукт не аффилирован с TMDb и не сертифицирован TMDb.
