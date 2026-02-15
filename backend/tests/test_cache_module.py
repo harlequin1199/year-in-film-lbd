@@ -106,3 +106,28 @@ def test_get_keywords_batch_disabled_cache_returns_none_values(monkeypatch):
     monkeypatch.setattr(cache, "DISABLE_CACHE", True)
 
     assert cache.get_keywords_batch([7, 8]) == {7: None, 8: None}
+
+
+def test_cache_connection_delegates_to_module_api(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(cache, "get_search", lambda title, year: calls.append(("get_search", title, year)) or 11)
+    monkeypatch.setattr(cache, "set_search", lambda title, year, tmdb_id: calls.append(("set_search", title, year, tmdb_id)))
+    monkeypatch.setattr(cache, "get_movie", lambda tmdb_id: calls.append(("get_movie", tmdb_id)) or {"id": tmdb_id})
+    monkeypatch.setattr(cache, "set_movie", lambda tmdb_id, payload: calls.append(("set_movie", tmdb_id, payload)))
+
+    conn = cache.CacheConnection()
+
+    assert conn.get_search("A", 2001) == 11
+    conn.set_search("B", 2002, 22)
+    assert conn.get_movie(33) == {"id": 33}
+    conn.set_movie(44, {"x": 1})
+    conn.flush_pending()
+    conn.close()
+
+    assert calls == [
+        ("get_search", "A", 2001),
+        ("set_search", "B", 2002, 22),
+        ("get_movie", 33),
+        ("set_movie", 44, {"x": 1}),
+    ]
