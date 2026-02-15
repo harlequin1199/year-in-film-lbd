@@ -17,7 +17,7 @@ import queue
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -121,10 +121,24 @@ def _get_read_conn() -> sqlite3.Connection:
 
 def _is_expired(updated_at: str) -> bool:
     try:
-        dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-        return datetime.utcnow() - dt.replace(tzinfo=None) > timedelta(days=TTL_DAYS)
+        return _utc_now() - _parse_utc_timestamp(updated_at) > timedelta(days=TTL_DAYS)
     except (ValueError, TypeError, AttributeError):
         return True
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _parse_utc_timestamp(value: str) -> datetime:
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _format_utc_timestamp() -> str:
+    return _utc_now().isoformat().replace("+00:00", "Z")
 
 
 # --- Writer thread: single connection, batch commits, retry on lock ---
@@ -132,7 +146,7 @@ def _is_expired(updated_at: str) -> bool:
 def _flush_batch(conn: sqlite3.Connection, batch: List[Tuple]) -> None:
     if not batch:
         return
-    now = datetime.utcnow().isoformat() + "Z"
+    now = _format_utc_timestamp()
     search_items: List[Tuple] = []
     movie_items: List[Tuple] = []
     credits_items: List[Tuple] = []

@@ -1,11 +1,13 @@
 import sys
 from pathlib import Path
+from datetime import timezone
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.client_errors_repository import ClientErrorsRepository
+from app.client_errors_repository import _parse_timestamp
 
 
 class _FakeCursor:
@@ -82,3 +84,9 @@ def test_trim_long_stack_before_insert():
     assert saved is not None
     assert len(saved["stack"]) <= 16384
     assert len(saved["component_stack"]) <= 16384
+
+
+def test_parse_timestamp_defaults_to_timezone_aware_utc():
+    ts = _parse_timestamp(None)
+    assert ts.tzinfo is not None
+    assert ts.tzinfo == timezone.utc

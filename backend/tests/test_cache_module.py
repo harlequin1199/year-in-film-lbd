@@ -2,7 +2,7 @@ import json
 import queue
 import sqlite3
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -36,7 +36,13 @@ class _FakeConn:
 
 
 def _iso_now(delta_days=0):
-    return (datetime.utcnow() + timedelta(days=delta_days)).isoformat() + "Z"
+    return (datetime.now(timezone.utc) + timedelta(days=delta_days)).isoformat().replace("+00:00", "Z")
+
+
+def test_format_timestamp_returns_utc_z_suffix():
+    ts = cache._format_utc_timestamp()
+    assert ts.endswith("Z")
+    assert datetime.fromisoformat(ts.replace("Z", "+00:00")).tzinfo is not None
 
 
 def test_is_expired_handles_invalid_dates():
