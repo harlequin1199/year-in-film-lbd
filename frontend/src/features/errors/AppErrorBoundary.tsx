@@ -1,4 +1,5 @@
 import React from 'react'
+import * as Sentry from '@sentry/react'
 import { TechnicalFallback } from './TechnicalFallback'
 
 type AppErrorBoundaryState = {
@@ -23,9 +24,10 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, A
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    void error
-    void info
-    // Client error reporting hook point.
+    Sentry.captureException(error, {
+      tags: { boundary_scope: 'global' },
+      extra: { componentStack: info.componentStack },
+    })
   }
 
   private reset = () => {

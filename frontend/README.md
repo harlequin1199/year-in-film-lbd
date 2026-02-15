@@ -37,7 +37,10 @@ npm run preview
 
 - `VITE_API_URL` — base URL backend API.
 - `VITE_BACKEND_URL` — алиас backend origin для интеграционных сценариев.
-- `VITE_CLIENT_ERRORS_PATH` — (опционально) путь для отправки client error событий.
+- `VITE_SENTRY_ENABLED` — включает client-side error reporting в Sentry (`true/false`).
+- `VITE_SENTRY_DSN` — DSN для Sentry browser SDK.
+- `VITE_SENTRY_ENVIRONMENT` — окружение (`development`, `production`).
+- `VITE_SENTRY_RELEASE` — идентификатор релиза (commit SHA/version).
 - `VITE_USE_MOCKS` — (опционально, dev) запуск в mock-режиме.
 
 ## Тесты и линт
@@ -68,3 +71,4 @@ npm run test:coverage
 - Основная аналитика выполняется на клиенте.
 - Backend используется как enrichment/интеграционный слой для TMDb.
 - Прогресс и часть кэша сохраняются локально (resume после перезагрузки).
+

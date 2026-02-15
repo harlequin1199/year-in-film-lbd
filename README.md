@@ -11,7 +11,7 @@
 - Режим возобновления анализа после перезагрузки страницы (IndexedDB).
 - Фильтрация отчета по годам.
 - Обработка ошибок рендеринга через `AppErrorBoundary` и `FeatureErrorBoundary`.
-- Отправка клиентских crash-событий на backend: `POST /api/client-errors`.
+- Error reporting and monitoring use Sentry (frontend + backend) and Grafana (/metrics).
 
 ## Архитектура
 
@@ -24,7 +24,6 @@
   - batch-endpoints для TMDb,
   - прокси TMDb-изображений,
   - write-behind SQLite-кэш,
-  - intake endpoint для клиентских ошибок.
 
 Принцип приватности данных:
 - полный CSV не отправляется на сервер;
@@ -64,14 +63,18 @@ npm run dev
 
 - `TMDB_API_KEY` (обязательно): ключ TMDb.
 - `FRONTEND_ORIGIN` (рекомендуется в production): origin фронтенда для CORS.
-- `DATABASE_URL` (опционально/production): PostgreSQL для хранения client error событий.
-
+- `SENTRY_ENABLED` (optional): enable backend Sentry SDK (`true/false`).
+- `SENTRY_DSN` (optional): Sentry DSN for backend.
+- `SENTRY_ENVIRONMENT` (optional): `development`/`production`.
+- `SENTRY_RELEASE` (optional): release identifier (commit SHA/version).
 ### Frontend
 
 - `VITE_API_URL`: base URL backend API.
 - `VITE_BACKEND_URL`: алиас backend origin для интеграционных сценариев.
-- `VITE_CLIENT_ERRORS_PATH` (опционально): путь для intake клиентских ошибок.
-
+- `VITE_SENTRY_ENABLED` (optional): enable frontend Sentry SDK (`true/false`).
+- `VITE_SENTRY_DSN` (optional): Sentry DSN for frontend.
+- `VITE_SENTRY_ENVIRONMENT` (optional): `development`/`production`.
+- `VITE_SENTRY_RELEASE` (optional): release identifier (commit SHA/version).
 ## Тестирование и качество
 
 Frontend:
@@ -101,7 +104,7 @@ CI запускает обязательные проверки в GitHub Action
 - `POST /tmdb/movies/credits/batch`
 - `POST /tmdb/movies/keywords/batch`
 - `POST /tmdb/movies/full/batch`
-- `POST /api/client-errors`
+- `GET /metrics`
 - `GET /api/demo-report`
 - `GET /api/demo-csv`
 
@@ -111,8 +114,10 @@ CI запускает обязательные проверки в GitHub Action
   - `docs/adr/ADR-001-analysis-store-boundaries.md`
   - `docs/adr/ADR-002-analysis-lifecycle-invariants.md`
   - `docs/adr/ADR-003-analysis-persistence-strategy.md`
+  - `docs/adr/ADR-004-observability-sentry-grafana.md`
 - Чеклист baseline/quality: `docs/plans/2026-02-14-senior-portfolio-foundation-checklist.md`
-- Инструкции по demo-asset: `docs/demo-report.md`
+- Demo asset guide: `docs/demo-report.md`
+- Observability runbook: `docs/ops/observability-runbook.md`
 
 ## Структура репозитория
 
@@ -127,3 +132,12 @@ docs/
 Проект для портфолио и персонального использования.
 
 Используются данные The Movie Database (TMDb). Продукт не аффилирован с TMDb и не сертифицирован TMDb.
+
+
+
+
+
+- Observability runbook: `docs/ops/observability-runbook.md`
+
+
+

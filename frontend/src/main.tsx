@@ -4,6 +4,9 @@ import { Analytics } from '@vercel/analytics/react'
 import './styles.css'
 import App from './App'
 import { AppErrorBoundary } from './features/errors/AppErrorBoundary'
+import { initSentry } from './observability/sentry'
+
+initSentry()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {
