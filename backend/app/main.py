@@ -6,9 +6,9 @@ from typing import Dict, Optional, Any, List
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, PlainTextResponse
 from pydantic import BaseModel
 import httpx
 import json
@@ -125,6 +125,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def metrics_auth_middleware(request: Request, call_next):
+    if request.url.path == "/metrics":
+        expected_token = (os.getenv("METRICS_BEARER_TOKEN") or "").strip()
+        if expected_token:
+            expected_header = f"Bearer {expected_token}"
+            auth_header = (request.headers.get("Authorization") or "").strip()
+            if auth_header != expected_header:
+                return PlainTextResponse("Unauthorized", status_code=401)
+    return await call_next(request)
+
 
 Instrumentator(
     should_group_status_codes=True,
