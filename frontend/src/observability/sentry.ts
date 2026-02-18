@@ -5,6 +5,7 @@ type EnvLike = {
   VITE_SENTRY_DSN?: string
   VITE_SENTRY_ENVIRONMENT?: string
   VITE_SENTRY_RELEASE?: string
+  VERCEL_GIT_COMMIT_SHA?: string
 }
 
 export function shouldEnableSentry(env: EnvLike): boolean {
@@ -17,7 +18,7 @@ export function initSentry(env: EnvLike = import.meta.env): void {
   Sentry.init({
     dsn: env.VITE_SENTRY_DSN,
     environment: env.VITE_SENTRY_ENVIRONMENT || 'development',
-    release: env.VITE_SENTRY_RELEASE,
+    release: env.VITE_SENTRY_RELEASE || env.VERCEL_GIT_COMMIT_SHA,
     tracesSampleRate: 0.05,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0.01,

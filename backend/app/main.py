@@ -29,6 +29,10 @@ def _should_enable_sentry(env: dict[str, str]) -> bool:
     return env.get("SENTRY_ENABLED") == "true" and bool(env.get("SENTRY_DSN"))
 
 
+def _resolve_sentry_release(env: dict[str, str]) -> str:
+    return env.get("SENTRY_RELEASE") or env.get("RENDER_GIT_COMMIT") or ""
+
+
 def _redact_sentry_event(event: dict[str, Any], _hint: Any) -> dict[str, Any]:
     request = event.get("request")
     if not isinstance(request, dict):
@@ -55,6 +59,7 @@ def _init_sentry_from_env() -> None:
         "SENTRY_DSN": os.getenv("SENTRY_DSN", ""),
         "SENTRY_ENVIRONMENT": os.getenv("SENTRY_ENVIRONMENT", "development"),
         "SENTRY_RELEASE": os.getenv("SENTRY_RELEASE", ""),
+        "RENDER_GIT_COMMIT": os.getenv("RENDER_GIT_COMMIT", ""),
     }
 
     if not _should_enable_sentry(env):
@@ -64,7 +69,7 @@ def _init_sentry_from_env() -> None:
     sentry_sdk.init(
         dsn=env["SENTRY_DSN"],
         environment=env["SENTRY_ENVIRONMENT"],
-        release=env["SENTRY_RELEASE"] or None,
+        release=_resolve_sentry_release(env) or None,
         traces_sample_rate=0.1,
         before_send=_redact_sentry_event,
         integrations=[FastApiIntegration()],
