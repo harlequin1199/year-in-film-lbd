@@ -1,49 +1,46 @@
-# Frontend (Year in Film)
+# Frontend
 
-SPA-приложение на React, которое:
-- принимает CSV из Letterboxd,
-- выполняет аналитику в браузере,
-- показывает интерактивный отчет,
-- сохраняет прогресс анализа локально.
+React SPA for the Year in Film dashboard.
 
-## Основные технологии
+## Stack
 
-- `React 19`
-- `TypeScript`
-- `Vite 7`
-- `Vitest`
-- `zustand`
-- `IndexedDB`
+- React 19
+- TypeScript
+- Vite
+- Vitest
+- ESLint
+- Zustand
+- IndexedDB
 
-## Локальный запуск
+## Local run
 
 ```bash
 npm ci
 npm run dev
 ```
 
-По умолчанию приложение открывается на `http://localhost:5173`.
+Default URL: `http://localhost:5173`.
 
-## Сборка
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Переменные окружения
+## Environment
 
-См. `frontend/.env.example`.
+See `.env.example`.
 
-- `VITE_API_URL` — base URL backend API.
-- `VITE_BACKEND_URL` — алиас backend origin для интеграционных сценариев.
-- `VITE_SENTRY_ENABLED` — включает client-side error reporting в Sentry (`true/false`).
-- `VITE_SENTRY_DSN` — DSN для Sentry browser SDK.
-- `VITE_SENTRY_ENVIRONMENT` — окружение (`development`, `production`).
-- `VITE_SENTRY_RELEASE` — идентификатор релиза (commit SHA/version).
-- `VITE_USE_MOCKS` — (опционально, dev) запуск в mock-режиме.
+- `VITE_API_URL` backend API base URL.
+- `VITE_BACKEND_URL` backend origin alias for integration scenarios.
+- `VITE_SENTRY_ENABLED` enable frontend Sentry (`true/false`).
+- `VITE_SENTRY_DSN` frontend Sentry DSN.
+- `VITE_SENTRY_ENVIRONMENT` deployment environment.
+- `VITE_SENTRY_RELEASE` release identifier.
+- `VITE_USE_MOCKS` optional local mock mode.
 
-## Тесты и линт
+## Tests and lint
 
 ```bash
 npm run lint
@@ -51,24 +48,14 @@ npm run test
 npm run test:coverage
 ```
 
-Порог покрытия задан в `frontend/vite.config.ts`.
+## FSD layout for analytics
 
-## Ключевые модули
+Analytics sections now follow Feature-Sliced Design:
 
-- `src/app/AppContainer.tsx` — оркестрация загрузки, прогресса и анализа.
-- `src/app/AppView.tsx` — компоновка основного UI.
-- `src/features/upload/useCsvAnalysisFlow.ts` — pipeline анализа и управление стадиями.
-- `src/store/analysisStore.ts` — глобальное состояние анализа.
-- `src/features/errors/*` — error boundaries и fallback UX.
-- `src/workers/*` — воркеры для тяжелых операций (парсинг CSV).
+- `src/widgets/analytics-overview/*` section-level composition.
+- `src/features/*` interaction-level behavior and controls.
+- `src/entities/stats/*` domain logic and domain-focused UI.
+- `src/shared/*` reusable UI and config utilities.
 
-## Поток данных
-
-`upload -> parse worker -> TMDb enrichment -> computed analytics -> render report`
-
-## Принципы
-
-- Основная аналитика выполняется на клиенте.
-- Backend используется как enrichment/интеграционный слой для TMDb.
-- Прогресс и часть кэша сохраняются локально (resume после перезагрузки).
+Detailed rules and examples: `../docs/frontend-fsd-guide.md`.
 

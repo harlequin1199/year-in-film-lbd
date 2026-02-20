@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, type ReactElement } from 'react'
-import { formatNumber, formatRating } from '../utils/format'
-import type { Badge } from '../types/stats.types'
+import { formatNumber, formatRating } from '../../../../utils/format'
+import type { Badge } from '../../../../types/stats.types'
 
 const ICONS: Record<string, ReactElement> = {
   film: (
@@ -76,7 +76,7 @@ function AutoFitValue({ text, title }: AutoFitValueProps) {
   const fit = useCallback(() => {
     const el = ref.current
     if (!el) return
-    // Временно запрещаем разрыв слов, чтобы замерить натуральную ширину
+
     const origWrap = el.style.overflowWrap
     const origBreak = el.style.wordBreak
     const origWhite = el.style.whiteSpace
@@ -91,13 +91,11 @@ function AutoFitValue({ text, title }: AutoFitValueProps) {
     el.style.maxHeight = 'none'
 
     let size = BASE_FONT
-    // Уменьшаем шрифт, пока текст не влезет без разрыва слов
     while (size > MIN_FONT && el.scrollWidth > el.clientWidth) {
       size -= STEP
       el.style.fontSize = `${size}px`
     }
 
-    // Возвращаем оригинальные стили
     el.style.overflowWrap = origWrap
     el.style.wordBreak = origBreak
     el.style.whiteSpace = origWhite
@@ -107,9 +105,9 @@ function AutoFitValue({ text, title }: AutoFitValueProps) {
 
   useEffect(() => {
     fit()
-    const ro = new ResizeObserver(fit)
-    if (ref.current?.parentElement) ro.observe(ref.current.parentElement)
-    return () => ro.disconnect()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null
+    if (ref.current?.parentElement && ro) ro.observe(ref.current.parentElement)
+    return () => ro?.disconnect()
   }, [text, fit])
 
   return (
@@ -119,45 +117,23 @@ function AutoFitValue({ text, title }: AutoFitValueProps) {
   )
 }
 
-interface BadgesSectionProps {
-  badges: Badge[]
-}
-
-function BadgesSection({ badges }: BadgesSectionProps) {
-  const items = badges || []
+export function BadgeCard({ badge }: { badge: Badge }) {
+  const displayValue = badge.isRating
+    ? formatRating(badge.value as number)
+    : typeof badge.value === 'string'
+      ? badge.value
+      : formatNumber(badge.value as number)
 
   return (
-    <section className="card">
-      <div className="card-header">
-        <h3>Бейджи</h3>
-        <p>Прогресс по небольшим целям</p>
+    <div className={`badge-card tone-${badge.tone || 'gold'}`}>
+      <div className="badge-icon-wrap" aria-hidden="true">
+        {ICONS[badge.iconKey] || ICONS.film}
       </div>
-      <div className="badge-grid">
-        {items.map((badge) => {
-          const displayValue = badge.isRating
-            ? formatRating(badge.value as number)
-            : typeof badge.value === 'string'
-              ? badge.value
-              : formatNumber(badge.value as number)
-          return (
-            <div className={`badge-card tone-${badge.tone || 'gold'}`} key={badge.title}>
-              <div className="badge-icon-wrap" aria-hidden="true">
-                {ICONS[badge.iconKey] || ICONS.film}
-              </div>
-              <div className="badge-content">
-                <p className="badge-title">{badge.title}</p>
-                <AutoFitValue
-                  text={displayValue}
-                  title={typeof badge.value === 'string' ? badge.value : undefined}
-                />
-                <p className="badge-subtitle">{badge.subtitle}</p>
-              </div>
-            </div>
-          )
-        })}
+      <div className="badge-content">
+        <p className="badge-title">{badge.title}</p>
+        <AutoFitValue text={displayValue} title={typeof badge.value === 'string' ? badge.value : undefined} />
+        <p className="badge-subtitle">{badge.subtitle}</p>
       </div>
-    </section>
+    </div>
   )
 }
-
-export default BadgesSection

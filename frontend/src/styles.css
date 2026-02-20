@@ -1186,6 +1186,10 @@ h3, .card-header h3 {
   gap: 10px;
 }
 
+.legend-list {
+  margin-top: 0;
+}
+
 .legend-item {
   display: grid;
   grid-template-columns: 16px 1fr auto;
@@ -2090,6 +2094,10 @@ h3, .card-header h3 {
   gap: 0 var(--space-sm);
   row-gap: var(--space-sm);
   align-items: baseline;
+}
+
+.badges-widget .badge-grid {
+  margin-top: var(--space-md);
 }
 
 .badge-card {

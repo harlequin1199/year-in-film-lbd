@@ -1,53 +1,51 @@
 # Year in Film (Letterboxd)
 
-Полноценное fullstack-приложение, которое превращает экспорт из Letterboxd в интерактивный годовой отчет по фильмам.
+Fullstack app that transforms Letterboxd export data into an interactive yearly film report.
 
-Пользователь загружает `ratings.csv` и получает дашборд в стиле «Spotify Wrapped», но для кино: метрики, ранжирования, графики, теги, десятилетия и персональные инсайты.
+## What it does
 
-## Что умеет проект
+- Upload `ratings.csv` and build analytics dashboard.
+- Enrich data with TMDb metadata (posters, genres, cast, crew, keywords).
+- Show rankings, trends, decade breakdowns, badges, and summary stats.
+- Resume interrupted analysis from local state (IndexedDB).
+- Use Sentry and `/metrics` for observability.
 
-- Быстрый старт анализа сразу после загрузки CSV.
-- Пошаговое обогащение данных через TMDb (постеры, жанры, актеры, режиссеры, ключевые слова).
-- Режим возобновления анализа после перезагрузки страницы (IndexedDB).
-- Фильтрация отчета по годам.
-- Обработка ошибок рендеринга через `AppErrorBoundary` и `FeatureErrorBoundary`.
-- Error reporting and monitoring use Sentry (frontend + backend) and Grafana (/metrics).
+## Architecture
 
-## Архитектура
+- `frontend`:
+  - React + TypeScript + Vite app.
+  - CSV parsing, analytics calculations, dashboard rendering.
+  - FSD structure for analytics UI:
+    - `src/widgets/analytics-overview/*` (composed sections)
+    - `src/features/*` (interaction logic)
+    - `src/entities/*` (domain models and domain UI)
+    - `src/shared/*` (reusable UI/config)
+- `backend`:
+  - FastAPI service for TMDb batch endpoints and proxy/cache flows.
 
-- `frontend` (React + Vite):
-  - парсинг CSV,
-  - расчет аналитики,
-  - UI и визуализация,
-  - локальный кэш и resume-состояние.
-- `backend` (FastAPI):
-  - batch-endpoints для TMDb,
-  - прокси TMDb-изображений,
-  - write-behind SQLite-кэш,
+Privacy model:
+- Full CSV is not uploaded to backend.
+- Backend receives only minimal fields required for TMDb enrichment.
 
-Принцип приватности данных:
-- полный CSV не отправляется на сервер;
-- на backend уходит только минимум полей, нужный для TMDb enrichment.
+## Tech stack
 
-## Стек
+- Frontend: React 19, TypeScript, Vite, Vitest, ESLint, Zustand
+- Backend: Python, FastAPI, httpx, SQLite
+- Integrations: TMDb API v3, Sentry
 
-- Frontend: `React 19`, `TypeScript`, `Vite 7`, `Vitest`, `zustand`.
-- Backend: `Python`, `FastAPI`, `httpx`, `SQLite`.
-- Интеграции: `TMDb API v3`.
+## Quick start
 
-## Быстрый старт (локально)
-
-### 1. Backend
+Backend:
 
 ```bash
 cd backend
 cp .env.example .env
-# Добавьте TMDB_API_KEY в .env
+# set TMDB_API_KEY in .env
 python -m pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Frontend
+Frontend:
 
 ```bash
 cd frontend
@@ -55,27 +53,22 @@ npm ci
 npm run dev
 ```
 
-Откройте `http://localhost:5173`.
+Open `http://localhost:5173`.
 
-## Переменные окружения
+## Environment variables
 
-### Backend
+Backend:
+- `TMDB_API_KEY` required.
+- `FRONTEND_ORIGIN` recommended for production CORS.
+- `SENTRY_ENABLED`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` optional.
 
-- `TMDB_API_KEY` (обязательно): ключ TMDb.
-- `FRONTEND_ORIGIN` (рекомендуется в production): origin фронтенда для CORS.
-- `SENTRY_ENABLED` (optional): enable backend Sentry SDK (`true/false`).
-- `SENTRY_DSN` (optional): Sentry DSN for backend.
-- `SENTRY_ENVIRONMENT` (optional): `development`/`production`.
-- `SENTRY_RELEASE` (optional): release identifier (commit SHA/version).
-### Frontend
+Frontend:
+- `VITE_API_URL` backend API base URL.
+- `VITE_BACKEND_URL` backend origin alias for integration scenarios.
+- `VITE_SENTRY_ENABLED`, `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE` optional.
+- `VITE_USE_MOCKS` optional local mock mode.
 
-- `VITE_API_URL`: base URL backend API.
-- `VITE_BACKEND_URL`: алиас backend origin для интеграционных сценариев.
-- `VITE_SENTRY_ENABLED` (optional): enable frontend Sentry SDK (`true/false`).
-- `VITE_SENTRY_DSN` (optional): Sentry DSN for frontend.
-- `VITE_SENTRY_ENVIRONMENT` (optional): `development`/`production`.
-- `VITE_SENTRY_RELEASE` (optional): release identifier (commit SHA/version).
-## Тестирование и качество
+## Testing and quality
 
 Frontend:
 
@@ -91,53 +84,12 @@ Backend:
 ```bash
 cd backend
 python -m pytest -q
-python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=15
+python -m pytest --cov=app --cov-report=term-missing
 ```
 
-CI запускает обязательные проверки в GitHub Actions (`.github/workflows/ci.yml`).
+## Documentation
 
-## Полезные endpoint'ы
-
-- `GET /health`
-- `POST /tmdb/search/batch`
-- `POST /tmdb/movies/batch`
-- `POST /tmdb/movies/credits/batch`
-- `POST /tmdb/movies/keywords/batch`
-- `POST /tmdb/movies/full/batch`
-- `GET /metrics`
-- `GET /api/demo-report`
-- `GET /api/demo-csv`
-
-## Документация
-
-- ADR:
-  - `docs/adr/ADR-001-analysis-store-boundaries.md`
-  - `docs/adr/ADR-002-analysis-lifecycle-invariants.md`
-  - `docs/adr/ADR-003-analysis-persistence-strategy.md`
-  - `docs/adr/ADR-004-observability-sentry-grafana.md`
-- Чеклист baseline/quality: `docs/plans/2026-02-14-senior-portfolio-foundation-checklist.md`
-- Demo asset guide: `docs/demo-report.md`
+- Frontend FSD guide: `docs/frontend-fsd-guide.md`
 - Observability runbook: `docs/ops/observability-runbook.md`
-
-## Структура репозитория
-
-```text
-backend/
-frontend/
-docs/
-```
-
-## Лицензия
-
-Проект для портфолио и персонального использования.
-
-Используются данные The Movie Database (TMDb). Продукт не аффилирован с TMDb и не сертифицирован TMDb.
-
-
-
-
-
-- Observability runbook: `docs/ops/observability-runbook.md`
-
-
+- ADRs: `docs/adr/*`
 

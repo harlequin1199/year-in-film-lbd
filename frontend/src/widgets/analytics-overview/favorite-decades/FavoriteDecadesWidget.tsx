@@ -1,19 +1,19 @@
-import Stars from './Stars'
-import { formatRating, formatYear, formatLoveScore } from '../utils/format'
-import { getLetterboxdDecadeUrl } from '../utils/letterboxdUrl'
-import type { Film } from '../types/film.types'
-import type { DecadeStats } from '../types/stats.types'
+import Stars from '../../../components/Stars'
+import { CardSectionHeader } from '../../../shared/ui/card-section-header'
+import { formatRating, formatYear, formatLoveScore } from '../../../utils/format'
+import { getLetterboxdDecadeUrl } from '../../../utils/letterboxdUrl'
+import type { Film } from '../../../types/film.types'
+import type { DecadeStats } from '../../../types/stats.types'
 
-interface FavoriteDecadesProps {
+interface FavoriteDecadesWidgetProps {
   films: Film[]
   decades: DecadeStats[]
 }
 
-function FavoriteDecades({ films, decades }: FavoriteDecadesProps) {
+function FavoriteDecadesWidget({ films, decades }: FavoriteDecadesWidgetProps) {
   if (!films) return null
 
-  const decadesList = (decades || [])
-    .slice(0, 3)
+  const decadesList = (decades || []).slice(0, 3)
 
   const getPostersForDecade = (decadeNum: number): (string | null)[] => {
     return films
@@ -24,13 +24,10 @@ function FavoriteDecades({ films, decades }: FavoriteDecadesProps) {
 
   return (
     <section className="card">
-      <div className="card-header">
-        <h3>Любимые десятилетия</h3>
-        <p>Самые сильные эпохи в вашей истории просмотров</p>
-      </div>
+      <CardSectionHeader title="Любимые десятилетия" description="Самые сильные эпохи в вашей истории просмотров" />
       {decadesList.length === 0 && (
         <div className="decade-empty">
-          Недостаточно данных для расчёта десятилетий.
+          Недостаточно данных для расчета десятилетий.
         </div>
       )}
       <div className="decade-list">
@@ -42,9 +39,9 @@ function FavoriteDecades({ films, decades }: FavoriteDecadesProps) {
             <div className={`decade-row ${rankClass}`} key={decade.decade}>
               <div className="decade-info">
                 <span className="decade-title">
-                  <a 
-                    href={getLetterboxdDecadeUrl(decade.decade)} 
-                    target="_blank" 
+                  <a
+                    href={getLetterboxdDecadeUrl(decade.decade)}
+                    target="_blank"
                     rel="noreferrer"
                     style={{ color: 'inherit', textDecoration: 'none' }}
                   >
@@ -60,8 +57,8 @@ function FavoriteDecades({ films, decades }: FavoriteDecadesProps) {
                 </div>
               </div>
               <div className="decade-posters">
-                {posters.map((poster, index) => (
-                  <div className="decade-poster" key={`${decade.decade}-${index}`}>
+                {posters.map((poster, posterIndex) => (
+                  <div className="decade-poster" key={`${decade.decade}-${posterIndex}`}>
                     {poster ? (
                       <img src={poster} alt="" loading="lazy" />
                     ) : (
@@ -78,4 +75,4 @@ function FavoriteDecades({ films, decades }: FavoriteDecadesProps) {
   )
 }
 
-export default FavoriteDecades
+export default FavoriteDecadesWidget
