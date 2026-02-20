@@ -6,5 +6,6 @@ describe('ByYearChart regression', () => {
   it('does not call setState from ref callback during render', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/ByYearChart.tsx'), 'utf-8')
     expect(source).not.toMatch(/ref=\{\(el\)\s*=>\s*\{[\s\S]*setContainerWidth\(/m)
+    expect(source).toContain('buildByYearModel')
   })
 })

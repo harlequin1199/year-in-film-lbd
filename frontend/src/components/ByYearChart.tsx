@@ -1,17 +1,10 @@
 import { useMemo, useState, useRef, useEffect, MouseEvent } from 'react'
 import { formatNumber, formatRating, formatYear, formatLoveScore } from '../utils/format'
 import LoveScoreInfo from './LoveScoreInfo'
+import { buildByYearModel } from '../entities/stats/lib/byYearModel'
+import { BY_YEAR_BAR_HEIGHT, getByYearBarGap, getByYearBarWidth } from '../shared/config/chart'
 import type { Film } from '../types/film.types'
 import type { YearStats } from '../types/stats.types'
-
-const BAR_HEIGHT = 220
-
-const getBarWidth = (yearCount: number): number => {
-  if (yearCount <= 40) return 10
-  if (yearCount <= 80) return 6
-  if (yearCount <= 120) return 4
-  return 2
-}
 
 interface ByYearChartProps {
   films: Film[]
@@ -27,13 +20,6 @@ interface TooltipState {
   }
   x: number
   y: number
-}
-
-interface YearEntry {
-  year: number
-  count: number
-  avgRating: number | null
-  loveScore: number | null
 }
 
 interface DecadeBoundary {
@@ -65,59 +51,15 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
     }
   }, [])
 
-  const loveScoreByYear = useMemo(() => {
-    const map = new Map<number, { loveScore: number; count: number; avg_rating: number }>()
-    ;(yearsByLoveScore || []).forEach((item) => {
-      map.set(Number(item.name), { loveScore: item.loveScore, count: item.count, avg_rating: item.avg_rating })
-    })
-    return map
-  }, [yearsByLoveScore])
-
-  const data = useMemo(() => {
-    if (!films || films.length === 0) return null
-    const years = films.map((film) => film.year).filter((year): year is number => year !== null && year !== undefined)
-    if (years.length === 0) return null
-
-    const minYear = Math.min(...years)
-    const maxYear = Math.max(...years)
-    const yearMap = new Map<number, { count: number; sum: number; rated: number }>()
-
-    for (let year = minYear; year <= maxYear; year += 1) {
-      yearMap.set(year, { count: 0, sum: 0, rated: 0 })
-    }
-
-    films.forEach((film) => {
-      if (!film.year) return
-      const entry = yearMap.get(film.year)
-      if (!entry) return
-      entry.count += 1
-      if (film.rating !== null && film.rating !== undefined) {
-        entry.sum += film.rating
-        entry.rated += 1
-      }
-    })
-
-    const yearEntries: YearEntry[] = Array.from(yearMap.entries()).map(([year, stats]) => {
-      const avgRating = stats.rated ? stats.sum / stats.rated : null
-      const loveData = loveScoreByYear.get(year)
-      return {
-        year,
-        count: stats.count,
-        avgRating,
-        loveScore: loveData?.loveScore ?? null,
-      }
-    })
-
-    return { minYear, maxYear, yearEntries }
-  }, [films, loveScoreByYear])
+  const data = useMemo(() => buildByYearModel(films, yearsByLoveScore), [films, yearsByLoveScore])
 
   if (!data) return null
 
   const { minYear, maxYear, yearEntries } = data
   const maxCount = Math.max(...yearEntries.map((entry) => entry.count), 1)
   const yearCount = maxYear - minYear + 1
-  const barWidth = getBarWidth(yearCount)
-  const gap = yearCount > 120 ? 0 : 1
+  const barWidth = getByYearBarWidth(yearCount)
+  const gap = getByYearBarGap(yearCount)
   const chartWidth = yearCount * (barWidth + gap)
 
   // Calculate decade boundaries
@@ -138,7 +80,7 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
     }
   }
 
-  const handleMove = (event: MouseEvent<SVGRectElement>, entry: YearEntry) => {
+  const handleMove = (event: MouseEvent<SVGRectElement>, entry: (typeof yearEntries)[number]) => {
     const tooltipWidth = 220
     const tooltipHeight = 78
     const left = Math.max(8, Math.min(event.clientX + 12, window.innerWidth - tooltipWidth - 8))
@@ -150,18 +92,18 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
     })
   }
 
-  const getHeight = (entry: YearEntry): number => {
+  const getHeight = (entry: (typeof yearEntries)[number]): number => {
     if (mode === 'count') {
       if (entry.count === 0) return 0
-      const scaled = Math.sqrt(entry.count / maxCount) * BAR_HEIGHT
+      const scaled = Math.sqrt(entry.count / maxCount) * BY_YEAR_BAR_HEIGHT
       return Math.max(2, scaled)
     }
     if (mode === 'loveScore') {
       if (entry.loveScore == null) return 0
-      return Math.max(2, (entry.loveScore / 100) * BAR_HEIGHT)
+      return Math.max(2, (entry.loveScore / 100) * BY_YEAR_BAR_HEIGHT)
     }
     if (entry.count === 0 || entry.avgRating === null) return 0
-    const scaled = Math.pow(entry.avgRating / 5, 1.2) * BAR_HEIGHT
+    const scaled = Math.pow(entry.avgRating / 5, 1.2) * BY_YEAR_BAR_HEIGHT
     return Math.max(2, scaled)
   }
 
@@ -281,8 +223,8 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
         <svg
           className="byyear-svg"
           width="100%"
-          height={BAR_HEIGHT}
-          viewBox={`0 0 ${chartWidth} ${BAR_HEIGHT}`}
+          height={BY_YEAR_BAR_HEIGHT}
+          viewBox={`0 0 ${chartWidth} ${BY_YEAR_BAR_HEIGHT}`}
           preserveAspectRatio="none"
           onMouseLeave={() => setTooltip(null)}
         >
@@ -321,12 +263,12 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
                 x={x1}
                 y={0}
                 width={width}
-                height={BAR_HEIGHT}
+                height={BY_YEAR_BAR_HEIGHT}
                 fill={bgColor}
               />
             )
           })}
-          <line x1="0" y1={BAR_HEIGHT} x2={chartWidth} y2={BAR_HEIGHT} stroke="#1f2430" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          <line x1="0" y1={BY_YEAR_BAR_HEIGHT} x2={chartWidth} y2={BY_YEAR_BAR_HEIGHT} stroke="#1f2430" strokeWidth="1" vectorEffect="non-scaling-stroke" />
           {/* Decade divider lines */}
           {decadeBoundaries.map(({ decade, x }) => {
             // Always show divider lines for all decades (including boundaries)
@@ -337,7 +279,7 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
                 x1={x}
                 y1={0}
                 x2={x}
-                y2={BAR_HEIGHT}
+                y2={BY_YEAR_BAR_HEIGHT}
                 stroke="#2a3242"
                 strokeWidth="1"
                 strokeDasharray="2 2"
@@ -349,7 +291,7 @@ function ByYearChart({ films, yearsByLoveScore }: ByYearChartProps) {
           {yearEntries.map((entry, index) => {
             const height = getHeight(entry)
             const x = index * (barWidth + gap)
-            const y = BAR_HEIGHT - height
+            const y = BY_YEAR_BAR_HEIGHT - height
             return (
               <rect
                 key={entry.year}
