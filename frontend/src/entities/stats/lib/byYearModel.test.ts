@@ -1,12 +1,15 @@
 import { expect, test } from 'vitest'
+import type { Film } from '../../../types/film.types'
 import { buildByYearModel } from './byYearModel'
 
 test('builds continuous year range and aggregates counts', () => {
+  const films = [
+    { year: 2000, rating: 4 },
+    { year: 2002, rating: 2 },
+  ] as unknown as Film[]
+
   const model = buildByYearModel(
-    [
-      { year: 2000, rating: 4 },
-      { year: 2002, rating: 2 },
-    ] as any,
+    films,
     [],
   )
 
