@@ -2096,6 +2096,10 @@ h3, .card-header h3 {
   align-items: baseline;
 }
 
+.badges-widget .badge-grid {
+  margin-top: var(--space-md);
+}
+
 .badge-card {
   grid-row: span 3;
   display: grid;
