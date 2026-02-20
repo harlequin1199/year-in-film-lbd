@@ -66,11 +66,11 @@ def test_search_batch_collects_task_exceptions(monkeypatch):
         async def __aenter__(self):
             return self
 
-        async def __aexit__(self, exc_type, exc, tb):
+        async def __aexit__(self, *_):
             return False
 
     monkeypatch.setattr(tmdb_batch, "_search_single", fake_search_single)
-    monkeypatch.setattr(tmdb_batch.httpx, "AsyncClient", lambda *args, **kwargs: _FakeAsyncClient())
+    monkeypatch.setattr(tmdb_batch.httpx, "AsyncClient", lambda *_args, **_kwargs: _FakeAsyncClient())
 
     result = asyncio.run(
         tmdb_batch.search_batch(

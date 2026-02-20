@@ -13,7 +13,7 @@ class _FakeAsyncClient:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *_):
         return False
 
 
@@ -38,7 +38,7 @@ def test_movies_batch_survives_malformed_movie_named_lists(monkeypatch):
         )
 
     monkeypatch.setattr(tmdb_batch_movies, "_get_movie_details", fake_get_movie_details)
-    monkeypatch.setattr(tmdb_batch_movies.httpx, "AsyncClient", lambda *args, **kwargs: _FakeAsyncClient())
+    monkeypatch.setattr(tmdb_batch_movies.httpx, "AsyncClient", lambda *_args, **_kwargs: _FakeAsyncClient())
 
     result = asyncio.run(tmdb_batch_movies.movies_batch([1, 2], "k"))
 
@@ -58,7 +58,7 @@ def test_keywords_batch_maps_error_and_empty_keywords(monkeypatch):
         return [], None, "api"
 
     monkeypatch.setattr(tmdb_batch_movies, "_get_movie_keywords", fake_get_movie_keywords)
-    monkeypatch.setattr(tmdb_batch_movies.httpx, "AsyncClient", lambda *args, **kwargs: _FakeAsyncClient())
+    monkeypatch.setattr(tmdb_batch_movies.httpx, "AsyncClient", lambda *_args, **_kwargs: _FakeAsyncClient())
 
     result = asyncio.run(tmdb_batch_movies.keywords_batch([1, 2], "k"))
 
