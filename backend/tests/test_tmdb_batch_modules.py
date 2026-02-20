@@ -13,12 +13,12 @@ class _FakeAsyncClient:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *_):
         return False
 
 
 def test_full_batch_survives_cache_batch_errors(monkeypatch):
-    monkeypatch.setattr(tmdb_batch_movies.httpx, 'AsyncClient', lambda *args, **kwargs: _FakeAsyncClient())
+    monkeypatch.setattr(tmdb_batch_movies.httpx, 'AsyncClient', lambda *_args, **_kwargs: _FakeAsyncClient())
 
     def _raise_cache_error(_ids):
         raise RuntimeError('cache unavailable')
@@ -41,7 +41,7 @@ def test_full_batch_survives_cache_batch_errors(monkeypatch):
 
 
 def test_full_batch_normalizes_invalid_cache_shapes(monkeypatch):
-    monkeypatch.setattr(tmdb_batch_movies.httpx, 'AsyncClient', lambda *args, **kwargs: _FakeAsyncClient())
+    monkeypatch.setattr(tmdb_batch_movies.httpx, 'AsyncClient', lambda *_args, **_kwargs: _FakeAsyncClient())
     monkeypatch.setattr(tmdb_batch_movies.cache_module, 'get_movie_batch', lambda _ids: None)
     monkeypatch.setattr(tmdb_batch_movies.cache_module, 'get_credits_batch', lambda _ids: [])
     monkeypatch.setattr(tmdb_batch_movies.cache_module, 'get_keywords_batch', lambda _ids: 'oops')

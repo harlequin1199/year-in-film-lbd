@@ -29,16 +29,16 @@ def test_health_endpoint_returns_ok():
 
 
 @pytest.mark.parametrize(
-    ('path', 'payload', 'module_name', 'func_name', 'expected_arg_key'),
+    ('path', 'payload', 'module_name', 'expected_arg_key'),
     [
-        ('/tmdb/search/batch', {'items': [{'title': 'Interstellar', 'year': 2014}]}, 'tmdb_batch', 'search_batch', 'items'),
-        ('/tmdb/movies/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'movies_batch', 'tmdb_ids'),
-        ('/tmdb/movies/credits/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'credits_batch', 'tmdb_ids'),
-        ('/tmdb/movies/keywords/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'keywords_batch', 'tmdb_ids'),
-        ('/tmdb/movies/full/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'full_batch', 'tmdb_ids'),
+        ('/tmdb/search/batch', {'items': [{'title': 'Interstellar', 'year': 2014}]}, 'tmdb_batch', 'items'),
+        ('/tmdb/movies/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'tmdb_ids'),
+        ('/tmdb/movies/credits/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'tmdb_ids'),
+        ('/tmdb/movies/keywords/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'tmdb_ids'),
+        ('/tmdb/movies/full/batch', {'tmdb_ids': [1, 2]}, 'tmdb_batch_movies', 'tmdb_ids'),
     ],
 )
-def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, payload, module_name, func_name, expected_arg_key):
+def test_tmdb_endpoints_return_200_with_stubbed_modules(monkeypatch, path, payload, module_name, expected_arg_key):
     monkeypatch.setenv('TMDB_API_KEY', 'test-key')
 
     captured = {}
