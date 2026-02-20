@@ -1,1 +1,0 @@
-﻿export { default } from '../widgets/analytics-overview/favorite-decades'

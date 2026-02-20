@@ -7,6 +7,7 @@ describe('AppView feature boundaries', () => {
     const appView = readFileSync(resolve(process.cwd(), 'src/app/AppView.tsx'), 'utf-8')
     const main = readFileSync(resolve(process.cwd(), 'src/main.tsx'), 'utf-8')
     expect(appView).toMatch(/FeatureErrorBoundary/)
+    expect(appView).toMatch(/widgets\/analytics-overview/)
     expect(main).toMatch(/AppErrorBoundary/)
   })
 })

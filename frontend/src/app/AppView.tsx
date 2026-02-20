@@ -9,7 +9,6 @@ import ProgressStatus from '../components/ProgressStatus'
 import WatchTimeCard from '../components/WatchTimeCard'
 import LanguagesSection from '../components/LanguagesSection'
 import ToggleRankedList from '../components/ToggleRankedList'
-import BadgesSection from '../components/BadgesSection'
 import ListsProgressSection from '../components/ListsProgressSection'
 import YearFilter from '../components/YearFilter'
 import { formatNumber, formatRating } from '../utils/format'
@@ -18,9 +17,10 @@ import { getLetterboxdCountryUrl, getLetterboxdDirectorUrl, getLetterboxdActorUr
 import type { Analysis, Computed, Progress, ResumeState, Film } from '../types'
 import { FeatureErrorBoundary } from '../features/errors/FeatureErrorBoundary'
 import { normalizeMojibakeText } from '../utils/normalizeMojibakeText'
+import BadgesWidget from '../widgets/analytics-overview/badges'
 
-const LazyChartsSection = lazy(() => import('../components/LazyChartsSection'))
-const LazyFavoriteDecades = lazy(() => import('../components/FavoriteDecades'))
+const LazyByYearChartWidget = lazy(() => import('../widgets/analytics-overview/by-year-chart'))
+const LazyFavoriteDecadesWidget = lazy(() => import('../widgets/analytics-overview/favorite-decades'))
 
 interface MockOption {
   id: string
@@ -412,15 +412,14 @@ function AppView(props: AppViewProps) {
           </section>
           <section className="grid">
             <Suspense fallback={null}>
-              <LazyChartsSection
-                films={filteredFilms}
-                yearsByLoveScore={computed.yearsByLoveScore}
-              />
+              <section className="chart-by-year-row">
+                <LazyByYearChartWidget films={filteredFilms} yearsByLoveScore={computed.yearsByLoveScore} />
+              </section>
             </Suspense>
           </section>
           <section className="grid">
             <Suspense fallback={null}>
-              <LazyFavoriteDecades films={filteredFilms} decades={computed.decades} />
+              <LazyFavoriteDecadesWidget films={filteredFilms} decades={computed.decades} />
             </Suspense>
           </section>
           <section className="grid">
@@ -467,7 +466,7 @@ function AppView(props: AppViewProps) {
             />
           </section>
           <section className="grid">
-            <BadgesSection badges={computed.badges} />
+            <BadgesWidget badges={computed.badges} />
           </section>
           </main>
         </FeatureErrorBoundary>
