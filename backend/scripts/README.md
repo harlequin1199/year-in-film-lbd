@@ -2,23 +2,41 @@
 
 Каталог с утилитами для подготовки справочных частотных таблиц на основе TMDb.
 
-## Скрипты
+## Что здесь есть
 
-- `genre_global_frequency.py` — собирает частоты по жанрам.
-- `country_global_frequency.py` — собирает частоты по странам.
-- `year_global_frequency.py` — собирает частоты по годам.
+- `genre_global_frequency.py` - частоты по жанрам.
+- `country_global_frequency.py` - частоты по странам.
+- `year_global_frequency.py` - частоты по годам.
 
-## Для чего это нужно
+## Зачем это нужно
 
-Эти данные можно использовать в аналитике и нормализации метрик (например, чтобы сравнивать пользовательские предпочтения с глобальным распределением).
+Эти данные используются как справочные baseline-распределения для аналитики и нормализации метрик.
 
-## Общий шаблон запуска
+## Требования
+
+- Установлены зависимости из `backend/requirements.txt`.
+- Задан `TMDB_API_KEY` (например, через `backend/.env`).
+
+## Запуск
+
+Из корня репозитория:
 
 ```bash
 cd backend
-python scripts/<script_name>.py
+python scripts/genre_global_frequency.py
+python scripts/country_global_frequency.py
+python scripts/year_global_frequency.py
 ```
 
-Перед запуском убедитесь, что:
-- установлены зависимости из `requirements.txt`,
-- задан `TMDB_API_KEY` в окружении.
+## Результаты
+
+Каждый скрипт сохраняет CSV в текущую рабочую директорию (`backend/`):
+
+- `genre_global_frequency.csv`
+- `country_global_frequency.csv`
+- `year_global_frequency.csv`
+
+## Примечания
+
+- Скрипты делают запросы к TMDb и содержат задержку между запросами для снижения риска rate-limit.
+- Для актуальных метрик рекомендуется периодически пересчитывать файлы.

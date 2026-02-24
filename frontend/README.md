@@ -1,8 +1,11 @@
-# Frontend
+﻿# Frontend (Year in Film)
 
-React SPA for the Year in Film dashboard.
+React SPA для Year in Film dashboard.
 
-## Stack
+- Корневой README (общее позиционирование и архитектура): `../README.md`
+- Live Demo: https://year-in-film-lbd.vercel.app/
+
+## Стек
 
 - React 19
 - TypeScript
@@ -12,35 +15,35 @@ React SPA for the Year in Film dashboard.
 - Zustand
 - IndexedDB
 
-## Local run
+## Локальный запуск
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Default URL: `http://localhost:5173`.
+По умолчанию приложение доступно на `http://localhost:5173`.
 
-## Build
+## Сборка
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Environment
+## Переменные окружения
 
-See `.env.example`.
+См. `.env.example`.
 
-- `VITE_API_URL` backend API base URL.
-- `VITE_BACKEND_URL` backend origin alias for integration scenarios.
-- `VITE_SENTRY_ENABLED` enable frontend Sentry (`true/false`).
-- `VITE_SENTRY_DSN` frontend Sentry DSN.
-- `VITE_SENTRY_ENVIRONMENT` deployment environment.
-- `VITE_SENTRY_RELEASE` release identifier.
-- `VITE_USE_MOCKS` optional local mock mode.
+- `VITE_API_URL` - backend API base URL.
+- `VITE_BACKEND_URL` - backend origin alias для интеграционных сценариев.
+- `VITE_SENTRY_ENABLED` - enable frontend Sentry (`true/false`).
+- `VITE_SENTRY_DSN` - frontend Sentry DSN.
+- `VITE_SENTRY_ENVIRONMENT` - deployment environment.
+- `VITE_SENTRY_RELEASE` - release identifier.
+- `VITE_USE_MOCKS` - optional local mock mode.
 
-## Tests and lint
+## Тесты и линт
 
 ```bash
 npm run lint
@@ -48,14 +51,13 @@ npm run test
 npm run test:coverage
 ```
 
-## FSD layout for analytics
+## FSD layout для аналитики
 
-Analytics sections now follow Feature-Sliced Design:
+Секции аналитики следуют Feature-Sliced Design:
 
-- `src/widgets/analytics-overview/*` section-level composition.
-- `src/features/*` interaction-level behavior and controls.
-- `src/entities/stats/*` domain logic and domain-focused UI.
-- `src/shared/*` reusable UI and config utilities.
+- `src/widgets/analytics-overview/*` - section-level composition.
+- `src/features/*` - interaction-level behavior and controls.
+- `src/entities/stats/*` - domain logic and domain-focused UI.
+- `src/shared/*` - reusable UI and config utilities.
 
-Detailed rules and examples: `../docs/frontend-fsd-guide.md`.
-
+Подробные правила и примеры: `../docs/frontend-fsd-guide.md`.
