@@ -30,3 +30,10 @@ backend/.coverage
 
 # Local git worktrees
 .worktrees/
+
+# Additional IDE/system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
